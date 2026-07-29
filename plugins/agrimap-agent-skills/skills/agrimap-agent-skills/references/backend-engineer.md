@@ -9,6 +9,7 @@
 - [C# baseline](#c-baseline)
 - [Phase 1: foundation](#phase-1-foundation)
 - [Phase 2: active-development](#phase-2-active-development)
+- [Database source of trust](#database-source-of-trust)
 - [Error/message reconciliation](#errormessage-reconciliation)
 - [HTTP request-value normalization](#http-request-value-normalization)
 - [Phase 3: stabilization](#phase-3-stabilization)
@@ -106,6 +107,16 @@ Active-development gate:
 - no speculative layer, model, repository, or abstraction was added;
 - affected callers, registrations, contracts, and data mappings were checked;
 - proportional tests/build/static checks passed.
+
+## Database source of trust
+
+Most AgriMap backend work reaches data through stored procedures, so run this gate whenever inspected or touched BE code calls a procedure, executes SQL, or maps a persisted result — analysis, diagnosis, feature, refactor, review, test, QA, and prompt alike.
+
+1. Load [`db-schema-context.md`](db-schema-context.md) and complete its lookup and SP → table trace before concluding anything about data, error codes, validation, or result shape.
+2. Owner DDL under `.agrimap-agent/knowledge/references/db-schema/**/*.sql` is `FACT`; product `sql/<GROUP_OR_DOMAIN>/` is next; `.agrimap-agent/knowledge/drafts/sql/` stays `tentative` and is never evidence.
+3. A procedure name in C# is a pointer, not a contract. Open the procedure, then the tables and `LUT_*` lookups it touches, before stating what it returns, validates, or throws.
+4. Missing schema is a named `UNKNOWN` and an owner question, never an inferred table, column, type, key, constraint, or message code, and never a reason to connect to a database.
+5. Record `db-schema: <loaded>/<expected>` in the receipt with the unresolved objects listed.
 
 ## Error/message reconciliation
 

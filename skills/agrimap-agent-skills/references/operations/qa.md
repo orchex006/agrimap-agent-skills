@@ -33,6 +33,7 @@
 - When target_kind is be-main or be-library: [backend-engineer.md](../backend-engineer.md) — backend QA fundamentals including request-value normalization
 - When the backend artifact contains C#: [patterns/csharp.md](../patterns/csharp.md) — project-wide C# QA baseline
 - When BE work reads or refactors cookie, header, query, form, JSON body, or device-ID resolution: [patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md](../patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md) — request-value QA behavior matrix for main/library code
+- When verification touches a stored procedure, SQL, or persisted data: [db-schema-context.md](../db-schema-context.md) — schema facts required to verify data and error behavior
 - When FE/BE URL, domain, redirect, or callback logic is under verification: [application-url-matrix.md](../application-url-matrix.md) — authoritative expected URL values
 
 Do not read the router `SKILL.md` during operation execution. If this generated entrypoint is missing or corrupt, stop with `PACKAGE_ENTRYPOINT_MISSING` and ask for package sync/reinstallation; never broaden into the router.

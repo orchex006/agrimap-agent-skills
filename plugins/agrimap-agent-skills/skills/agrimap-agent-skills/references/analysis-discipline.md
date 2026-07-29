@@ -40,6 +40,6 @@ Return:
 - smallest complete execution checklist;
 - verification and QA evidence required to close the task.
 
-For conclusions involving a database, require actual project code, the applicable local `db-schema`, and representative examples or data shapes. Never connect to a database to fill the gap. If any are absent, call the analysis `preliminary`, keep claims at `HYPOTHESIS`/`UNKNOWN`, and list the exact evidence needed for a conclusive rerun.
+For conclusions involving a database, require actual project code, the applicable local `db-schema`, and representative examples or data shapes. Look the schema up by object name under `.agrimap-agent/knowledge/references/db-schema/**/*.sql` and product `sql/`, following [db-schema-context.md](db-schema-context.md), before declaring evidence missing; a stored-procedure name alone is not the contract. Never connect to a database to fill the gap. If any are absent, call the analysis `preliminary`, keep claims at `HYPOTHESIS`/`UNKNOWN`, and list the exact evidence needed for a conclusive rerun.
 
 At `light`, keep the operation-specific analysis concise and write only current/recent memory plus daily audit evidence; never create `tasks/**`. At `standard` or `regulated`, write the canonical durable `.agrimap-agent/tasks/YYYY-MM/<task-id>/analysis.md` using [../assets/templates/analysis.md](../assets/templates/analysis.md), regardless of whether the operation is analyze, diagnose, or simulate.

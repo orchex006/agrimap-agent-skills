@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added `references/db-schema-context.md` as the owner of database evidence: owner DDL lookup by object name, the mandatory one-hop expansion from a stored procedure to the tables and `LUT_*` lookups it touches, and an ordered SP → table trace from a failing call to the exact condition, `THROW` code, and column that raised it.
+- Routed that gate as a conditional reference from `analyze`, `diagnose`, `simulate`, `plan`, `design`, `architect`, `review`, `be`, `sql`, `qa`, `prompt`, and `execute`, so stored-procedure work can no longer be diagnosed or reviewed from application code alone.
+- Added a `Database source of trust` gate to `backend-engineer.md`, made `analysis-discipline.md` name the db-schema path before declaring evidence missing, and gave `diagnose` an explicit instruction to open the procedure and its tables instead of stopping at the caller.
+- Re-baselined token-coverage budgets for the added mandatory context and added a `diagnose-be-stored-procedure-light` coverage scenario plus contract regression tests.
+
 ## 2.1.0 - 2026-07-24
 
 - Added a read-only stdio MCP server (`skills/agrimap-agent-skills/scripts/mcp-server.mjs`, declared in `gemini-extension.json` under `mcpServers.agrimap`) so Gemini can load bundled AgriMap contract and reference files that its workspace-sandboxed file tools cannot reach.

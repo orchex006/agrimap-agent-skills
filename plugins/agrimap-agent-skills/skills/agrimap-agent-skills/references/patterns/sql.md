@@ -20,7 +20,7 @@ Classify as `sql-table`, `sql-procedure`, or `sql-table-and-procedure`. Before p
 Golden AgriMap structure outranks neighboring project structure; mixed project conventions never redefine the shared standard.
 
 1. Owner-approved requirements and decisions for the current task.
-2. Active database schema, callers, result sets, relationships, and deployed behavior as compatibility facts. Preserve these unless the owner approves a behavior or data change.
+2. Active database schema, callers, result sets, relationships, and deployed behavior as compatibility facts, located through [db-schema-context.md](../db-schema-context.md). Preserve these unless the owner approves a behavior or data change.
 3. This normalized SQL contract plus matching `current` entries under `golden/sql/` for structure, naming, types, comments, and file organization.
 4. Matching `legacy-compatible` or `unverified` golden evidence for its declared structural scope, after applying the conflict matrix; never copy a documented defect or infer business/data semantics from it.
 5. Neighboring project structure only where the normalized contract and all applicable golden evidence are silent.

@@ -84,6 +84,7 @@ for (const required of [
   "skills/agrimap-agent-skills/references/application-url-matrix.md",
   "skills/agrimap-agent-skills/references/runtime-core.md",
   "skills/agrimap-agent-skills/references/backend-engineer.md",
+  "skills/agrimap-agent-skills/references/db-schema-context.md",
   "skills/agrimap-agent-skills/references/service-ownership.md",
   "skills/agrimap-agent-skills/references/evals/sql-scenarios.md",
   "skills/agrimap-agent-skills/scripts/log-events.mjs",

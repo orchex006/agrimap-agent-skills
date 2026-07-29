@@ -19,6 +19,7 @@ const promptPolicy = await read("skills/agrimap-agent-skills/references/prompt.m
 const delegationPolicy = await read("skills/agrimap-agent-skills/references/subagents-and-branches.md");
 const passiveCapabilities = await read("skills/agrimap-agent-skills/references/passive-capabilities.md");
 const lifecycle = await read("skills/agrimap-agent-skills/references/lifecycle-core.md");
+const dbSchemaContext = await read("skills/agrimap-agent-skills/references/db-schema-context.md");
 
 const modes = [
   "performance-preserve-behavior",
@@ -111,6 +112,34 @@ test("light analysis is CLI-readable and database conclusions fail soft on missi
   assert.match(contract, /preliminary/i);
   assert.match(analysis, /At `light`.*current\/recent memory plus daily audit evidence.*never create `tasks\/\*\*`/);
   assert.doesNotMatch(analysis, /A chat answer alone is not a closed deliverable/);
+});
+
+test("stored-procedure work forces owner DDL evidence and SP to table tracing", () => {
+  for (const marker of [
+    ".agrimap-agent/knowledge/references/db-schema/**/*.sql",
+    "sql/<GROUP_OR_DOMAIN>/procedure/<PROCEDURE>.sql",
+    ".agrimap-agent/knowledge/drafts/sql/",
+    "THROW <number>, '<error_code>'",
+    "db-schema: <loaded>/<expected>",
+  ]) assert.ok(dbSchemaContext.includes(marker), `db-schema context marker missing: ${marker}`);
+  assert.match(dbSchemaContext, /never infer a table, column, type, nullability, key, constraint, or message code/i);
+  assert.match(dbSchemaContext, /One hop past the procedure is mandatory/i);
+  assert.doesNotMatch(dbSchemaContext, /connect to a database to (fill|answer)[^.]*\bis allowed\b/i);
+
+  assert.match(backendDiscipline, /## Database source of trust/);
+  assert.match(backendDiscipline, /db-schema-context\.md/);
+  assert.match(backendDiscipline, /procedure name in C# is a pointer, not a contract/i);
+  assert.match(analysis, /knowledge\/references\/db-schema\/\*\*\/\*\.sql/);
+  assert.match(sqlPolicy, /db-schema-context\.md/);
+
+  for (const name of ["analyze", "diagnose", "simulate", "plan", "design", "architect", "review", "be", "sql", "qa", "prompt", "execute"]) {
+    const operation = operations.operations.find((item) => item.operation === name);
+    const routed = (operation.conditionalReferences || []).filter((item) => item.path === "db-schema-context.md");
+    assert.equal(routed.length, 1, `${name} must route db-schema-context.md exactly once`);
+    assert.ok(/stored procedure|table, view, or procedure/i.test(routed[0].when), `${name} db-schema condition must name stored-procedure or object scope`);
+  }
+  const diagnose = operations.operations.find((item) => item.operation === "diagnose");
+  assert.match(diagnose.instructions.join("\n"), /open that procedure and the tables it touches.*name the exact failing condition/is);
 });
 
 test("SQL writers install lazily only on command-not-found and fail closed when folder parsing stops", () => {

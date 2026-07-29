@@ -31,6 +31,7 @@
 - When target_kind is be-main or be-library: [backend-engineer.md](../backend-engineer.md) — backend review fundamentals
 - When the backend review contains C#: [patterns/csharp.md](../patterns/csharp.md) — project-wide C# review baseline
 - When the backend review touches cookie, header, query, form, JSON body, or device-ID resolution: [patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md](../patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md) — request-value correctness and precedence review
+- When the review touches a stored procedure, SQL, or persisted data: [db-schema-context.md](../db-schema-context.md) — schema evidence behind data and error-code findings
 - When the review touches FE/BE URL, domain, redirect, or callback logic: [application-url-matrix.md](../application-url-matrix.md) — authoritative expected URL values
 
 Do not read the router `SKILL.md` during operation execution. If this generated entrypoint is missing or corrupt, stop with `PACKAGE_ENTRYPOINT_MISSING` and ask for package sync/reinstallation; never broaden into the router.

@@ -47,5 +47,6 @@ Resolve exactly one action before target inspection or product writes. Safe defa
 ## Load only when the condition matches
 
 - When action=refactor: [refactor-modes.md](../refactor-modes.md) — exact refactor behavior and logic-change boundary
+- When any table, view, or procedure outside the edited file is read, joined, or written: [db-schema-context.md](../db-schema-context.md) — owner DDL evidence for every referenced object
 
 Do not read the router `SKILL.md` during operation execution. If this generated entrypoint is missing or corrupt, stop with `PACKAGE_ENTRYPOINT_MISSING` and ask for package sync/reinstallation; never broaden into the router.

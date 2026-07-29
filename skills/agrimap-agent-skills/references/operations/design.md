@@ -33,6 +33,7 @@
 - When the backend design includes cookie, header, query, form, JSON body, or device-ID resolution: [patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md](../patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md) — request-value resolution contract
 - When target=sql: [patterns/sql.md](../patterns/sql.md) — SQL schema, result, transaction, and deployment design discipline
 - When target=architecture: [service-ownership.md](../service-ownership.md) — canonical service/data ownership and architecture boundaries
+- When the design reads or writes data through a stored procedure, view, or table: [db-schema-context.md](../db-schema-context.md) — owner DDL evidence and SP → table tracing
 - When target is FE or BE and URL, domain, redirect, or callback logic is in scope: [application-url-matrix.md](../application-url-matrix.md) — authoritative environment-specific design values
 
 Do not read the router `SKILL.md` during operation execution. If this generated entrypoint is missing or corrupt, stop with `PACKAGE_ENTRYPOINT_MISSING` and ask for package sync/reinstallation; never broaden into the router.

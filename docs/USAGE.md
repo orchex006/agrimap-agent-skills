@@ -287,6 +287,8 @@ Passive capability คือ embedded supporting skill: ความรู้ �
 
 งาน FE/BE ที่เกี่ยวข้องกับการต่อ domain, redirect หรือ callback ต้องเลือก `application + mode + environment + url_kind` จาก `references/application-url-matrix.md` แบบ exact. ห้ามประกอบ URL ด้วย generic string concatenation เมื่อมีค่าใน matrix และค่าที่เป็น `—` ต้องตอบ unsupported ห้าม fallback ไป environment/application อื่น.
 
+งานใดก็ตามที่แตะข้อมูลผ่าน stored procedure, view, table หรือ inline SQL ต้องโหลด `references/db-schema-context.md` ก่อนสรุป. Agent ต้องหาไฟล์ DDL ตามชื่อ object จาก `.agrimap-agent/knowledge/references/db-schema/**/*.sql` (owner = `FACT`) แล้วต่อด้วย `sql/<GROUP_OR_DOMAIN>/` ในโปรเจกต์; `.agrimap-agent/knowledge/drafts/sql/` เป็น `tentative` ใช้เป็นหลักฐานไม่ได้. การเปิดเฉพาะ procedure ไม่พอ ต้องเปิด table และ `LUT_*` ที่ procedure นั้นอ่าน/เขียนต่ออีกหนึ่งชั้นเสมอ. เมื่อ API พัง 500 จาก SP ให้ไล่ตามลำดับ: error code ที่ BE map → `PO_*` output ของ repository → `THROW <number>, '<error_code>'` ใน procedure → section `Validate ...` ที่คุม throw นั้น → predicate/คอลัมน์/`DEL_FLAG` ที่เงื่อนไขใช้ → DDL ของ table ปลายทาง แล้วรายงาน `db-schema: <loaded>/<expected>` พร้อม object ที่หาไม่เจอ. Schema ที่ขาดคือ `UNKNOWN` ที่ต้องถาม owner ห้ามเดา table/column/type/constraint และห้ามต่อฐานข้อมูลจริง.
+
 ## 4. Larger text / ข้อความยาว
 
 วิธีแนะนำคือเก็บข้อความในไฟล์ Markdown ภายในโปรเจกต์แล้วชี้ path เพื่อรักษาหัวข้อ, line references และตรวจ coverage ได้. ตัวอย่าง fixture อยู่ที่ [LONG-REQUEST.md](../examples/inputs/LONG-REQUEST.md):

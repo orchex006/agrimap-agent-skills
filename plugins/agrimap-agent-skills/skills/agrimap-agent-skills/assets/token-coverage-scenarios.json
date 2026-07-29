@@ -7,16 +7,16 @@
   },
   "budgets": {
     "direct": {
-      "maxWords": 1250,
-      "maxEstimatedTokensHigh": 3400
+      "maxWords": 1320,
+      "maxEstimatedTokensHigh": 3560
     },
     "required": {
-      "maxWords": 6200,
-      "maxEstimatedTokensHigh": 16000
+      "maxWords": 6400,
+      "maxEstimatedTokensHigh": 16500
     },
     "scenario": {
-      "maxWords": 9000,
-      "maxEstimatedTokensHigh": 24000
+      "maxWords": 9200,
+      "maxEstimatedTokensHigh": 24600
     }
   },
   "scenarios": [
@@ -267,8 +267,8 @@
       ],
       "budgets": {
         "scenario": {
-          "maxWords": 8000,
-          "maxEstimatedTokensHigh": 21000
+          "maxWords": 8100,
+          "maxEstimatedTokensHigh": 21200
         }
       }
     },
@@ -306,6 +306,22 @@
         "backend-engineer.md",
         "patterns/csharp.md",
         "patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md"
+      ]
+    },
+    {
+      "id": "diagnose-be-stored-procedure-light",
+      "description": "Backend 500 raised by a stored procedure, traced to the failing condition through owner DDL",
+      "operation": "diagnose",
+      "depth": "light",
+      "activate": [
+        "backend-engineer.md",
+        "db-schema-context.md"
+      ],
+      "mustLoad": [
+        "analysis-discipline.md",
+        "input-and-scope.md",
+        "backend-engineer.md",
+        "db-schema-context.md"
       ]
     },
     {

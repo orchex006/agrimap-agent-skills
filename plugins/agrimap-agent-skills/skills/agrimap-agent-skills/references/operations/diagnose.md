@@ -17,7 +17,8 @@
 ## Execute this contract
 
 1. Reproduce or trace the symptom, separate causes from correlations, and test bounded hypotheses.
-2. Return the proven root cause, evidence, affected path, and proposed fix; do not apply the fix.
+2. When the failing path reaches a stored procedure or SQL, open that procedure and the tables it touches from the local db-schema references, and name the exact failing condition instead of stopping at the caller.
+3. Return the proven root cause, evidence, affected path, and proposed fix; do not apply the fix.
 
 ## Load now
 
@@ -31,6 +32,7 @@
 - When target_kind is be-main or be-library: [backend-engineer.md](../backend-engineer.md) — backend diagnosis fundamentals including request-value normalization
 - When the backend target contains C#: [patterns/csharp.md](../patterns/csharp.md) — project-wide C# behavior and style baseline
 - When the backend symptom may involve cookie, header, query, form, JSON body, or device-ID resolution: [patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md](../patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md) — expected extraction, normalization, and precedence
+- When the symptom may involve a stored procedure, SQL error, or persisted data: [db-schema-context.md](../db-schema-context.md) — SP → table tracing from error code to the failing condition
 - When FE/BE URL, domain, redirect, or callback logic may contribute to the symptom: [application-url-matrix.md](../application-url-matrix.md) — authoritative environment-specific URL behavior
 
 Do not read the router `SKILL.md` during operation execution. If this generated entrypoint is missing or corrupt, stop with `PACKAGE_ENTRYPOINT_MISSING` and ask for package sync/reinstallation; never broaden into the router.
