@@ -34,8 +34,9 @@ Resolve exactly one action before target inspection or product writes. Safe defa
 3. Edit/refactor requires an exact existing target; otherwise stop SQL_EDIT_TARGET_NOT_FOUND. Never switch to create; preserve the existing path unless migration is authorized.
 4. Create requires output_owner=product|owner-reference|knowledge-draft; otherwise stop SQL_OUTPUT_OWNER_REQUIRED. The absence of a directory is never create authority.
 5. Skill-package meta work never authorizes root product SQL; fixtures/examples require an explicit package-owned path.
-6. For create/edit, show the bounded slice, stay within light limits, load applicable schema/caller evidence, and route broader work to agm-prompt before any product write.
-7. For action=refactor, require exactly one mode before editing; when ambiguous, stop and show all five modes with one recommendation. Preserve result sets, transactions, side effects, error mapping, and deployment idempotency unless recorded authority and the selected mode explicitly allow a change, then format and validate every declared changed SQL path.
+6. Every created or edited stored procedure must declare CREATE OR ALTER PROCEDURE; replace standalone CREATE PROCEDURE, ALTER PROCEDURE, CREATE PROC, or ALTER PROC and validate the complete changed SQL path set.
+7. For create/edit, show the bounded slice, stay within light limits, load applicable schema/caller evidence, and route broader work to agm-prompt before any product write.
+8. For action=refactor, require exactly one mode before editing; when ambiguous, stop and show all five modes with one recommendation. Preserve result sets, transactions, side effects, error mapping, and deployment idempotency unless recorded authority and the selected mode explicitly allow a change, then format and validate every declared changed SQL path.
 
 ## Load now
 

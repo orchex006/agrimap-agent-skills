@@ -35,4 +35,6 @@ test("SQL eval catalog is reachable and encodes deterministic cross-provider gat
   assert.match(evals, /at least three times/i);
   assert.match(evals, /validate-sql-artifacts\.mjs/);
   assert.match(evals, /formatted 3\/3/);
+  assert.match(evals, /Every created or edited procedure declares `CREATE OR ALTER PROCEDURE`/);
+  assert.match(evals, /standalone `CREATE PROCEDURE`, `ALTER PROCEDURE`, `CREATE PROC`, and `ALTER PROC` fail validation/);
 });

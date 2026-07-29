@@ -111,6 +111,12 @@ export async function sqlContractPreflight({ targetKind, objectName, integrityVe
       "references/patterns/sql.md",
       "references/patterns/golden/sql/manifest.json",
     ],
+    requiredNormalizations: normalizedKind === "sql-procedure"
+      ? [{
+          code: "PROCEDURE_DECLARATION_CANONICAL",
+          requirement: "Render every created or edited procedure with CREATE OR ALTER PROCEDURE, even when selected raw-immutable evidence uses standalone CREATE PROCEDURE or ALTER PROCEDURE.",
+        }]
+      : [],
     selectedGolden: [
       { role: "structure", path: goldenPath(primary.fileName), status: primary.status, evidenceMode: primary.evidenceMode },
       { role: "messages", path: goldenPath(message.fileName), status: message.status, evidenceMode: message.evidenceMode },

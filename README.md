@@ -216,6 +216,7 @@ For new SQL artifacts, the normalized AgriMap golden contract outranks a project
 - Any target that reads or writes data through a stored procedure, view, table, or inline SQL loads [`db-schema-context.md`](skills/agrimap-agent-skills/references/db-schema-context.md) first. It resolves owner DDL by object name, requires the tables and `LUT_*` lookups one hop past each procedure, traces a failing call from mapped error code through `THROW` and its `Validate ...` gate down to the column the predicate assumes, and reports `db-schema: <loaded>/<expected>`. Missing schema is a named `UNKNOWN` for the owner, never an inferred table, column, type, key, or constraint, and never a reason to connect to a database.
 - Write guarded message inserts only to `sql/<GROUP_OR_DOMAIN>/messages.sql`, targeting `LUT_APP_MESSAGES (ID, DESCR)` with `IF NOT EXISTS`.
 - Lookup tables use an `INT` key and `NAME NVARCHAR(255)`; general tables use a `NUMERIC(38,0)` key.
+- Every created or edited stored procedure uses `CREATE OR ALTER PROCEDURE`; standalone `CREATE PROCEDURE`, `ALTER PROCEDURE`, `CREATE PROC`, and `ALTER PROC` fail validation. Raw-immutable golden evidence is not rewritten, so writers normalize its declaration when producing output.
 - Stored procedures use `_I`, `_U`, `_D`, `_Q`, or `_CHECK_Q` according to their operation.
 - Stored procedures mark validation gates, transaction boundaries, numbered business steps, and `PO_*` returns with canonical three-line section comments.
 

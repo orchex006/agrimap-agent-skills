@@ -20,19 +20,144 @@ function stripComments(sql) {
     .replace(/--[^\r\n]*/g, " ");
 }
 
+function maskCommentsAndStrings(sql) {
+  const output = [];
+  const bracketIdentifiers = [];
+  let state = "code";
+  let blockDepth = 0;
+
+  const masked = (value) => value === "\r" || value === "\n" ? value : " ";
+
+  for (let index = 0; index < sql.length; index += 1) {
+    const current = sql[index];
+    const next = sql[index + 1];
+
+    if (state === "line-comment") {
+      output.push(masked(current));
+      if (current === "\r" || current === "\n") state = "code";
+      continue;
+    }
+
+    if (state === "block-comment") {
+      if (current === "/" && next === "*") {
+        output.push(" ", " ");
+        blockDepth += 1;
+        index += 1;
+      } else if (current === "*" && next === "/") {
+        output.push(" ", " ");
+        blockDepth -= 1;
+        index += 1;
+        if (blockDepth === 0) state = "code";
+      } else {
+        output.push(masked(current));
+      }
+      continue;
+    }
+
+    if (state === "single-quote") {
+      output.push(masked(current));
+      if (current === "'" && next === "'") {
+        output.push(" ");
+        index += 1;
+      } else if (current === "'") {
+        state = "code";
+      }
+      continue;
+    }
+
+    if (state === "double-quote") {
+      output.push(masked(current));
+      if (current === '"' && next === '"') {
+        output.push(" ");
+        index += 1;
+      } else if (current === '"') {
+        state = "code";
+      }
+      continue;
+    }
+
+    if (current === "[") {
+      let cursor = index + 1;
+      let identifier = "";
+      let closed = false;
+      while (cursor < sql.length) {
+        if (sql[cursor] === "]" && sql[cursor + 1] === "]") {
+          identifier += "]";
+          cursor += 2;
+        } else if (sql[cursor] === "]") {
+          closed = true;
+          cursor += 1;
+          break;
+        } else {
+          identifier += sql[cursor];
+          cursor += 1;
+        }
+      }
+
+      if (!closed) {
+        for (let remainder = index; remainder < sql.length; remainder += 1) {
+          output.push(masked(sql[remainder]));
+        }
+        return { source: output.join(""), bracketIdentifiers };
+      }
+
+      const placeholder = `__AGM_BRACKET_${bracketIdentifiers.length}__`;
+      bracketIdentifiers.push(identifier);
+      output.push(`[${placeholder}]`);
+      index = cursor - 1;
+      continue;
+    }
+
+    if (current === "-") {
+      if (next === "-") {
+        output.push(" ", " ");
+        state = "line-comment";
+        index += 1;
+      } else {
+        output.push(current);
+      }
+    } else if (current === "/" && next === "*") {
+      output.push(" ", " ");
+      state = "block-comment";
+      blockDepth = 1;
+      index += 1;
+    } else if (current === "'") {
+      output.push("_");
+      state = "single-quote";
+    } else if (current === '"') {
+      output.push("_");
+      state = "double-quote";
+    } else {
+      output.push(current);
+    }
+  }
+
+  return { source: output.join(""), bracketIdentifiers };
+}
+
 function extractObjectDefinitions(sql, kind) {
-  const source = stripComments(sql);
+  const { source, bracketIdentifiers } = maskCommentsAndStrings(sql);
+  const decodeBracketIdentifier = (value) => {
+    const match = String(value || "").match(/^__AGM_BRACKET_(\d+)__$/);
+    return match ? bracketIdentifiers[Number(match[1])] : value;
+  };
   const prefix = kind === "table"
-    ? String.raw`\bCREATE\s+TABLE`
-    : String.raw`\b(?:CREATE\s+OR\s+ALTER|CREATE|ALTER)\s+PROCEDURE`;
+    ? String.raw`\b(?<declaration>CREATE)\s+(?<keyword>TABLE)\b`
+    : String.raw`\b(?<declaration>CREATE\s+OR\s+ALTER|CREATE|ALTER)\s+(?<keyword>PROCEDURE|PROC)\b`;
   const pattern = new RegExp(
-    `${prefix}\\s+(?:(?:\\[([^\\]]+)\\]|([A-Z_][A-Z0-9_]*))\\s*\\.\\s*)?(?:\\[([^\\]]+)\\]|([A-Z_][A-Z0-9_]*))`,
+    `${prefix}\\s+(?:(?:\\[(?<bracketSchema>[^\\]]+)\\]|(?<plainSchema>[A-Z_][A-Z0-9_]*))\\s*\\.\\s*)?(?:\\[(?<bracketName>[^\\]]+)\\]|(?<plainName>[A-Z_][A-Z0-9_]*))`,
     "gi",
   );
-  return [...source.matchAll(pattern)].map((match) => ({
-    schema: match[1] || match[2] ? String(match[1] || match[2]).toUpperCase() : null,
-    name: String(match[3] || match[4] || "").toUpperCase(),
-  }));
+  return [...source.matchAll(pattern)].map((match) => {
+    const schema = decodeBracketIdentifier(match.groups?.bracketSchema) || match.groups?.plainSchema;
+    const name = decodeBracketIdentifier(match.groups?.bracketName) || match.groups?.plainName;
+    return {
+      declaration: String(match.groups?.declaration || "").replace(/\s+/g, " ").toUpperCase(),
+      keyword: String(match.groups?.keyword || "").toUpperCase(),
+      schema: schema ? String(schema).toUpperCase() : null,
+      name: String(name || "").toUpperCase(),
+    };
+  });
 }
 
 function extractObjectNames(sql, kind) {
@@ -303,6 +428,17 @@ export async function validateSqlArtifacts({ cwd = process.cwd(), files = [] } =
     } else {
       if (procedures.length !== 1) issues.push({ file: relative, code: "PROCEDURE_OBJECT_COUNT_INVALID", message: `expected exactly one procedure definition; found ${procedures.length}` });
       if (tables.length) issues.push({ file: relative, code: "PROCEDURE_FILE_TABLE_FORBIDDEN", message: "procedure file must not define a table" });
+      if (
+        procedureDefinitions.length !== 1
+        || procedureDefinitions[0].declaration !== "CREATE OR ALTER"
+        || procedureDefinitions[0].keyword !== "PROCEDURE"
+      ) {
+        issues.push({
+          file: relative,
+          code: "PROCEDURE_DECLARATION_INVALID",
+          message: "created or edited procedures must use CREATE OR ALTER PROCEDURE; standalone CREATE/ALTER or PROC declarations are forbidden",
+        });
+      }
       if (procedures.length === 1 && procedures[0] !== fileStem) issues.push({ file: relative, code: "PROCEDURE_FILENAME_MISMATCH", message: `filename ${fileStem}.sql must match procedure ${procedures[0]}` });
       if (!procedureSuffix(fileStem)) issues.push({ file: relative, code: "PROCEDURE_SUFFIX_INVALID", message: "procedure must end with _I, _U, _D, _Q, or _CHECK_Q" });
       if (procedures.length === 1) {

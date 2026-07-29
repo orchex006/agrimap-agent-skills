@@ -11,6 +11,7 @@ const analysis = await read("skills/agrimap-agent-skills/references/analysis-dis
 const elicitation = await read("skills/agrimap-agent-skills/references/elicitation.md");
 const refactorModes = await read("skills/agrimap-agent-skills/references/refactor-modes.md");
 const sqlPolicy = await read("skills/agrimap-agent-skills/references/patterns/sql.md");
+const conflictResolution = await read("skills/agrimap-agent-skills/references/patterns/conflict-resolution.md");
 const backendPattern = await read("skills/agrimap-agent-skills/references/patterns/backend.md");
 const backendDiscipline = await read("skills/agrimap-agent-skills/references/backend-engineer.md");
 const frontendPattern = await read("skills/agrimap-agent-skills/references/patterns/frontend.md");
@@ -159,6 +160,14 @@ test("SQL writers install lazily only on command-not-found and fail closed when 
   assert.match(sqlPolicy, /Use OS temp for probes and always clean it/);
   assert.match(sqlPolicy, /never create `\.tmp-\*` under project\/workspace/);
   assert.doesNotMatch(sqlPolicy, /--ignore\s+parsing|finalize-sql-artifacts|sqlfluff fix|--force|\.sqlfluff/);
+});
+
+test("SQL stored procedure create and edit require one idempotent declaration", () => {
+  const operation = operations.operations.find((item) => item.operation === "sql");
+  assert.match(operation.instructions.join("\n"), /Every created or edited stored procedure must declare CREATE OR ALTER PROCEDURE/);
+  assert.match(sqlPolicy, /exactly one `CREATE OR ALTER PROCEDURE`/);
+  assert.match(sqlPolicy, /Standalone `CREATE PROCEDURE`, `ALTER PROCEDURE`, `CREATE PROC`, and `ALTER PROC` are violations/);
+  assert.match(conflictResolution, /every created or edited procedure output must normalize its declaration to `CREATE OR ALTER PROCEDURE`/);
 });
 
 test("unified SQL refactor loads the complete command owner and proves format coverage", () => {

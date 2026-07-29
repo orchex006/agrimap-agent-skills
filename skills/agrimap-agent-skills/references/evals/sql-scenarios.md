@@ -78,9 +78,10 @@ Run these scenarios on the same clean fixture with Claude, Codex, and Gemini aft
 - **[HARD]** Names end in `_I`, `_U`, `_D`, `_Q`, and `_CHECK_Q` respectively.
 - **[HARD]** Each uppercase filename stem equals the stored procedure object name.
 - **[HARD]** Every procedure file contains one procedure and preserves required `PI_*`/`PO_*` parameters.
+- **[HARD]** Every created or edited procedure declares `CREATE OR ALTER PROCEDURE`; standalone `CREATE PROCEDURE`, `ALTER PROCEDURE`, `CREATE PROC`, and `ALTER PROC` fail validation.
 - **[RUBRIC]** The golden procedure comment shell includes a runnable data-test section.
 
-**Anti-pattern:** Invent `_SAVE`, `_GET`, `_DEL`, or combine procedure variants in one file.
+**Anti-pattern:** Invent `_SAVE`, `_GET`, `_DEL`, combine procedure variants in one file, or copy a standalone procedure declaration from raw golden evidence.
 
 ## S6 — Procedure flow comments
 

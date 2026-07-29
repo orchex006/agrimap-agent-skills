@@ -57,7 +57,7 @@ sql/
 
 - Derive one full domain segment from feature/golden evidence (`UM`, `CONTENT`, `AUTH_FLOW`); never split `AUTH_FLOW` into `AUTH`.
 - Table: exactly one `CREATE TABLE` at `sql/<GROUP_OR_DOMAIN>/table/<TABLE>.sql`; uppercase stem equals object name.
-- Procedure: exactly one `CREATE|ALTER|CREATE OR ALTER PROCEDURE` at `sql/<GROUP_OR_DOMAIN>/procedure/<PROCEDURE>.sql`; uppercase stem equals object name.
+- Procedure: exactly one `CREATE OR ALTER PROCEDURE` at `sql/<GROUP_OR_DOMAIN>/procedure/<PROCEDURE>.sql`; uppercase stem equals object name.
 - Messages: idempotent inserts only at lowercase `sql/<GROUP_OR_DOMAIN>/messages.sql`.
 - Never bundle objects or put table/procedure definitions in `messages.sql`.
 - Knowledge drafts mirror this object-per-file layout and are labelled `tentative`; owner references preserve supplied evidence and never authorize generated implementation.
@@ -252,6 +252,14 @@ surrogate key `[ID]` ใช้ได้ **2 ชนิดเท่านั้น
 - ไฟล์ใหม่ไม่มี rerun guard / TRY-CATCH transaction / extended properties → violation
 
 ## Stored procedure work
+
+Every stored procedure created or edited by the Agent must use this idempotent declaration form:
+
+```sql
+CREATE OR ALTER PROCEDURE [agrimap_app].[<PROCEDURE_NAME>]
+```
+
+Standalone `CREATE PROCEDURE`, `ALTER PROCEDURE`, `CREATE PROC`, and `ALTER PROC` are violations for every created or edited procedure, including a logic-only edit of an existing file. Replace only the declaration when that is the requested change; preserve parameters, result sets, transactions, side effects, errors, and business logic unless the authorized scope says otherwise. Raw-immutable golden files may retain their captured declaration as evidence, but any output derived from them must normalize the declaration to `CREATE OR ALTER PROCEDURE`.
 
 Name every procedure by its behavior and keep the filename identical to the object name:
 

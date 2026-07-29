@@ -36,7 +36,7 @@ CREATE TABLE [agrimap_app].[UM_USER]
 );
 `);
   await put(root, "sql/UM/procedure/UM_USER_I.sql", `
-CREATE PROCEDURE [agrimap_app].[UM_USER_I]
+CREATE OR ALTER PROCEDURE [agrimap_app].[UM_USER_I]
 AS
 BEGIN
   -- =============================================
@@ -99,7 +99,7 @@ CREATE TABLE [agrimap_app].[CONTENT_ITEM]
 test("accepts canonical procedure comments for gates, steps, transactions, and PO_DATA", async (t) => {
   const root = await fixture(t);
   await put(root, "sql/DD/procedure/DD_DASHBOARD_WIDGET_I.sql", `
-CREATE PROCEDURE [agrimap_app].[DD_DASHBOARD_WIDGET_I]
+CREATE OR ALTER PROCEDURE [agrimap_app].[DD_DASHBOARD_WIDGET_I]
   @PI_SESSION_USER_ID NUMERIC(38, 0) = NULL,
   @PI_USER_ID NUMERIC(38, 0) = NULL,
   @PI_WIDGET_TYPE_ID INT = NULL,
@@ -161,7 +161,7 @@ END;
 test("procedure validation ignores cosmetic section-comment indentation", async (t) => {
   const root = await fixture(t);
   await put(root, "sql/UM/procedure/UM_USER_Q.sql", `
-CREATE PROCEDURE [agrimap_app].[UM_USER_Q]
+CREATE OR ALTER PROCEDURE [agrimap_app].[UM_USER_Q]
 AS
 BEGIN
 -- =============================================
@@ -174,10 +174,149 @@ END;
   assert.equal(result.ok, true, JSON.stringify(result.issues));
 });
 
+test("rejects every noncanonical PROCEDURE or PROC declaration despite adversarial literals", async (t) => {
+  const root = await fixture(t);
+  const cases = [
+    ["UM_USER_Q", "CREATE PROCEDURE"],
+    ["UM_USER_D", "ALTER PROCEDURE"],
+    ["UM_USER_I", "CREATE PROC"],
+    ["UM_USER_U", "ALTER PROC"],
+    ["UM_USER_CHECK_Q", "CREATE OR ALTER PROC"],
+  ];
+
+  for (const [objectName, declaration] of cases) {
+    await put(root, `sql/UM/procedure/${objectName}.sql`, `
+${declaration} [agrimap_app].[${objectName}]
+AS
+BEGIN
+  -- =============================================
+  -- Step 1: Exercise declaration parser
+  -- =============================================
+  SELECT N'-- declaration guidance'
+    + N'CREATE OR ALTER PROCEDURE [agrimap_app].[${objectName}]';
+END;
+`);
+  }
+
+  const result = await validateSqlArtifacts({
+    cwd: root,
+    files: cases.map(([objectName]) => `sql/UM/procedure/${objectName}.sql`),
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.issues.filter((issue) => issue.code === "PROCEDURE_DECLARATION_INVALID").length, cases.length);
+});
+
+test("ignores procedure-like text inside adversarial SQL strings and comments", async (t) => {
+  const root = await fixture(t);
+  await put(root, "sql/UM/procedure/UM_USER_Q.sql", `
+CREATE OR ALTER PROCEDURE [agrimap_app].[UM_USER_Q]
+AS
+BEGIN
+  -- =============================================
+  -- Step 1: Return declaration guidance
+  -- =============================================
+  SELECT N'-- declaration guidance'
+    + N'CREATE OR ALTER PROCEDURE [agrimap_app].[FAKE_Q]';
+  SELECT N'escaped quote: ''CREATE PROC [agrimap_app].[FAKE_I]''';
+  SELECT "ALTER PROCEDURE [agrimap_app].[FAKE_U]";
+  SELECT [guidance -- ]] CREATE OR ALTER PROCEDURE [agrimap_app].[FAKE_Q];
+  /* outer comment
+     /* nested CREATE PROCEDURE [agrimap_app].[FAKE_D] */
+     CREATE OR ALTER PROCEDURE [agrimap_app].[FAKE_CHECK_Q]
+  */
+END;
+`);
+
+  const result = await validateSqlArtifacts({ cwd: root, files: ["sql/UM/procedure/UM_USER_Q.sql"] });
+  assert.equal(result.ok, true, JSON.stringify(result.issues));
+});
+
+test("rejects declarations synthesized from bracketed identifier contents", async (t) => {
+  const root = await fixture(t);
+  await put(root, "sql/UM/procedure/UM_USER_Q.sql", `
+-- =============================================
+-- Step 1: Return parser guidance
+-- =============================================
+SELECT [guidance -- ]] CREATE OR ALTER PROCEDURE [agrimap_app].[UM_USER_Q];
+`);
+  await put(root, "sql/UM/procedure/UM_USER_U.sql", `
+-- =============================================
+-- Step 1: Return parser guidance
+-- =============================================
+SELECT [unterminated CREATE OR ALTER PROCEDURE [agrimap_app].[UM_USER_U]
+`);
+
+  const result = await validateSqlArtifacts({
+    cwd: root,
+    files: ["sql/UM/procedure/UM_USER_Q.sql", "sql/UM/procedure/UM_USER_U.sql"],
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.issues.filter((issue) => issue.code === "PROCEDURE_DECLARATION_INVALID").length, 2);
+  assert.equal(result.issues.filter((issue) => issue.code === "PROCEDURE_OBJECT_COUNT_INVALID").length, 2);
+});
+
+test("does not synthesize declarations across quoted non-code regions", async (t) => {
+  const root = await fixture(t);
+  const cases = [
+    ["UM_USER_Q", "CREATE 'ignored' OR ALTER PROCEDURE"],
+    ["UM_USER_U", "CREATE OR 'ignored' ALTER PROCEDURE"],
+    ["UM_USER_D", 'CREATE OR ALTER "ignored" PROCEDURE'],
+  ];
+
+  for (const [objectName, declaration] of cases) {
+    await put(root, `sql/UM/procedure/${objectName}.sql`, `
+-- =============================================
+-- Step 1: Return parser guidance
+-- =============================================
+${declaration} [agrimap_app].[${objectName}]
+`);
+  }
+
+  const result = await validateSqlArtifacts({
+    cwd: root,
+    files: cases.map(([objectName]) => `sql/UM/procedure/${objectName}.sql`),
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.issues.filter((issue) => issue.code === "PROCEDURE_DECLARATION_INVALID").length, cases.length);
+});
+
+test("keeps shared table and message object discovery stable with adversarial literals", async (t) => {
+  const root = await fixture(t);
+  await put(root, "sql/UM/table/UM_USER.sql", `
+CREATE TABLE [agrimap_app].[UM_USER]
+(
+  [ID] NUMERIC(38, 0) NOT NULL,
+  ${auditColumns},
+  CONSTRAINT [PK_UM_USER] PRIMARY KEY ([ID])
+);
+SELECT N'-- object guidance'
+  + N'CREATE TABLE [agrimap_app].[FAKE_TABLE]';
+SELECT [guidance -- ]] CREATE TABLE [agrimap_app].[FAKE_TABLE];
+`);
+  await put(root, "sql/UM/messages.sql", `
+IF NOT EXISTS
+(
+  SELECT 1 FROM [agrimap_app].[LUT_APP_MESSAGES]
+  WHERE [ID] = 'parser_guidance'
+)
+BEGIN
+  INSERT INTO [agrimap_app].[LUT_APP_MESSAGES] ([ID], [DESCR])
+  VALUES ('parser_guidance', N'-- object guidance' + N'CREATE PROC [agrimap_app].[FAKE_I]');
+END;
+GO
+`);
+
+  const result = await validateSqlArtifacts({
+    cwd: root,
+    files: ["sql/UM/table/UM_USER.sql", "sql/UM/messages.sql"],
+  });
+  assert.equal(result.ok, true, JSON.stringify(result.issues));
+});
+
 test("rejects actor and target user parameters with non-canonical types", async (t) => {
   const root = await fixture(t);
   await put(root, "sql/UM/procedure/UM_USER_Q.sql", `
-CREATE PROCEDURE [agrimap_app].[UM_USER_Q]
+CREATE OR ALTER PROCEDURE [agrimap_app].[UM_USER_Q]
   @PI_SESSION_USER_ID INT = NULL,
   @PI_USER_ID BIGINT = NULL
 AS
@@ -197,7 +336,7 @@ END;
 test("rejects procedures whose control-flow gates have missing or vague comments", async (t) => {
   const root = await fixture(t);
   await put(root, "sql/DD/procedure/DD_DASHBOARD_WIDGET_I.sql", `
-CREATE PROCEDURE [agrimap_app].[DD_DASHBOARD_WIDGET_I]
+CREATE OR ALTER PROCEDURE [agrimap_app].[DD_DASHBOARD_WIDGET_I]
   @PI_WIDGET_TYPE_ID INT = NULL,
   @PO_DATA NUMERIC(38, 0) = NULL OUTPUT
 AS
@@ -244,7 +383,7 @@ CREATE TABLE [agrimap_app].[AUTH_FLOW] ([ID] NUMERIC(38, 0));
 CREATE TABLE [agrimap_app].[AUTH_FLOW_TRANSACTION] ([ID] NUMERIC(38, 0));
 `);
   await put(root, "sql/AUTH_FLOW/procedure/AUTH_FLOW_SAVE.sql", `
-CREATE PROCEDURE [agrimap_app].[AUTH_FLOW_SAVE] AS SELECT 1;
+CREATE OR ALTER PROCEDURE [agrimap_app].[AUTH_FLOW_SAVE] AS SELECT 1;
 `);
   await put(root, "sql/AUTH_FLOW/messages.sql", `
 INSERT INTO [agrimap_app].[LUT_APP_MESSAGES] ([ID], [DESCR])
@@ -294,7 +433,7 @@ CREATE TABLE [agrimap_app].[UM_USER]
 test("rejects dbo and unqualified schemas for created SQL objects", async (t) => {
   const root = await fixture(t);
   await put(root, "sql/UM/procedure/UM_USER_Q.sql", `
-CREATE PROCEDURE [dbo].[UM_USER_Q]
+CREATE OR ALTER PROCEDURE [dbo].[UM_USER_Q]
 AS
 BEGIN
   -- =============================================
@@ -304,7 +443,7 @@ BEGIN
 END;
 `);
   await put(root, "sql/UM/procedure/UM_USER_CHECK_Q.sql", `
-CREATE PROCEDURE [UM_USER_CHECK_Q]
+CREATE OR ALTER PROCEDURE [UM_USER_CHECK_Q]
 AS
 BEGIN
   -- =============================================

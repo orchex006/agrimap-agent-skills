@@ -9,6 +9,10 @@ test("selects an exact procedure golden and the executable message insert templa
   const result = await sqlContractPreflight({ targetKind: "sql-procedure", objectName: "UM_USER_I" });
   assert.equal(result.ok, true, JSON.stringify(result.issues));
   assert.equal(result.gate, "SQL_CONTRACT_READY");
+  assert.deepEqual(result.requiredNormalizations, [{
+    code: "PROCEDURE_DECLARATION_CANONICAL",
+    requirement: "Render every created or edited procedure with CREATE OR ALTER PROCEDURE, even when selected raw-immutable evidence uses standalone CREATE PROCEDURE or ALTER PROCEDURE.",
+  }]);
   assert.equal(result.selectedGolden[0].path, "references/patterns/golden/sql/UM_USER_I.sql");
   assert.equal(result.selectedGolden[1].path, "references/patterns/golden/sql/LUT_APP_MESSAGES.example.sql");
   const template = await readFile(path.join(projectRoot, "skills", "agrimap-agent-skills", result.selectedGolden[1].path), "utf8");
@@ -21,6 +25,8 @@ test("selects current lookup and query structures for new objects", async () => 
   const query = await sqlContractPreflight({ targetKind: "sql-procedure", objectName: "ORDER_ITEM_Q" });
   assert.equal(lookup.ok, true, JSON.stringify(lookup.issues));
   assert.equal(query.ok, true, JSON.stringify(query.issues));
+  assert.deepEqual(lookup.requiredNormalizations, []);
+  assert.equal(query.requiredNormalizations[0].code, "PROCEDURE_DECLARATION_CANONICAL");
   assert.equal(lookup.selectedGolden[0].path, "references/patterns/golden/sql/LUT_AUTH_TYPE.sql");
   assert.match(query.selectedGolden[0].path, /_Q\.sql$/);
 });
