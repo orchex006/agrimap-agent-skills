@@ -1,0 +1,42 @@
+{
+  "version": "3.0.1",
+  "source": "Owner-supplied canonical Changelog Release Deployment contract submitted 2026-09-08; AGENTS body preserved in full",
+  "files": [
+    {
+      "source": "AGENTS.md",
+      "target": "AGENTS.md",
+      "mode": "copy",
+      "sha256": "50adc6c7769bda91247f0c8a0abc4cab97c7f5a548fa77758852ae5d783c36d7"
+    },
+    {
+      "source": "CLAUDE.md",
+      "target": "CLAUDE.md",
+      "mode": "copy",
+      "sha256": "4d12d27b6367f0f7afeaac6d3b7811de2977ada63e4e3a758d6eded4f355c4df"
+    },
+    {
+      "source": "CURSOR.md",
+      "target": "CURSOR.md",
+      "mode": "copy",
+      "sha256": "a82ac49684ec6b323436e50f8dcbb1d01b1856935b3aaa5bd9f6442852de246a"
+    },
+    {
+      "source": "deployment.md",
+      "target": "README.md",
+      "mode": "section",
+      "sha256": "ffea144edff7d676b77b1248c5ff38fa7f34b2cd29f5ded7ca93aca1cd9e4a0d"
+    },
+    {
+      "source": "GEMINI.md",
+      "target": "GEMINI.md",
+      "mode": "copy",
+      "sha256": "f89dc812bca60877bd6716f0eac151ac6c1fb41009a465bed050cfe8adfe7254"
+    },
+    {
+      "source": "release-notes/README.md",
+      "target": "release-notes/README.md",
+      "mode": "copy",
+      "sha256": "5fcb9257d97f0a9f8f8af7b6d3694b79242679ce9064e215cc3de6bf97b4e0a5"
+    }
+  ]
+}

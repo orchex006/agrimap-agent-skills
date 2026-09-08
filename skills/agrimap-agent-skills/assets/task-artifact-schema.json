@@ -1,9 +1,19 @@
 {
   "schemaVersion": 5,
   "description": "Canonical phase ownership, scaffold, and completion contract for AgriMap task artifacts.",
-  "workflowDepths": ["light", "standard", "regulated"],
-  "artifactlessDepths": ["light"],
-  "phaseOrder": ["contract", "verification", "closure"],
+  "workflowDepths": [
+    "light",
+    "standard",
+    "regulated"
+  ],
+  "artifactlessDepths": [
+    "light"
+  ],
+  "phaseOrder": [
+    "contract",
+    "verification",
+    "closure"
+  ],
   "scaffoldOrder": [
     "brief.md",
     "checklists.md"
@@ -16,24 +26,80 @@
       "writer": "the leader starting a standard/regulated execution; agm-prompt is artifactless",
       "scaffoldAtStart": true,
       "requiredForCompletion": true,
-      "requiredForDepths": ["standard", "regulated"],
+      "requiredForDepths": [
+        "standard",
+        "regulated"
+      ],
       "requiredFields": [
-        { "label": "Task ID" },
-        { "label": "Requested by" },
-        { "label": "Identity source", "enum": ["manual-confirmed", "git-config-confirmed", "legacy-migrated"] },
-        { "label": "Requester authority", "enum": ["owner", "delegated", "requester-only", "unknown"] },
-        { "label": "Decision owner" },
-        { "label": "Authority evidence" },
-        { "label": "Model label" },
-        { "label": "Actual model" },
-        { "label": "Role" },
-        { "label": "Agent" },
-        { "label": "Provider", "enum": ["codex", "claude", "gemini"] },
-        { "label": "Operation" },
-        { "label": "Workflow depth", "enum": ["light", "standard", "regulated"] },
-        { "label": "Objective" },
-        { "label": "Scope" },
-        { "label": "Non-goals" }
+        {
+          "label": "Task ID"
+        },
+        {
+          "label": "Requested by"
+        },
+        {
+          "label": "Identity source",
+          "enum": [
+            "manual-confirmed",
+            "git-config-confirmed",
+            "legacy-migrated"
+          ]
+        },
+        {
+          "label": "Requester authority",
+          "enum": [
+            "owner",
+            "delegated",
+            "requester-only",
+            "unknown"
+          ]
+        },
+        {
+          "label": "Decision owner"
+        },
+        {
+          "label": "Authority evidence"
+        },
+        {
+          "label": "Model label"
+        },
+        {
+          "label": "Actual model"
+        },
+        {
+          "label": "Role"
+        },
+        {
+          "label": "Agent"
+        },
+        {
+          "label": "Provider",
+          "enum": [
+            "codex",
+            "claude",
+            "gemini"
+          ]
+        },
+        {
+          "label": "Operation"
+        },
+        {
+          "label": "Workflow depth",
+          "enum": [
+            "light",
+            "standard",
+            "regulated"
+          ]
+        },
+        {
+          "label": "Objective"
+        },
+        {
+          "label": "Scope"
+        },
+        {
+          "label": "Non-goals"
+        }
       ],
       "requiredSections": [
         "File and logical-contract ownership",
@@ -50,7 +116,10 @@
       "writer": "leader or executor after target inspection and before implementation completion",
       "scaffoldAtStart": false,
       "requiredForCompletion": true,
-      "requiredForDepths": ["standard", "regulated"],
+      "requiredForDepths": [
+        "standard",
+        "regulated"
+      ],
       "requiredSections": [
         "Current State",
         "Findings",
@@ -64,7 +133,10 @@
       "writer": "the tracked execution leader initializes acceptance items; executor and leader update status",
       "scaffoldAtStart": true,
       "requiredForCompletion": true,
-      "requiredForDepths": ["standard", "regulated"],
+      "requiredForDepths": [
+        "standard",
+        "regulated"
+      ],
       "kind": "checklist",
       "minimumItems": 1,
       "requireAllChecked": true
@@ -76,33 +148,109 @@
       "writer": "agm-qa after implementation evidence exists",
       "scaffoldAtStart": false,
       "requiredForCompletion": true,
-      "requiredForDepths": ["standard", "regulated"],
+      "requiredForDepths": [
+        "standard",
+        "regulated"
+      ],
       "requiredFields": [
-        { "label": "Status", "enum": ["passed", "failed", "blocked", "not-applicable"] },
-        { "label": "QA mode", "enum": ["not-applicable", "light", "full"] },
-        { "label": "QA mode reason" },
-        { "label": "Coverage key" },
-        { "label": "Light sequence", "enum": ["0", "1", "2"] },
-        { "label": "Patterns" },
-        { "label": "Requested by" },
-        { "label": "Decision owner" },
-        { "label": "QA model label" },
-        { "label": "QA actual model" },
-        { "label": "QA role", "const": "qa" },
-        { "label": "QA agent" },
-        { "label": "QA provider", "enum": ["codex", "claude", "gemini"] },
-        { "label": "Product artifacts modified", "const": "false" },
-        { "label": "Workflow artifacts written" },
-        { "label": "Implementation model label" },
-        { "label": "Implementation actual model" },
-        { "label": "Implementation role" },
-        { "label": "Implementation agent" },
-        { "label": "Implementation provider", "enum": ["codex", "claude", "gemini"] }
+        {
+          "label": "Status",
+          "enum": [
+            "passed",
+            "failed",
+            "blocked",
+            "not-applicable"
+          ]
+        },
+        {
+          "label": "QA mode",
+          "enum": [
+            "not-applicable",
+            "light",
+            "full"
+          ]
+        },
+        {
+          "label": "QA mode reason"
+        },
+        {
+          "label": "Coverage key"
+        },
+        {
+          "label": "Light sequence",
+          "enum": [
+            "0",
+            "1",
+            "2"
+          ]
+        },
+        {
+          "label": "Patterns"
+        },
+        {
+          "label": "Requested by"
+        },
+        {
+          "label": "Decision owner"
+        },
+        {
+          "label": "QA model label"
+        },
+        {
+          "label": "QA actual model"
+        },
+        {
+          "label": "QA role",
+          "const": "qa"
+        },
+        {
+          "label": "QA agent"
+        },
+        {
+          "label": "QA provider",
+          "enum": [
+            "codex",
+            "claude",
+            "gemini"
+          ]
+        },
+        {
+          "label": "Product artifacts modified",
+          "const": "false"
+        },
+        {
+          "label": "Workflow artifacts written"
+        },
+        {
+          "label": "Implementation model label"
+        },
+        {
+          "label": "Implementation actual model"
+        },
+        {
+          "label": "Implementation role"
+        },
+        {
+          "label": "Implementation agent"
+        },
+        {
+          "label": "Implementation provider",
+          "enum": [
+            "codex",
+            "claude",
+            "gemini"
+          ]
+        }
       ],
       "requiredSectionsByField": {
         "Status": {
-          "passed": ["Requirement evidence", "Commands and observed results"],
-          "not-applicable": ["Limitations"]
+          "passed": [
+            "Requirement evidence",
+            "Commands and observed results"
+          ],
+          "not-applicable": [
+            "Limitations"
+          ]
         }
       }
     },
@@ -113,20 +261,74 @@
       "writer": "leader after implementation, verification, and applicable QA",
       "scaffoldAtStart": false,
       "requiredForCompletion": true,
-      "requiredForDepths": ["standard", "regulated"],
+      "requiredForDepths": [
+        "standard",
+        "regulated"
+      ],
       "requiredFields": [
-        { "label": "Outcome", "const": "completed" },
-        { "label": "Requested by" },
-        { "label": "Decision owner" },
-        { "label": "Leader model label" },
-        { "label": "Leader actual model" },
-        { "label": "Leader role", "const": "leader" },
-        { "label": "Leader agent" },
-        { "label": "Leader provider", "enum": ["codex", "claude", "gemini"] },
-        { "label": "Workflow depth", "enum": ["light", "standard", "regulated"] },
-        { "label": "QA status", "enum": ["passed", "not-applicable"] },
-        { "label": "QA mode", "enum": ["not-applicable", "light", "full"] },
-        { "label": "Delivery boundary", "enum": ["task", "commit", "publish", "release"] }
+        {
+          "label": "Outcome",
+          "const": "completed"
+        },
+        {
+          "label": "Requested by"
+        },
+        {
+          "label": "Decision owner"
+        },
+        {
+          "label": "Leader model label"
+        },
+        {
+          "label": "Leader actual model"
+        },
+        {
+          "label": "Leader role",
+          "const": "leader"
+        },
+        {
+          "label": "Leader agent"
+        },
+        {
+          "label": "Leader provider",
+          "enum": [
+            "codex",
+            "claude",
+            "gemini"
+          ]
+        },
+        {
+          "label": "Workflow depth",
+          "enum": [
+            "light",
+            "standard",
+            "regulated"
+          ]
+        },
+        {
+          "label": "QA status",
+          "enum": [
+            "passed",
+            "not-applicable"
+          ]
+        },
+        {
+          "label": "QA mode",
+          "enum": [
+            "not-applicable",
+            "light",
+            "full"
+          ]
+        },
+        {
+          "label": "Delivery boundary",
+          "enum": [
+            "task",
+            "commit",
+            "publish",
+            "release"
+          ]
+        }
       ],
       "requiredSections": [
         "Authorized decisions",
@@ -138,7 +340,10 @@
     }
   },
   "crossArtifactRules": {
-    "acceptedQaStatuses": ["passed", "not-applicable"],
+    "acceptedQaStatuses": [
+      "passed",
+      "not-applicable"
+    ],
     "taskIdField": "Task ID",
     "requesterField": "Requested by",
     "decisionOwnerField": "Decision owner",
@@ -151,17 +356,34 @@
     "resultQaStatusField": "QA status",
     "resultQaModeField": "QA mode",
     "deliveryBoundaryField": "Delivery boundary",
-    "fullQaBoundaries": ["commit", "publish", "release"],
-    "qaIdentityFields": ["QA actual model", "QA agent", "QA provider"],
-    "implementationIdentityFields": ["Implementation actual model", "Implementation agent", "Implementation provider"],
+    "fullQaBoundaries": [
+      "commit",
+      "publish",
+      "release"
+    ],
+    "qaIdentityFields": [
+      "QA actual model",
+      "QA agent",
+      "QA provider"
+    ],
+    "implementationIdentityFields": [
+      "Implementation actual model",
+      "Implementation agent",
+      "Implementation provider"
+    ],
     "lightSequenceField": "Light sequence",
     "fullLightSequence": "0",
-    "lightAllowedSequences": ["1", "2"]
+    "lightAllowedSequences": [
+      "1",
+      "2"
+    ]
   },
   "qaFullTriggers": [
     "commit, publish, or release boundary",
     "same-task full re-QA after a qa-finding",
     "third consecutive passed-light tracked closure for the same coverage key",
     "explicit requester request for qa_mode=full or highest verification"
-  ]
+  ],
+  "runtimeArtifactVersion": 3,
+  "legacyArtifactVersion": 2
 }

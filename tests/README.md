@@ -1,28 +1,10 @@
-# Test structure
+# Tests for 3.0.0
 
-The test suite is grouped by behavior rather than by implementation script:
+- `npm test`: package/mirror/bootstrap/golden validation and the current behavioral suite, once.
+- `npm run test:docs`: user-guide links/anchors, valid example aliases/actions, exact distributed copies and negative validation fixtures; no installation or release commands executed.
+- `npm run test:unit`: v3 runtime fixtures plus retained parser, SQL file-contract, golden-integrity, token and MCP tests.
+- `npm run test:workspace`, `test:usage`, `test:integration`: compatibility command names for the same v3 fixture suite; do not run all three routinely.
+- `npm run audit:tokens:strict`: route coverage and context-budget audit.
+- `npm run test:legacy-v2`: retained historical v2 expectations, not a 3.0.0 release gate. They assert intentionally removed five-file/default-QA behavior; failures here are not a claim of v3 compatibility.
 
-```text
-tests/
-├── helpers/                         shared process and temporary-workspace harness
-├── unit/                            isolated parser/extractor/eval-contract behavior
-└── integration/
-    ├── package/                     published adapters, docs, and fixture mirrors
-    └── workspace/
-        ├── workspace.test.mjs       ordered end-to-end scenario
-        └── cases/                   one workspace concern per module
-```
-
-## Commands
-
-- `npm run test:unit`: isolated unit tests.
-- `npm run test:token-coverage`: deterministic token/read coverage unit tests.
-- `npm run audit:tokens`: report every operation baseline and curated scenario; add `-- --strict` behavior through `npm run audit:tokens:strict` for CI.
-- `npm run test:workspace`: workspace lifecycle, hooks, completion, history, and reuse integration.
-- `npm run test:usage`: published package/documentation integration.
-- `npm run test:integration`: all integration categories.
-- `npm test`: package validation, unit, integration, and golden verification.
-
-Workspace case modules intentionally share one temporary project because later cases verify durable history produced by earlier lifecycle cases. Their order is explicit in `workspace.test.mjs`; unit and package tests remain independent.
-
-Add new tests to the narrowest matching category. Create a new case module when a workspace concern does not fit an existing module; do not grow the runner into another monolith.
+Tests use isolated temporary workspaces, no live database, release publication or Jenkins pipelines. Script-level tests do not establish model-family performance; outcome/guided/bounded profiles need real task-family evaluations.

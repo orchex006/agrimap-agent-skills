@@ -18,7 +18,7 @@ Record each item with:
 
 ## Host mentions and free text
 
-Normalize host-native references (`@file`, attach, drag-drop) into manifest entries with the observed `kind` and `priority: required`. When it is unclear whether a mentioned file is the primary target or supporting context, or when free-text arguments carry no key, state the chosen interpretation in the activation receipt and proceed for product-read-only work; confirm first when acting on the wrong interpretation would edit product artifacts or change scope. Resolve every remaining parameter with [elicitation.md](elicitation.md); never guess a never-guess input.
+Interpret host-native references (`@file`, attach, drag-drop) by their observed role: target, required evidence or optional example. A separate input manifest needs an actual complex-input or handoff consumer; do not create one for a simple question. When a reference is ambiguous, state a safe interpretation and proceed read-only; clarify before writes if a wrong interpretation would materially change scope. Use [elicitation.md](elicitation.md) for consequential gaps, not to fill every optional parameter.
 
 ## Large text
 

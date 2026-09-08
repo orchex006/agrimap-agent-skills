@@ -5,61 +5,204 @@
       "id": "goal-rules",
       "reference": "goal-rules.md",
       "activation": "automatically applied throughout every mapped operation and action",
-      "operations": ["analyze", "architect", "be", "design", "diagnose", "fe", "sql", "review", "simulate", "execute", "plan", "qa", "prompt"],
-      "actions": ["*"],
+      "operations": [
+        "analyze",
+        "architect",
+        "be",
+        "diagnose",
+        "fe",
+        "sql",
+        "execute",
+        "plan",
+        "qa",
+        "prompt"
+      ],
+      "actions": [
+        "*"
+      ],
       "authorityEffect": "supports reasoning and execution through mandatory constraints without independently authorizing product writes",
       "grantsProductWrite": false,
-      "requiredInputs": ["objective", "scope", "logic impact", "acceptance evidence"],
-      "evidenceOutput": ["resolved boundary", "measurable completion", "material ambiguity stop when needed"],
+      "requiredInputs": [
+        "objective",
+        "scope",
+        "logic impact",
+        "acceptance evidence"
+      ],
+      "evidenceOutput": [
+        "resolved boundary",
+        "measurable completion",
+        "material ambiguity stop when needed"
+      ],
       "conflicts": "Higher-priority repository and requester constraints remain authoritative; this capability may narrow but never expand authority."
     },
     {
       "id": "refactor-guard",
       "reference": "refactor-modes.md",
       "activation": "when refactor intent is explicit or unambiguous",
-      "operations": ["fe", "be", "sql"],
-      "actions": ["refactor"],
+      "operations": [
+        "fe",
+        "be",
+        "sql"
+      ],
+      "actions": [
+        "refactor"
+      ],
       "authorityEffect": "supports the selected refactor action by requiring exactly one mode before editing; it does not select that action",
       "grantsProductWrite": false,
-      "requiredInputs": ["target domain", "refactor mode", "behavior to preserve", "allowed logic impact"],
-      "evidenceOutput": ["selected mode", "preservation boundary", "verification evidence"],
-      "conflicts": "An ambiguous mode stops before editing; strict-preserve-logic overrides convenience cleanup."
+      "requiredInputs": [
+        "target domain",
+        "refactor mode",
+        "behavior to preserve",
+        "allowed logic impact"
+      ],
+      "evidenceOutput": [
+        "selected mode",
+        "preservation boundary",
+        "verification evidence"
+      ],
+      "conflicts": "Infer safe preservation when clear; clarify only material behavior/scope differences."
     },
     {
       "id": "test-decision",
       "reference": "passive-capabilities.md#passive-febe-refactor-test-decision",
-      "activation": "automatically during FE/BE analyze, design, create, edit, refactor and relevant prompt planning",
-      "operations": ["fe", "be", "prompt"],
-      "actions": ["analyze", "design", "create", "edit", "refactor", "prompt"],
+      "activation": "Only for an actual executable change, explicit test request or concrete regression risk.",
+      "operations": [
+        "fe",
+        "be",
+        "prompt"
+      ],
+      "actions": [
+        "analyze",
+        "design",
+        "create",
+        "edit",
+        "refactor",
+        "prompt"
+      ],
       "authorityEffect": "supports the selected action by classifying test need without independently authorizing test writes",
       "grantsProductWrite": false,
-      "requiredInputs": ["behavior boundary", "risk", "existing harness evidence"],
-      "evidenceOutput": ["required|recommended|not_applicable", "reason", "proposed coverage"],
+      "requiredInputs": [
+        "behavior boundary",
+        "risk",
+        "existing harness evidence"
+      ],
+      "evidenceOutput": [
+        "required|recommended|not_applicable",
+        "reason",
+        "proposed coverage"
+      ],
       "conflicts": "A read-only operation may recommend but never create tests."
     },
     {
       "id": "design-discipline",
-      "reference": "passive-capabilities.md#design",
-      "activation": "automatically when design reasoning is needed inside an eligible operation",
-      "operations": ["analyze", "architect", "be", "design", "diagnose", "fe", "sql", "review", "simulate", "plan", "prompt"],
-      "actions": ["analyze", "design", "prompt"],
+      "reference": "recommendations.md",
+      "activation": "Proactively whenever current scoped work supports a useful recommendation or design decision; surface insufficient context visibly rather than guessing",
+      "operations": [
+        "analyze",
+        "diagnose",
+        "plan",
+        "architect",
+        "fe",
+        "be",
+        "sql",
+        "qa",
+        "prompt",
+        "execute"
+      ],
+      "actions": [
+        "*"
+      ],
       "authorityEffect": "supports reasoning inside the selected action without selecting the action or creating write intent",
       "grantsProductWrite": false,
-      "requiredInputs": ["current evidence", "actors or consumers", "acceptance boundary"],
-      "evidenceOutput": ["current-state facts", "proposed behavior", "unresolved owner decisions"],
-      "conflicts": "Proposed design never overrides repository facts or an unresolved decision-owner choice."
+      "requiredInputs": [
+        "available evidence, including explicit gaps",
+        "current objective and scope"
+      ],
+      "evidenceOutput": [
+        "recommendation or explicit insufficiency",
+        "facts separated from assumptions",
+        "missing information and material limitations",
+        "qualitative confidence with reason; conditional recommendation when supportable"
+      ],
+      "conflicts": "A recommendation is not implementation authority; no fabricated facts, arbitrary confidence percentages, separate command, or new lifecycle."
     },
     {
       "id": "sql-explain",
       "reference": "passive-capabilities.md#sql-explain",
       "activation": "explicit SQL explain intent or embedded explanation support needed during SQL analysis",
-      "operations": ["sql"],
-      "actions": ["analyze", "explain"],
+      "operations": [
+        "sql"
+      ],
+      "actions": [
+        "analyze",
+        "explain"
+      ],
       "authorityEffect": "product-read-only",
       "grantsProductWrite": false,
-      "requiredInputs": ["SQL text or pointed SQL object", "available schema and caller evidence"],
-      "evidenceOutput": ["FACT|INFERENCE|UNKNOWN explanation", "side effects", "risks"],
+      "requiredInputs": [
+        "SQL text or pointed SQL object",
+        "available schema and caller evidence"
+      ],
+      "evidenceOutput": [
+        "FACT|INFERENCE|UNKNOWN explanation",
+        "side effects",
+        "risks"
+      ],
       "conflicts": "A modification request routes to explicit action=edit or action=refactor; explain never edits or executes SQL."
+    },
+    {
+      "id": "sql-context-readonly",
+      "reference": "sql-context-readonly.md",
+      "activation": "Relevant schema, object or caller evidence is missing and a managed connected profile is available",
+      "operations": [
+        "sql",
+        "be",
+        "analyze",
+        "diagnose",
+        "qa",
+        "prompt",
+        "execute"
+      ],
+      "actions": [
+        "*"
+      ],
+      "authorityEffect": "Read-only managed context; never database mutation or execution of routines",
+      "grantsProductWrite": false,
+      "requiredInputs": [
+        "object or query scope",
+        "connected room profile",
+        "bounded result size and masking"
+      ],
+      "evidenceOutput": [
+        "sanitized context with provenance",
+        "unknowns and fallback"
+      ],
+      "conflicts": "User prohibition overrides all provider write capabilities; no metadata sync or database DDL/DML/EXEC."
+    },
+    {
+      "id": "release-knowledge",
+      "reference": "release-and-bootstrap.md",
+      "activation": "Explicit relevant bootstrap, branch, version or release work",
+      "operations": [
+        "fe",
+        "be",
+        "execute",
+        "prompt"
+      ],
+      "actions": [
+        "*"
+      ],
+      "authorityEffect": "Knowledge only; effects require current requester release or bootstrap scope",
+      "grantsProductWrite": false,
+      "requiredInputs": [
+        "target project",
+        "requested environment and effect"
+      ],
+      "evidenceOutput": [
+        "develop -> jenkins push Inhouse -> jenkins-release push Production",
+        "separate Git and pipeline evidence"
+      ],
+      "conflicts": "Quoted keywords never execute; bootstrap does not release or reset versions."
     }
   ]
 }

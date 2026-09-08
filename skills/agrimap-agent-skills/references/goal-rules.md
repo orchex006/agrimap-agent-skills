@@ -4,6 +4,8 @@
 
 ## GR-1 — Think Before Coding
 
+- Apply [recommendations.md](recommendations.md): proactively give supported recommendations; visibly identify missing information, assumptions, limitations and confidence. Unsupported material choices remain unresolved, not fabricated defaults.
+
 - Resolve material intent, scope, write boundary, behavior/logic impact, and measurable completion before the first product write.
 - Never invent material intent. Ask the requester when ambiguity could change logic, contract, data, target, files, authority, or acceptance.
 - Present a materially simpler equivalent approach before writing when one exists.

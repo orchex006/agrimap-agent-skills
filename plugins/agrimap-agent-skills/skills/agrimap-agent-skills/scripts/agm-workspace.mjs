@@ -25,6 +25,8 @@ import {
 } from "./identity.mjs";
 import { isLogEvent, logEventError, MILESTONE_TYPES, QA_FAILED_EVENT } from "./log-events.mjs";
 import { loadTaskArtifactSchema } from "./task-artifact-schema.mjs";
+import { selectWorkflow, instructionProfile } from './governance-policy.mjs';
+import { applyBootstrap } from './project-bootstrap.mjs';
 
 const AUDIT_SCHEMA_VERSION = 4;
 const SUPPORTED_AUDIT_SCHEMA_VERSIONS = new Set([1, 2, 3, AUDIT_SCHEMA_VERSION]);
@@ -255,6 +257,7 @@ async function reserveExecutionId(state, preferredId, timestamp, timeZone) {
 }
 
 function confirmationHours(value) {
+  if (!Number(value)) return 0;
   return Math.min(168, Math.max(1, Number(value) || DEFAULT_CONFIRMATION_HOURS));
 }
 
@@ -274,8 +277,15 @@ function defaultTaskId(operation, subject) {
   return `${now().replace(/[-:TZ.]/g, "").slice(0, 14)}-${taskSubjectSlug(subject) || operation || "task"}`;
 }
 
-async function ensureLayout(root) {
+async function ensureLayout(root, bootstrap = false) {
   const state = path.join(root, ".agrimap-agent");
+  // Runtime events must not initialize a project or populate unused directories.
+  await mkdir(state, { recursive: true });
+  if (!bootstrap) {
+    const ignore = path.join(state, '.gitignore');
+    if (!(await exists(ignore))) await writeFile(ignore, 'runtime/\ncache/\n', 'utf8');
+    return state;
+  }
   const directories = [
     "decisions",
     "knowledge",
@@ -288,9 +298,6 @@ async function ensureLayout(root) {
     "reports",
     "runtime/active",
     "runtime/sessions",
-    "tasks",
-    "tasks/complete",
-    "tasks/cancelled",
     "runtime/reservations",
   ];
   await Promise.all(directories.map((directory) => mkdir(path.join(state, directory), { recursive: true })));
@@ -315,7 +322,7 @@ async function ensureLayout(root) {
         auto: existingConfig.activation?.auto === true,
       },
       identity: {
-        mode: "per-session",
+        mode: "confirmed-user-workspace",
         runtimePath: ".agrimap-agent/runtime/sessions",
         confirmationHours: DEFAULT_CONFIRMATION_HOURS,
         gitRequesterSuggestion: true,
@@ -424,6 +431,9 @@ async function identify(state, args) {
     updatedAt: confirmedAt,
   };
   await writeJson(sessionIdentityPath(state, sessionId), identity);
+  const local = localAuditMetadata();
+  const userKey = safeSessionId(`${local.machine}-${local.osUser}`);
+  await writeJson(path.join(state, 'runtime', 'users', `${userKey}.json`), identity);
   return { ok: true, identity };
 }
 
@@ -432,7 +442,10 @@ async function sessionIdentity(state, sessionId, defaultProvider = "unknown") {
   try {
     return normalizeIdentity(await readJson(sessionIdentityPath(state, sessionId)), { defaultProvider });
   } catch {
-    return null;
+    const local = localAuditMetadata();
+    const userKey = safeSessionId(`${local.machine}-${local.osUser}`);
+    const remembered = await readJson(path.join(state, 'runtime', 'users', `${userKey}.json`)).catch(() => null);
+    return remembered ? normalizeIdentity({ ...remembered, sessionId }, { defaultProvider }) : null;
   }
 }
 
@@ -524,6 +537,9 @@ function normalizeAuditEvent(event = {}) {
       agent: event.agent,
       provider: event.provider,
       workflowDepth: event.workflow_depth,
+      artifactVersion: event.artifact_version,
+      verificationStatus: event.verification_status,
+      risk: event.risk,
       event: event.event,
       milestone: event.milestone,
       logType: event.log_type,
@@ -622,6 +638,9 @@ async function appendLog(state, event) {
     execution_id: trackableEvent.executionId || trackableEvent.taskId,
     task_id: trackableEvent.workflowDepth === "light" ? null : trackableEvent.taskId,
     workflow_depth: trackableEvent.workflowDepth,
+    ...(trackableEvent.artifactVersion ? {artifact_version:trackableEvent.artifactVersion} : {}),
+    ...(trackableEvent.verificationStatus ? {verification_status:trackableEvent.verificationStatus} : {}),
+    ...(trackableEvent.risk ? {risk:trackableEvent.risk} : {}),
     requester: trackableEvent.requestedBy,
     requester_id: trackableEvent.requesterId ?? null,
     identity_source: trackableEvent.identitySource,
@@ -673,7 +692,9 @@ async function appendLog(state, event) {
 }
 
 async function init(root, args) {
-  const state = await ensureLayout(root);
+  const bootstrap = args.bootstrap ? await applyBootstrap({ target: root, kind: args.kind }) : null;
+  if (bootstrap && !bootstrap.ok) return { ok: false, code: 'BOOTSTRAP_CONFLICT', entries: bootstrap.entries.map(({content,...entry}) => entry) };
+  const state = await ensureLayout(root, true);
   let identity = null;
   if (args.session && (args.requestedBy || args["requested-by"] || args.owner)) {
     const result = await identify(state, args);
@@ -689,15 +710,21 @@ async function init(root, args) {
     state,
     identity,
     needsRequester,
+    bootstrap: bootstrap ? { applied: true, version: bootstrap.version } : null,
     suggestedRequester: needsRequester ? gitRequesterSuggestion(root) : null,
   };
 }
 
 async function start(root, args) {
   const operation = String(args.operation || "task").trim().toLowerCase();
+  let selection;
+  try {
+    selection = selectWorkflow({ operation, action: args.action, tracking: Boolean(args.tracking), risk: args.risk, depth: args.depth || args['workflow-depth'], persist: Boolean(args.persist) });
+  } catch (error) { return { ok: false, code: error.message }; }
+  if (!selection.depth) return { ok: true, started: false, workflowDepth: null, reason: selection.reason };
   const state = await ensureLayout(root);
   const config = await workspaceConfig(state);
-  const workflowDepth = String(args.depth || args["workflow-depth"] || "regulated").trim().toLowerCase();
+  const workflowDepth = selection.depth;
   if (!TRACKED_WORKFLOW_DEPTHS.has(workflowDepth)) {
     return { ok: false, code: "INVALID_WORKFLOW_DEPTH", message: "--depth must be light, standard, or regulated when starting task state." };
   }
@@ -798,7 +825,7 @@ async function start(root, args) {
     },
     "checklists.md": { task_id: taskId },
   };
-  if (taskPath) {
+  if (taskPath && args['legacy-artifacts']) {
     for (const artifactName of taskArtifactSchema.scaffoldOrder || []) {
       const requiredForDepths = taskArtifactSchema.artifacts?.[artifactName]?.requiredForDepths || [];
       if (!requiredForDepths.includes(workflowDepth)) continue;
@@ -810,6 +837,11 @@ async function start(root, args) {
   }
 
   const active = {
+    artifactVersion: args['legacy-artifacts'] ? 2 : 3,
+    depthReason: selection.reason,
+    risk: args.risk || '',
+    instructionProfile: instructionProfile({ taskProfile: args.profile }).profile,
+    reportRequested: Boolean(args.report),
     executionId,
     runId: executionId,
     taskId,
@@ -833,6 +865,9 @@ async function start(root, args) {
     recentMemoryPath: `memory/recent/${reservation.period}/${executionId}-${slug}.md`,
   };
   await writeJson(activePath, active);
+  if (taskPath && active.artifactVersion === 3) {
+    await writeFile(path.join(taskPath, 'task.md'), `# Task ${executionId}\n\n- Objective: ${objective}\n- Requester: ${requestedBy}\n- Depth: ${workflowDepth}\n- Reason: ${selection.reason}\n- Status: active\n\n## Scope\n${scaffoldReplacements['brief.md'].scope}\n\n## Acceptance\n- [ ] Authorized objective verified with proportional evidence.\n\n## Progress and evidence\n\n## Result\nPending.\n`, 'utf8');
+  }
   const memoryPaths = activeMemoryPaths(state, active);
   await mkdir(path.dirname(memoryPaths.current), { recursive: true });
   await mkdir(path.dirname(memoryPaths.recent), { recursive: true });
@@ -855,6 +890,8 @@ async function start(root, args) {
     ...execution,
     workflowDepth,
     event: "created",
+    artifactVersion: active.artifactVersion,
+    risk: active.risk,
     summary: `Started ${operation} task.`,
     request: objective,
     reason: objective,
@@ -866,7 +903,7 @@ async function start(root, args) {
   return {
     ok: true,
     activeTask: active,
-    commitReminder: dirty ? "Git has uncommitted changes; confirm the previous task boundary with the requester." : null,
+    commitReminder: dirty ? "Preserve unrelated working-copy changes; current scope remains authoritative." : null,
   };
 }
 
@@ -923,16 +960,20 @@ async function checkpoint(root, args) {
   if (activeMatch?.ambiguous) return activeTaskAmbiguityError(executionId, activeMatch.matches);
   if (!activeMatch?.active) return { ok: false, code: "ACTIVE_EXECUTION_NOT_FOUND", message: "No active execution matches this ID/session." };
   const active = activeMatch.active;
+  if (event === 'verified') {
+    const status = args.status || 'passed';
+    if (!['passed','failed','blocked','not-applicable'].includes(status)) return { ok: false, code: 'INVALID_VERIFICATION_STATUS' };
+  }
   const taskId = active.taskId || null;
   const taskPath = taskId ? await findTaskPath(state, taskId, active) : null;
-  if (taskPath && await exists(path.join(taskPath, "result.md"))) {
+  if (active.artifactVersion !== 3 && taskPath && await exists(path.join(taskPath, "result.md"))) {
     return {
       ok: false,
       code: "PREMATURE_RESULT_ARTIFACT",
       message: "result.md is closure-only and must be written after implementation, verification, and applicable QA checkpoints.",
     };
   }
-  if (taskPath && (
+  if (active.artifactVersion !== 3 && taskPath && (
     ["changed", "decision"].includes(event)
     && await exists(path.join(taskPath, "qa.md"))
     && await countTaskEvents(state, executionId, "qa-finding") === 0
@@ -951,11 +992,11 @@ async function checkpoint(root, args) {
         message: "qa-finding is verification-only evidence and must not claim changed product files.",
       };
     }
-    if (await countTaskEvents(state, executionId, "qa-finding") >= 1) {
+    if (await countTaskEvents(state, executionId, "qa-finding") >= Number(args['repair-budget'] || 3)) {
       return {
         ok: false,
         code: "QA_CORRECTION_LIMIT",
-        message: `This task already used its one in-scope correction cycle. Record terminal ${QA_FAILED_EVENT} and move further correction to a new approved task/prompt.`,
+        message: 'Repair budget exhausted. Record unresolved evidence; never report a false pass.',
       };
     }
   }
@@ -993,6 +1034,9 @@ async function checkpoint(root, args) {
     ...execution,
     workflowDepth: active.workflowDepth || taskIdentity.workflowDepth || "regulated",
     event,
+    artifactVersion: active.artifactVersion,
+    verificationStatus: event === 'verified' ? args.status || 'passed' : undefined,
+    risk: active.risk,
     milestone,
     summary,
     reason,
@@ -1007,6 +1051,11 @@ async function checkpoint(root, args) {
     verificationItemsTruncated: rawVerification.slice(0, verification.length)
       .filter((item, index) => item.trim().replace(/\s+/g, " ") !== verification[index]).length,
   };
+  if (event === 'verified') {
+    active.verificationStatus = args.status || 'passed';
+    active.verificationAgent = args.agent || active.agent;
+    await writeJson(activeMatch.activePath, active);
+  }
   return { ok: true, executionId, taskId, milestone, requestedBy, requesterId, identitySource, ...execution, memory: stateRelative(state, memoryPaths.current), recent: stateRelative(state, memoryPaths.recent), compaction };
 }
 
@@ -1273,8 +1322,11 @@ async function validate(root, args) {
   if (!executionId) return { ok: false, message: "--execution (or compatibility --task) is required." };
   const activeMatch = await findActiveForTask(state, executionId, safeSessionId(args.session));
   if (activeMatch?.ambiguous) return activeTaskAmbiguityError(executionId, activeMatch.matches);
-  const active = activeMatch?.active || {};
-  const taskId = active.taskId || (String(args.depth || args["workflow-depth"] || "").toLowerCase() === "light" ? null : executionId);
+  const recordedEvidence = await auditEvidenceForExecution(state, executionId);
+  const original = recordedEvidence.events.find(event => event.event === 'created');
+  const lastVerification = recordedEvidence.events.filter(event => event.event === 'verified').at(-1);
+  const active = activeMatch?.active || (original?.artifactVersion === 3 ? { artifactVersion:3, taskId:original.taskId, executionId, workflowDepth:original.workflowDepth, risk:original.risk, agent:original.agent, verificationStatus:lastVerification?.verificationStatus, verificationAgent:lastVerification?.agent } : {});
+  const taskId = Object.hasOwn(active, 'taskId') ? active.taskId : (String(args.depth || args['workflow-depth'] || active.workflowDepth || '').toLowerCase() === 'light' ? null : executionId);
   const taskPath = taskId ? await findTaskPath(state, taskId, active) : null;
   const artifactDefinitions = taskArtifactSchema.artifacts || {};
   const briefPreview = taskPath ? await readFile(path.join(taskPath, "brief.md"), "utf8").catch(() => "") : "";
@@ -1282,10 +1334,23 @@ async function validate(root, args) {
   if (!TRACKED_WORKFLOW_DEPTHS.has(workflowDepth)) {
     return { ok: false, executionId, taskId, workflowDepth, contentFailures: [{ file: "brief.md", field: "Workflow depth", reason: "invalid-enum" }] };
   }
-  const evidence = await auditEvidenceForExecution(state, executionId);
+  const evidence = recordedEvidence;
   const created = evidence.events.find((event) => event.event === "created" && eventRequest(event));
   const memoryPaths = activeMemoryPaths(state, { ...active, executionId, taskId });
-  const memoryRecorded = await exists(memoryPaths.current) || await exists(memoryPaths.recent);
+  const memoryRecorded = await exists(memoryPaths.current) || await exists(memoryPaths.recent)
+    || Boolean(await findExecutionMemoryPath(state, 'recent', executionId, original?.timestamp ? zonedParts(original.timestamp, (await workspaceConfig(state)).timeZone || DEFAULT_PROJECT_TIME_ZONE).period : null));
+  if (active.artifactVersion === 3) {
+    const failures = [];
+    if (!created || !memoryRecorded) failures.push('missing-execution-evidence');
+    if (taskPath) {
+      const task = await readFile(path.join(taskPath, 'task.md'), 'utf8').catch(() => '');
+      if (!task || /- \[ \]/.test(task) || !/## Result\s+\S/.test(task) || /## Result\s+Pending\./.test(task)) failures.push('task-not-complete');
+    }
+    if (!evidence.events.some(event => event.event === 'verified')) failures.push('verification-evidence-required');
+    if (!['passed','not-applicable'].includes(active.verificationStatus)) failures.push('verification-not-passed');
+    if (active.risk === 'independent-assurance' && active.verificationAgent === active.agent) failures.push('independent-verifier-required');
+    return { ok: !failures.length && !evidence.failures.length, executionId, taskId, workflowDepth, contentFailures: failures, auditFailures: evidence.failures };
+  }
   if (workflowDepth === "light") {
     const leakedTaskPath = await findTaskPath(state, executionId, active);
     const contentFailures = [];
@@ -1560,6 +1625,7 @@ async function updateProjectMemory(state, active, status, reportPath) {
 }
 
 async function writeCanonicalExecutionReport(state, active, status, files, verification, taskPath = null) {
+  if (active.artifactVersion === 3 && !active.reportRequested) return activeMemoryPaths(state, active).recent;
   const executionId = active.executionId || active.taskId;
   const config = await workspaceConfig(state);
   const startedLocal = zonedParts(active.startedAt || now(), config.timeZone || DEFAULT_PROJECT_TIME_ZONE);
@@ -1583,7 +1649,7 @@ async function writeCanonicalExecutionReport(state, active, status, files, verif
   const promptSource = active.promptPath
     ? `\`.agrimap-agent/${String(active.promptPath).replace(/^\.agrimap-agent[\\/]/, "").replace(/\\/g, "/")}\``
     : "not-recorded";
-  const taskArtifacts = ["brief.md", "analysis.md", "checklists.md", "qa.md", "result.md"];
+  const taskArtifacts = active.artifactVersion === 3 ? ["task.md"] : ["brief.md", "analysis.md", "checklists.md", "qa.md", "result.md"];
   const taskStatusRows = active.taskId
     ? (await Promise.all(taskArtifacts.map(async (fileName) => {
         const present = taskPath ? await exists(path.join(taskPath, fileName)) : false;
@@ -1670,7 +1736,7 @@ async function complete(root, args) {
   const requestedBy = active.requestedBy || taskIdentity.requestedBy;
   const execution = executionIdentity(args, active);
   const files = await recordedTaskFiles(state, executionId);
-  const verification = ["agm-workspace validate: passed"];
+  const verification = (await auditEvidenceForExecution(state, executionId)).events.filter(e => e.event === 'verified').flatMap(e => e.verification || []);
   const priorTerminal = (await auditEvidenceForExecution(state, executionId)).events.some((event) => event.event === "completed");
   if (!priorTerminal) await appendLog(state, {
     executionId,
@@ -1692,7 +1758,7 @@ async function complete(root, args) {
   });
   const memoryPaths = await appendRecentTerminal(state, active, "completed", "Completion gate passed.");
   const reportPath = await writeCanonicalExecutionReport(state, active, "completed", files, verification, taskPath);
-  const projectMemory = await updateProjectMemory(state, active, "completed", reportPath);
+  const projectMemory = active.artifactVersion === 3 && !active.taskId && !active.reportRequested ? null : await updateProjectMemory(state, active, "completed", reportPath);
   const archivedTaskPath = await moveTaskToTerminal(state, active, "complete");
   await rm(memoryPaths.current, { force: true });
   await rm(activeMatch.activePath, { force: true });
@@ -1703,7 +1769,7 @@ async function complete(root, args) {
     requestedBy,
     recentMemory: stateRelative(state, memoryPaths.recent),
     projectMemory,
-    report: stateRelative(state, reportPath),
+    report: active.artifactVersion === 3 && !active.reportRequested ? null : stateRelative(state, reportPath),
     archivedTask: archivedTaskPath ? stateRelative(state, archivedTaskPath) : null,
     promptsMoved: false,
   };
@@ -1723,7 +1789,7 @@ async function closeTask(root, args) {
   const taskIdentity = taskPath ? await taskAuditIdentity(taskPath) : {};
   const requestedBy = active.requestedBy || taskIdentity.requestedBy;
   if (!requestedBy) return { ok: false, needsRequester: true, message: "Requester is missing from active state and the task brief." };
-  if (status === QA_FAILED_EVENT) {
+  if (status === QA_FAILED_EVENT && active.artifactVersion !== 3) {
     const nextPrompt = String(args.nextPrompt || args["next-prompt"] || "").trim();
     const nextPromptPath = nextPrompt ? path.resolve(root, nextPrompt) : "";
     const promptsRoot = path.resolve(state, "instructions");
@@ -1767,7 +1833,7 @@ async function closeTask(root, args) {
     complete: false,
     recentMemory: stateRelative(state, memoryPaths.recent),
     projectMemory: null,
-    report: stateRelative(state, reportPath),
+    report: active.artifactVersion === 3 && !active.reportRequested ? null : stateRelative(state, reportPath),
     archivedTask: archivedTaskPath ? stateRelative(state, archivedTaskPath) : null,
     promptsMoved: false,
     nextPrompt: status === QA_FAILED_EVENT ? args.nextPrompt || args["next-prompt"] : null,
@@ -1948,6 +2014,7 @@ async function history(root, args) {
     const recentMemory = await findExecutionMemoryPath(state, "recent", executionId, period, activeMatch?.active?.recentMemoryPath);
     const reportFiles = (await filesUnder(path.join(state, "reports", period))).filter((file) => path.basename(file).startsWith(`${executionId}-`) && file.endsWith(".md"));
     const artifactCandidates = {
+      task: taskPath ? path.join(taskPath, "task.md") : null,
       brief: taskPath ? path.join(taskPath, "brief.md") : null,
       analysis: taskPath ? path.join(taskPath, "analysis.md") : null,
       checklists: taskPath ? path.join(taskPath, "checklists.md") : null,

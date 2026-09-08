@@ -46,9 +46,9 @@
       ]
     },
     {
-      "id": "design-fe-main-light",
-      "description": "Frontend design with the FE discipline condition selected",
-      "operation": "design",
+      "id": "passive-design-fe-main-light",
+      "description": "Passive Frontend design with the FE discipline condition selected",
+      "operation": "analyze",
       "depth": "light",
       "activate": [
         "frontend-engineer.md"
@@ -75,11 +75,12 @@
     },
     {
       "id": "be-callback-matrix-light",
-      "description": "Backend URL and callback work loads the authoritative application matrix",
+      "description": "Backend URL and callback work loads the authoritative application matrix with a material input ambiguity requiring elicitation",
       "operation": "be",
       "depth": "light",
       "activate": [
-        "application-url-matrix.md"
+        "application-url-matrix.md",
+        "elicitation.md"
       ],
       "mustLoad": [
         "goal-rules.md",
@@ -91,9 +92,9 @@
       ]
     },
     {
-      "id": "simulate-fe-main-light",
-      "description": "Frontend state simulation with FE state and observable fundamentals",
-      "operation": "simulate",
+      "id": "passive-simulate-fe-main-light",
+      "description": "Passive Frontend state simulation with FE state and observable fundamentals",
+      "operation": "analyze",
       "depth": "light",
       "activate": [
         "frontend-engineer.md"
@@ -132,16 +133,16 @@
       ]
     },
     {
-      "id": "review-fe-main-light",
-      "description": "Frontend review selects status plus the embedded supporting FE discipline",
-      "operation": "review",
+      "id": "passive-review-fe-main-light",
+      "description": "Passive Frontend review selects status plus the embedded supporting FE discipline",
+      "operation": "analyze",
       "depth": "light",
       "activate": [
-        "patterns/pattern-status.md",
         "frontend-engineer.md"
       ],
       "select": [
-        "patterns/frontend.md"
+        "patterns/frontend.md",
+        "patterns/pattern-status.md"
       ],
       "mustLoad": [
         "analysis-discipline.md",
@@ -208,7 +209,7 @@
     },
     {
       "id": "passive-unit-test-fe-library-light",
-      "description": "Frontend embedded unit-test decision through the FE discipline",
+      "description": "Frontend embedded unit-test decision through the FE discipline with a material input ambiguity requiring elicitation",
       "operation": "fe",
       "depth": "light",
       "mustLoad": [
@@ -216,11 +217,14 @@
         "elicitation.md",
         "frontend-engineer.md",
         "patterns/frontend.md"
+      ],
+      "activate": [
+        "elicitation.md"
       ]
     },
     {
       "id": "fe-create-main-light",
-      "description": "Frontend creation through the unified FE façade",
+      "description": "Frontend creation through the unified FE façade with a material input ambiguity requiring elicitation",
       "operation": "fe",
       "depth": "light",
       "mustLoad": [
@@ -228,17 +232,23 @@
         "elicitation.md",
         "frontend-engineer.md",
         "patterns/frontend.md"
+      ],
+      "activate": [
+        "elicitation.md"
       ]
     },
     {
       "id": "sql-create-golden-light",
-      "description": "Direct SQL creation loads the SQL contract through the unified SQL façade",
+      "description": "Direct SQL creation loads the SQL contract through the unified SQL façade with a material input ambiguity requiring elicitation",
       "operation": "sql",
       "depth": "light",
       "mustLoad": [
         "passive-capabilities.md",
         "elicitation.md",
         "patterns/sql.md"
+      ],
+      "activate": [
+        "elicitation.md"
       ]
     },
     {
@@ -377,6 +387,120 @@
         "backend-engineer.md",
         "patterns/csharp.md",
         "patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md"
+      ]
+    },
+    {
+      "id": "be-managed-read-context",
+      "description": "Missing backend SQL evidence loads managed read-only context",
+      "operation": "be",
+      "depth": "light",
+      "activate": [
+        "sql-context-readonly.md"
+      ],
+      "mustLoad": [
+        "sql-context-readonly.md"
+      ]
+    },
+    {
+      "id": "execute-release-flow",
+      "description": "Authorized release loads ordered environment push and pipeline knowledge",
+      "operation": "execute",
+      "depth": "regulated",
+      "activate": [
+        "release-and-bootstrap.md"
+      ],
+      "mustLoad": [
+        "release-and-bootstrap.md"
+      ]
+    },
+    {
+      "id": "recommendation-analyze",
+      "description": "Routine evidence and uncertainty discipline without a design command",
+      "operation": "analyze",
+      "depth": "light",
+      "mustLoad": [
+        "recommendations.md"
+      ]
+    },
+    {
+      "id": "recommendation-diagnose",
+      "description": "Routine evidence and uncertainty discipline without a design command",
+      "operation": "diagnose",
+      "depth": "light",
+      "mustLoad": [
+        "recommendations.md"
+      ]
+    },
+    {
+      "id": "recommendation-plan",
+      "description": "Routine evidence and uncertainty discipline without a design command",
+      "operation": "plan",
+      "depth": "light",
+      "mustLoad": [
+        "recommendations.md"
+      ]
+    },
+    {
+      "id": "recommendation-architect",
+      "description": "Routine evidence and uncertainty discipline without a design command",
+      "operation": "architect",
+      "depth": "light",
+      "mustLoad": [
+        "recommendations.md"
+      ]
+    },
+    {
+      "id": "recommendation-fe",
+      "description": "Routine evidence and uncertainty discipline without a design command",
+      "operation": "fe",
+      "depth": "light",
+      "mustLoad": [
+        "recommendations.md"
+      ]
+    },
+    {
+      "id": "recommendation-be",
+      "description": "Routine evidence and uncertainty discipline without a design command",
+      "operation": "be",
+      "depth": "light",
+      "mustLoad": [
+        "recommendations.md"
+      ]
+    },
+    {
+      "id": "recommendation-sql",
+      "description": "Routine evidence and uncertainty discipline without a design command",
+      "operation": "sql",
+      "depth": "light",
+      "mustLoad": [
+        "recommendations.md"
+      ]
+    },
+    {
+      "id": "recommendation-qa",
+      "description": "Routine evidence and uncertainty discipline without a design command",
+      "operation": "qa",
+      "depth": "light",
+      "mustLoad": [
+        "recommendations.md"
+      ]
+    },
+    {
+      "id": "recommendation-prompt",
+      "description": "Routine evidence and uncertainty discipline without a design command",
+      "operation": "prompt",
+      "depth": "light",
+      "mustLoad": [
+        "recommendations.md"
+      ]
+    },
+    {
+      "id": "recommendation-execute",
+      "description": "Routine evidence and uncertainty discipline without a design command",
+      "operation": "execute",
+      "depth": "light",
+      "mustLoad": [
+        "recommendations.md"
       ]
     }
   ]

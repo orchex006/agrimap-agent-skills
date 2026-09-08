@@ -6,7 +6,7 @@
 - Workflow depth: default `light`; allowed `light`
 - Mode: `workflow-write-only`
 - Purpose: Analyze and refine requester intent into one immutable versioned Prompt Result with explicit Main and Subagent ownership.
-- Deliverable: .agrimap-agent/prompts/YYYY-MM/<conversation-id>/<context>-vNNN.md plus light memory/log/report evidence; never tasks/** or separate role files
+- Deliverable: one immutable Prompt Result only when requested content changes; no tasks
 
 ## Inputs and help
 
@@ -16,10 +16,9 @@
 
 ## Execute this contract
 
-1. Treat requester input as V0 only. The first finalized model result creates immutable V1; every focused continuation creates the next immutable version without overwriting prior files.
-2. Create exactly one Prompt Package file per version. State Main ownership and either explicit Subagent assignments or explicit none, including files/contracts, forbidden overlap, model profile, verification, and handoff.
-3. Use an explicit source path after validation. Without one, continue only when exactly one credible prompt family exists in the same conversation/context; otherwise stop PROMPT_SOURCE_CONFIRM_REQUIRED.
-4. Remain workflow-write-only and product-read-only. Never create tasks/**, execute the Prompt Result, create separate role instructions, or store model answers/tool output/hidden reasoning as raw history.
+1. Classify continuation intent. Explain/compare/propose/acknowledge/approve never create a version.
+2. Create V1 for the first finalized executable result; create V2+ only for substantive requester-backed changes. Reuse identical content and preserve lineage.
+3. Keep one file per version with Main/Subagent ownership; never create requirements or tasks.
 
 ## Load now
 
@@ -27,6 +26,7 @@
 - [prompt.md](../prompt.md) — immutable Prompt Result lifecycle, source resolution, and package sections
 - [passive-capabilities.md](../passive-capabilities.md) — embedded design support for brief and acceptance
 - [model-capability-matrix.yaml](../model-capability-matrix.yaml) — capability-profile routing labels
+- [recommendations.md](../recommendations.md) — visible evidence-calibrated recommendations and routine uncertainty disclosure
 
 ## Load only when the condition matches
 
@@ -38,5 +38,8 @@
 - When target_kind is sql-table, sql-procedure, or sql-table-and-procedure: [patterns/sql.md](../patterns/sql.md) — SQL fundamentals that every generated handoff must carry
 - When the handoff touches a stored procedure, table, or persisted data: [db-schema-context.md](../db-schema-context.md) — schema evidence the executor must carry
 - When FE/BE URL, domain, redirect, or callback logic is in scope: [application-url-matrix.md](../application-url-matrix.md) — authoritative environment-specific Prompt Result inputs
+- When material intent remains unresolved: [elicitation.md](../elicitation.md) — resolve only consequential ambiguity
+- When database context is needed: [sql-context-readonly.md](../sql-context-readonly.md) — managed read-only metadata and SELECT; never database writes
+- When project bootstrap, versioning, branches or release are requested: [release-and-bootstrap.md](../release-and-bootstrap.md) — project-specific adoption and release knowledge
 
 Do not read the router `SKILL.md` during operation execution. If this generated entrypoint is missing or corrupt, stop with `PACKAGE_ENTRYPOINT_MISSING` and ask for package sync/reinstallation; never broaden into the router.

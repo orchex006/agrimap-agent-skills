@@ -1,6 +1,6 @@
-# Keep normal repository text deterministic across operating systems.
+# Stable package text and raw evidence bytes across Windows/Linux checkouts.
 * text=auto eol=lf
-
-# Golden SHA-256 values pin CRLF bytes; preserve that checkout contract.
-skills/agrimap-agent-skills/references/patterns/golden/** text eol=crlf
-plugins/agrimap-agent-skills/skills/agrimap-agent-skills/references/patterns/golden/** text eol=crlf
+**/references/patterns/golden/** -text
+*.png binary
+*.jpg binary
+*.zip binary

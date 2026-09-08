@@ -11,7 +11,7 @@ Resolve database truth in this order and record which level answered:
 3. `.agrimap-agent/knowledge/drafts/sql/`: AI-generated and `tentative`. Never schema `FACT` and never evidence for a conclusion.
 4. Nothing matches: name the exact missing object, keep the claim at `HYPOTHESIS`/`UNKNOWN`, and ask the owner.
 
-Never connect to a database to fill a gap, and never infer a table, column, type, nullability, key, constraint, or message code that no loaded reference contains.
+If local evidence is missing or stale, use [sql-context-readonly.md](sql-context-readonly.md) through the current connected sql-context-pack profile. Metadata and bounded masked SELECT are allowed; database DDL/DML/EXEC, metadata sync and routine deployment are forbidden. Never infer missing schema facts.
 
 ## Required lookup
 

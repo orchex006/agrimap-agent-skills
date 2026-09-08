@@ -3,16 +3,16 @@
 <!-- Generated from config/operations.json. Do not edit directly. -->
 
 - Operation: `architect`
-- Workflow depth: default `standard`; allowed `standard`, `regulated`
+- Workflow depth: default `light`; allowed `light`, `standard`, `regulated`
 - Mode: `product-read-only`
 - Purpose: Design boundaries, contracts, and migration trade-offs.
-- Deliverable: .agrimap-agent/decisions/<decision-id>.md
+- Deliverable: requested result with proportional evidence; no lifecycle for ordinary answers
 
 ## Inputs and help
 
 - Required: boundary question or objective.
 - Conditional: decision-owner approval before an architecture record becomes approved.
-- Minimal example: `$agm-architect requested_by=Billy objective="Choose ownership boundary for order status"`
+- Minimal example: `$agm-architect objective="Choose ownership boundary for order status"`
 
 ## Execute this contract
 
@@ -24,6 +24,7 @@
 - [goal-rules.md](../goal-rules.md) — mandatory Think/Simplicity/Surgical/Goal-Driven discipline
 - [analysis-discipline.md](../analysis-discipline.md) — architecture evidence and counterarguments
 - [service-ownership.md](../service-ownership.md) — canonical service and data ownership
+- [recommendations.md](../recommendations.md) — visible evidence-calibrated recommendations and routine uncertainty disclosure
 
 ## Load only when the condition matches
 
@@ -33,5 +34,6 @@
 - When the backend architecture includes cookie, header, query, form, JSON body, or device-ID resolution: [patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md](../patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md) — request-value ownership and precedence contract
 - When the architecture moves data through stored procedures, tables, or views: [db-schema-context.md](../db-schema-context.md) — schema ownership and SP → table facts
 - When the architecture includes FE/BE URL, domain, redirect, or callback ownership: [application-url-matrix.md](../application-url-matrix.md) — authoritative environment-specific boundary values
+- When material intent remains unresolved: [elicitation.md](../elicitation.md) — resolve only consequential ambiguity
 
 Do not read the router `SKILL.md` during operation execution. If this generated entrypoint is missing or corrupt, stop with `PACKAGE_ENTRYPOINT_MISSING` and ask for package sync/reinstallation; never broaden into the router.

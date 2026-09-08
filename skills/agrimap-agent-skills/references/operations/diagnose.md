@@ -6,13 +6,13 @@
 - Workflow depth: default `light`; allowed `light`, `standard`, `regulated`
 - Mode: `product-read-only`
 - Purpose: Diagnose a problem to a proven root cause.
-- Deliverable: direct diagnosis response at light; tracked analysis.md only at standard/regulated
+- Deliverable: requested result with proportional evidence; no lifecycle for ordinary answers
 
 ## Inputs and help
 
 - Required: symptom.
 - Conditional: reproduction evidence when the symptom is not observable from the repository.
-- Minimal example: `$agm-diagnose depth=light symptom="Save returns 500" target_files=src/orders.ts implementation=false`
+- Minimal example: `$agm-diagnose symptom="Save returns 500" target_files=src/orders.ts implementation=false`
 
 ## Execute this contract
 
@@ -25,6 +25,7 @@
 - [goal-rules.md](../goal-rules.md) — mandatory Think/Simplicity/Surgical/Goal-Driven discipline
 - [analysis-discipline.md](../analysis-discipline.md) — hypothesis and evidence discipline
 - [input-and-scope.md](../input-and-scope.md) — symptom and target coverage
+- [recommendations.md](../recommendations.md) — visible evidence-calibrated recommendations and routine uncertainty disclosure
 
 ## Load only when the condition matches
 
@@ -34,5 +35,7 @@
 - When the backend symptom may involve cookie, header, query, form, JSON body, or device-ID resolution: [patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md](../patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md) — expected extraction, normalization, and precedence
 - When the symptom may involve a stored procedure, SQL error, or persisted data: [db-schema-context.md](../db-schema-context.md) — SP → table tracing from error code to the failing condition
 - When FE/BE URL, domain, redirect, or callback logic may contribute to the symptom: [application-url-matrix.md](../application-url-matrix.md) — authoritative environment-specific URL behavior
+- When material intent remains unresolved: [elicitation.md](../elicitation.md) — resolve only consequential ambiguity
+- When database context is needed: [sql-context-readonly.md](../sql-context-readonly.md) — managed read-only metadata and SELECT; never database writes
 
 Do not read the router `SKILL.md` during operation execution. If this generated entrypoint is missing or corrupt, stop with `PACKAGE_ENTRYPOINT_MISSING` and ask for package sync/reinstallation; never broaden into the router.

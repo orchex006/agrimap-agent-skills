@@ -71,7 +71,7 @@
       "fileName": "011-1-security-auth.md",
       "heading": "Security Auth",
       "language": "md",
-      "sha256": "c9d1c81b7a3bf260a2c46b6592c51f653aa091edeae160b4b220a697634b22b8"
+      "sha256": "9ffebf0609b4aa4d5d78e95a12d9d17b3b26e44836c472d14b5fa40df2ca97b6"
     },
     {
       "fileName": "011-2-security-auth-flow.md",
@@ -101,7 +101,7 @@
       "fileName": "013-1-extensions-request-value-normalize.md",
       "heading": "HTTP Request Value Extensions",
       "language": "md",
-      "sha256": "b183d65a706c538a997fdf1070771c72044fc71cdb65b713abe9a084e9e0ea45"
+      "sha256": "ff2c37c8d5572188b2b9d0e875f442a41d928817d07371222d2571f915ede1b6"
     }
   ]
 }

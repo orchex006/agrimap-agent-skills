@@ -1,6 +1,6 @@
 # Example large request: checkout retry
 
-This is a safe fixture for testing large-text intake. A real requester message may be much longer; the headings provide stable chunk boundaries.
+This is a safe fixture for testing large-text intake, not a real project request or authorization. See [beginner cookbook](../../docs/COMMAND-COOKBOOK.md) for chat instructions. A real requester message may be much longer; the headings provide stable chunk boundaries. Replace identities and scope with actual requester-confirmed values before use.
 
 ## Requester and authority
 
@@ -43,7 +43,7 @@ The UI cannot distinguish an unknown server outcome from a confirmed failure. So
 
 - Correctness is more important than a cosmetic refactor.
 - Material contract or logic changes require trade-off discussion.
-- QA must be independent and verification-only: product artifacts are read-only, while `qa.md`, heartbeat, and QA checkpoint/log evidence are writable.
+- This example requests independent, verification-only QA because duplicate orders affect persisted outcomes. Product artifacts remain read-only for the reviewer. Record concise evidence in the existing task/result; a separate qa.md is optional for a real consumer. No heartbeat file or separate lifecycle is required by this example.
 
 ## References
 

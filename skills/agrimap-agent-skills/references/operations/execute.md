@@ -3,36 +3,37 @@
 <!-- Generated from config/operations.json. Do not edit directly. -->
 
 - Operation: `execute`
-- Workflow depth: default `regulated`; allowed `regulated`
+- Workflow depth: default `light`; allowed `light`, `standard`, `regulated`
 - Mode: `product-write`
-- Purpose: Execute one decision-owner-approved generated prompt as the execution source of truth with checkpoints, deviation stops, and a Result Package.
-- Deliverable: integrated Result Package awaiting canonical QA
+- Purpose: Implement an authorized objective, approved Prompt Result, or resumable task with proportional verification and scoped delivery.
+- Deliverable: requested result with proportional evidence; no lifecycle for ordinary answers
 
 ## Inputs and help
 
-- Required: approved prompt path or resumable task_id.
-- Conditional: decision-owner choice when a material deviation exceeds the approved prompt.
-- Minimal example: `$agm-exec requested_by=Billy prompt=.agrimap-agent/instructions/YYYY-MM/<task-id>/executor.prompt.md`
+- Required: authorized objective or approved prompt or resumable task.
+- Conditional: decision-owner choice only when a material deviation exceeds the authorized scope.
+- Minimal example: `$agm-exec objective="Implement the accepted change"`
 
 ## Execute this contract
 
-1. Require prompt_status=owner-approved and execute its ordered steps as the task source of truth.
-2. Stop and report structured deviation evidence when a material change exceeds scope; return the Result Package and integration artifact.
-3. Own implementation only: update the acceptance checklist and record integration evidence, but do not create qa.md or result.md; QA and final Leader closure are later phases.
+1. Use recorded requester authorization; a generated prompt is optional. Preserve binding scope, dependencies and acceptance while adapting implementation steps to evidence.
+2. Select tracking/assurance from actual work; one task.md only when resume/handoff is needed.
+3. Verify proportionally and close after actual acceptance. Separate QA only for its real risk or an explicit request.
 
 ## Load now
 
 - [goal-rules.md](../goal-rules.md) — mandatory Think/Simplicity/Surgical/Goal-Driven discipline
-- [prompt.md](../prompt.md) — Prompt Result source of truth and deviation contract
-- [subagents-and-branches.md](../subagents-and-branches.md) — native activity, workspace, and integration contract
-- [qa-and-done.md](../qa-and-done.md) — regulated QA and completion source
+- [recommendations.md](../recommendations.md) — visible evidence-calibrated recommendations and routine uncertainty disclosure
 
 ## Load only when the condition matches
 
-- When the approved prompt targets C# backend work: [backend-engineer.md](../backend-engineer.md) — backend discipline carried into execution
-- When the approved prompt targets C# backend work: [patterns/csharp.md](../patterns/csharp.md) — project-wide C# execution baseline
-- When the approved backend prompt touches cookie, header, query, form, JSON body, or device-ID resolution: [patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md](../patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md) — request-value execution contract
-- When the approved prompt touches a stored procedure, table, or persisted data: [db-schema-context.md](../db-schema-context.md) — schema evidence required before data changes
-- When the approved Prompt Result touches FE/BE URL, domain, redirect, or callback logic: [application-url-matrix.md](../application-url-matrix.md) — authoritative environment-specific execution values
+- When the authorized work targets C# backend work: [backend-engineer.md](../backend-engineer.md) — backend discipline carried into execution
+- When the authorized work targets C# backend work: [patterns/csharp.md](../patterns/csharp.md) — project-wide C# execution baseline
+- When the authorized backend work touches cookie, header, query, form, JSON body, or device-ID resolution: [patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md](../patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md) — request-value execution contract
+- When the authorized work touches a stored procedure, table, or persisted data: [db-schema-context.md](../db-schema-context.md) — schema evidence required before data changes
+- When the authorized work touches FE/BE URL, domain, redirect, or callback logic: [application-url-matrix.md](../application-url-matrix.md) — authoritative environment-specific execution values
+- When material intent remains unresolved: [elicitation.md](../elicitation.md) — resolve only consequential ambiguity
+- When database context is needed: [sql-context-readonly.md](../sql-context-readonly.md) — managed read-only metadata and SELECT; never database writes
+- When project bootstrap, versioning, branches or release are requested: [release-and-bootstrap.md](../release-and-bootstrap.md) — project-specific adoption and release knowledge
 
 Do not read the router `SKILL.md` during operation execution. If this generated entrypoint is missing or corrupt, stop with `PACKAGE_ENTRYPOINT_MISSING` and ask for package sync/reinstallation; never broaden into the router.

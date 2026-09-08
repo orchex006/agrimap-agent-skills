@@ -1,6 +1,6 @@
 # Delegation, workspace, and progress
 
-Load this file only for `regulated` work that actually delegates. `light` and `standard` never delegate.
+Load only when independent delegation is justified and supported by the host. Delegation does not itself select regulated depth. Use one writer per file/contract and Main integration; sequential work is valid.
 
 ## Dispatch boundary
 

@@ -1,6 +1,6 @@
 # Refactor modes
 
-Require one of the five enums before editing. Infer and state an unambiguous free-text match; otherwise show the complete numbered menu below, mark one `Recommended`, and accept its number or enum. Never return only a recommendation.
+Use one mode for the current scope. Infer and state a safe behavior-preserving mode when the request is clear. Ask only when different plausible choices materially change behavior or scope; do not show a five-mode menu by default.
 
 ## `performance-preserve-behavior`
 
@@ -26,7 +26,7 @@ Change only the logic required to eliminate a proven defect. Capture the failing
 
 ## Required refactor brief
 
-For standard/regulated refactors, record this discipline in canonical `.agrimap-agent/tasks/YYYY-MM/<task-id>/analysis.md` before changing code. Light refactors create no task artifact. Record:
+For tracked refactors, keep the relevant boundary in the existing `task.md`; a separate analysis file needs an actual consumer. Light refactors create no task artifact. Use only the relevant fields:
 
 - `mode`
 - `objective`

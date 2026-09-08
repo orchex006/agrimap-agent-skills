@@ -24,6 +24,14 @@ const pluginRoot = path.join(root, "plugins", "agrimap-agent-skills");
 const pluginSkills = path.join(pluginRoot, "skills");
 const packageManifest = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 const packageVersion = packageManifest.version;
+if (packageManifest.name !== 'agrimap-agent-skills') throw new Error('SYNC_WORKSPACE_MISMATCH');
+async function removeGenerated(target) {
+  const resolved = path.resolve(target);
+  const relative = path.relative(path.resolve(root), resolved);
+  const allowed = ['skills/agrimap-agent-skills/references/operations', 'plugins/agrimap-agent-skills/skills', 'plugins/agrimap-agent-skills/docs', 'plugins/agrimap-agent-skills/examples', 'plugins/agrimap-agent-skills/hooks', 'commands'];
+  if (!relative || path.isAbsolute(relative) || !allowed.includes(relative.split(path.sep).join('/'))) throw new Error('UNSAFE_GENERATED_TARGET');
+  await rm(resolved, { recursive: true, force: true });
+}
 if (typeof packageVersion !== "string" || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/.test(packageVersion)) {
   throw new Error("package.json version must be a valid semantic version.");
 }
@@ -31,7 +39,7 @@ const operations = JSON.parse(await readFile(path.join(root, "config", "operatio
 const operationIssues = operationConfigIssues(operations);
 if (operationIssues.length) throw new Error(`Invalid operation config:\n- ${operationIssues.join("\n- ")}`);
 const operationEntrypointsDirectory = path.join(canonicalSkill, "references", "operations");
-await rm(operationEntrypointsDirectory, { recursive: true, force: true });
+await removeGenerated(operationEntrypointsDirectory);
 await mkdir(operationEntrypointsDirectory, { recursive: true });
 for (const item of operations.operations) {
   await writeFile(operationEntrypointPath(canonicalSkill, item), renderOperationEntrypoint(item), "utf8");
@@ -56,11 +64,12 @@ for (const relativePath of ["README.md", path.join("docs", "USAGE.md")]) {
   await writeFile(filePath, replaceTaskArtifactSchemaDocs(content, generatedTaskArtifactDocs), "utf8");
 }
 
-await rm(pluginSkills, { recursive: true, force: true });
+await removeGenerated(pluginSkills);
 await mkdir(pluginSkills, { recursive: true });
 await cp(canonicalSkill, path.join(pluginSkills, "agrimap-agent-skills"), { recursive: true });
+for (const file of ['README.md', 'CHANGELOG.md']) await cp(path.join(root, file), path.join(pluginRoot, file));
 for (const directory of ["docs", "examples"]) {
-  await rm(path.join(pluginRoot, directory), { recursive: true, force: true });
+  await removeGenerated(path.join(pluginRoot, directory));
   await cp(path.join(root, directory), path.join(pluginRoot, directory), { recursive: true });
 }
 
@@ -148,7 +157,7 @@ const hooksDirectory = path.join(pluginRoot, "hooks");
 // cross-load the other host's provider flag. Their manifests select only the
 // provider-specific files below. Gemini uses the repository-root extension
 // hooks/hooks.json and is therefore outside this plugin root.
-await rm(hooksDirectory, { recursive: true, force: true });
+await removeGenerated(hooksDirectory);
 await mkdir(hooksDirectory, { recursive: true });
 await writeFile(
   path.join(hooksDirectory, "codex-hooks.json"),
@@ -161,7 +170,7 @@ await writeFile(
   "utf8",
 );
 
-await rm(path.join(root, "commands"), { recursive: true, force: true });
+await removeGenerated(path.join(root, "commands"));
 await mkdir(path.join(root, "commands"), { recursive: true });
 for (const item of operations.operations) {
   const prompt = renderGeminiCommandPrompt(item);

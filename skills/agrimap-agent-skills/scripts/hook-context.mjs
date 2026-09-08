@@ -5,7 +5,8 @@ import { createHash } from "node:crypto";
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseCliArgs } from "./cli-args.mjs";
-import { normalizeIdentity } from "./identity.mjs";
+import { localAuditMetadata, normalizeIdentity } from "./identity.mjs";
+import { classifyRequest, unquotedIntent } from './governance-policy.mjs';
 import { AGRIMAP_OPERATION_ALIASES, AGRIMAP_ROUTER_ALIAS } from "./operation-aliases.mjs";
 
 const AGRIMAP_PROJECT_PATTERNS = Object.freeze([
@@ -68,7 +69,8 @@ function recognizedProjectName(value) {
 }
 
 function explicitSkillInvocation(provider, prompt) {
-  const value = String(prompt || "");
+  const value = unquotedIntent(prompt);
+  if (/^\s*(?:example|ตัวอย่าง)\s*:/i.test(value)) return false;
   const pattern = EXPLICIT_SKILL_PATTERNS[provider];
   const adapterMarker = new RegExp(`(?:^|\\s)AGRIMAP_EXPLICIT_ALIAS=(?:${EXPLICIT_SKILL_ALTERNATION})(?=$|\\s)`, "i");
   return Boolean(value) && ((Boolean(pattern) && pattern.test(value)) || adapterMarker.test(value));
@@ -122,7 +124,14 @@ function zonedParts(timestamp = new Date().toISOString(), timeZone = "Asia/Bangk
 async function archiveRawPrompt(stateRoot, config, input) {
   const prompt = typeof input.prompt === "string" ? input.prompt : "";
   const eventName = input.hook_event_name || input.hookEventName || "";
-  if (eventName !== "UserPromptSubmit" || !prompt) return null;
+  if (!['UserPromptSubmit', 'BeforeAgent'].includes(eventName) || !prompt) return null;
+  // A host submission ID deduplicates retries, not repeated human submissions.
+  const submitId = input.prompt_id || input.event_id || input.message_id;
+  if (submitId) {
+    const marker = path.join(stateRoot, 'runtime', 'submits', fingerprint(String(input.session_id || input.sessionId) + ':' + submitId));
+    await mkdir(path.dirname(marker), { recursive: true });
+    try { await writeFile(marker, '', { flag: 'wx' }); } catch (error) { if (error.code === 'EEXIST') return null; throw error; }
+  }
   const timestamp = new Date().toISOString();
   const local = zonedParts(timestamp, config?.timeZone || "Asia/Bangkok");
   const conversationId = safeSessionId(
@@ -226,185 +235,39 @@ async function readStdin() {
 
 const args = parseCliArgs(process.argv.slice(2));
 const input = await readStdin();
-const mode = args.mode || "session";
 const configuredProvider = normalizeProvider(args.provider);
-const providerResolution = resolveHookProvider(configuredProvider, process.env);
-const provider = providerResolution.provider;
-const providerMismatch = configuredProvider !== provider;
+const provider = resolveHookProvider(configuredProvider, process.env).provider;
 const cwd = workspaceRoot(path.resolve(input.cwd || process.cwd()));
-const stateRoot = path.join(cwd, ".agrimap-agent");
+const stateRoot = path.join(cwd, '.agrimap-agent');
+const config = await readJson(path.join(stateRoot, 'config.json'));
 const sessionId = safeSessionId(input.session_id || input.sessionId || input.conversation_id || input.conversationId);
-const hookSessionKey = sessionId || safeSessionId(path.basename(input.transcript_path || input.transcriptPath || ""));
-const effectiveSessionId = hookSessionKey;
-const hostReportedModel = String(input.model || "").trim() || null;
-const activeTask = effectiveSessionId
-  ? await readJson(path.join(stateRoot, "runtime", "active", `${effectiveSessionId}.json`))
-  : null;
-const activationConfig = await readJson(path.join(stateRoot, "config.json"));
-const projectCandidate = projectActivation(cwd, activationConfig);
-const explicitInvocation = explicitSkillInvocation(provider, input.prompt);
-const activation = activeTask
-  ? { active: true, reason: "active-task" }
-  : explicitInvocation
-    ? { active: true, reason: "explicit-skill" }
-    : projectCandidate;
-
-if (!activation.active) {
-  await new Promise((resolve) => process.stdout.write(
-    JSON.stringify({ continue: true, suppressOutput: true }),
-    resolve,
-  ));
-  process.exit(0);
+const prompt = input.prompt || '';
+const explicit = explicitSkillInvocation(provider, prompt);
+const selection = classifyRequest({ prompt, explicit, recognized: projectActivation(cwd, config).active });
+const output = { continue: true, suppressOutput: true };
+// SessionStart is intentionally silent. Current-turn intent precedes identity,
+// old execution state and all persistence. Names/cwd alone are insufficient.
+if (selection.active) {
+  await archiveRawPrompt(stateRoot, config, input);
+  const active = sessionId ? await readJson(path.join(stateRoot, 'runtime', 'active', sessionId + '.json')) : null;
+  const local = localAuditMetadata();
+  const userKey = safeSessionId(local.machine + '-' + local.osUser);
+  const rawIdentity = (sessionId && await readJson(path.join(stateRoot, 'runtime', 'sessions', sessionId + '.json')))
+    || await readJson(path.join(stateRoot, 'runtime', 'users', userKey + '.json'));
+  const identity = rawIdentity ? normalizeIdentity(rawIdentity) : null;
+  const packageWork = await isSkillPackageRepository(cwd);
+  const context = [
+    'AgriMap 3.0: resolve current intent before choosing one operation. Quoted commands are examples, not authorization.',
+    'Questions/explanations use no lifecycle, task files, identity prompt or tests. Start execution only for authorized durable work.',
+    'Supporting skills add relevant evidence; they never grant database writes or release authority.',
+    'SQL context is read-only: managed metadata and SELECT only; no DDL/DML, EXEC, metadata sync or routine deployment.',
+    packageWork ? 'Workspace kind: skill-package. Package work never creates root product FE/BE/SQL artifacts.' : 'Use only the applicable project contracts.',
+    identity && !identity.expired ? 'Confirmed requester: ' + identity.requestedBy + '. Identity is not approval authority.'
+      : 'For a write that needs attribution, reuse confirmed conversation identity or ask once; do not ask for ordinary questions.',
+    input.model ? 'Actual host model: ' + input.model + '; configurable labels are separate.' : 'Record actual host model when known; otherwise unknown.',
+    sessionId ? 'Session: ' + sessionId : 'Use a stable session for durable work.'
+  ];
+  if (active) context.push('Existing execution ' + (active.executionId || active.taskId) + ': resume only if this request concerns it; unrelated conversation does not replace it.');
+  output.hookSpecificOutput = { hookEventName: input.hook_event_name || input.hookEventName || 'UserPromptSubmit', additionalContext: context.join('\n') };
 }
-
-const archivedPromptPath = await archiveRawPrompt(stateRoot, activationConfig, input);
-if (archivedPromptPath && activeTask && effectiveSessionId) {
-  activeTask.rawPromptHistoryPath = archivedPromptPath;
-  await writeJson(path.join(stateRoot, "runtime", "active", `${effectiveSessionId}.json`), activeTask);
-}
-
-const rawIdentity = effectiveSessionId
-  ? await readJson(path.join(stateRoot, "runtime", "sessions", `${effectiveSessionId}.json`))
-  : null;
-const identity = rawIdentity ? normalizeIdentity(rawIdentity, { defaultProvider: provider }) : null;
-const skillPackageRepository = await isSkillPackageRepository(cwd);
-const sqlProductRoutingRequired = !activeTask && !explicitInvocation && primarySqlProductIntent(input.prompt);
-const confirmedIdentity = identity && !identity.expired ? identity : null;
-const taskRequester = activeTask?.requestedBy || null;
-const execution = {
-  ...(activeTask || confirmedIdentity || identity || {}),
-  ...(hostReportedModel ? { model: hostReportedModel } : {}),
-};
-const suggestedRequester = confirmedIdentity ? null : gitRequesterSuggestion(cwd);
-const projectMemory = await readText(path.join(stateRoot, "memory", "project.md"));
-const currentMemoryRelative = activeTask?.currentMemoryPath
-  || (activeTask?.taskId ? `memory/current/${activeTask.taskId}.md` : "");
-const currentTaskMemory = currentMemoryRelative
-  ? await readText(path.join(stateRoot, currentMemoryRelative))
-  : "";
-const { promptPath: _promptPath, rawPromptHistoryPath: _rawPromptHistoryPath, ...activeTaskForFingerprint } = activeTask || {};
-const memoryFingerprint = fingerprint(JSON.stringify({
-  projectMemory,
-  activeTask: activeTaskForFingerprint,
-  currentTaskMemory,
-}));
-const hookStatePath = effectiveSessionId && (projectMemory || identity || activeTask)
-  ? path.join(stateRoot, "runtime", "hooks", `${safeSessionId(provider)}-${hookSessionKey}.json`)
-  : "";
-const previousHookState = mode === "task" && hookStatePath
-  ? await readJson(hookStatePath)
-  : null;
-
-// Task mode stays silent except for tracked-lane state that genuinely needs attention.
-const context = [];
-
-if (mode === "task") {
-  if (!confirmedIdentity) {
-    context.push(
-      identity?.expired
-        ? `AgriMap: requester confirmation expired (last: ${identity.requestedBy}). Reconfirm the human before starting any operation so task, memory, and log attribution remain durable.`
-        : "AgriMap: requester is not persisted. Identify the human before starting any operation; every depth requires memory and audit attribution, while only standard/regulated create task artifacts.",
-    );
-  }
-  if (activeTask && previousHookState && previousHookState.memoryFingerprint !== memoryFingerprint) {
-    context.push(
-      "AgriMap: task/project memory changed on disk since the last refresh — if you did not write that change yourself, reopen .agrimap-agent/memory/ before continuing.",
-    );
-  }
-} else {
-context.push(
-  "AgriMap identity and audit context:",
-  `- Hook provider: ${provider} (resolved from ${providerResolution.source}).`,
-  providerMismatch
-    ? `- Ignored mismatched hook configuration provider=${configuredProvider}; host evidence requires provider=${provider}. Refresh the installed plugin to remove the stale hook.`
-    : `- Hook configuration and runtime provider agree: ${provider}.`,
-  `- Hook mode: ${mode}`,
-  hostReportedModel
-    ? `- Host-reported active model: ${hostReportedModel}. Record this exact value as actual model; keep configured modelLabel separate.`
-    : "- The hook did not report an active model. Record `model: unknown` only after checking the host runtime; never substitute a configured modelLabel as actual model.",
-  effectiveSessionId
-    ? `- Session: ${effectiveSessionId}${sessionId ? "" : " (derived from transcript path)"}`
-    : "- Session ID is unavailable. Create one before starting any operation.",
-  confirmedIdentity
-    ? `- Confirmed session requester: ${confirmedIdentity.requestedBy}; valid until ${confirmedIdentity.expiresAt}.`
-    : identity?.expired
-      ? `- Requester confirmation expired. Last confirmed requester was ${identity.requestedBy}; reconfirm before starting any operation.`
-      : "- Session requester is unknown. Resolve it before starting the operation; every depth persists concise memory/log evidence and tracked depths also persist task artifacts.",
-  taskRequester
-    ? `- Active task requested by: ${taskRequester}; immutable task attribution comes from its tracked brief and created log event.`
-    : "- No active task requester is recorded for this session.",
-  `- Previously recorded execution identity (may be stale — your own runtime identity wins): model=${execution.model || "unrecorded"}, role=${execution.role || "leader"}, agent=${execution.agent || "primary"}, provider=${execution.provider || "unrecorded"}.`,
-  effectiveSessionId
-    ? `- Persist/reconfirm with agm-workspace.mjs identify --session ${effectiveSessionId} --owner <confirmed-human-name> --model "${hostReportedModel || "unknown"}" --provider ${provider} before any operation.`
-    : `- Create a stable session ID and persist the confirmed human with --model "${hostReportedModel || "unknown"}" --provider ${provider} before any operation.`,
-  suggestedRequester
-    ? `- Unconfirmed Git-name suggestion: ${suggestedRequester}. Ask the human to confirm it; never attribute work automatically from this value.`
-    : "- Do not substitute machine, OS, or Git identity for explicit human confirmation.",
-  "- Workflow depth controls persistence: light creates no tasks/** artifacts; standard and regulated create tracked task artifacts. Every depth creates current/recent memory and daily created/milestone/terminal audit events.",
-  "- For audit/history questions, run agm-workspace.mjs history with person/date/task filters; inspect attributionSemantics, auditStorage, invalidLines, and returned brief/result/QA/memory paths. Distinguish requester, workflow executor, claimed files, and Git author; never answer from conversational recall alone.",
-  "- Durable project memory is .agrimap-agent/memory/project.md; reopen it when context was compacted or current project facts are needed.",
-);
-}
-
-if (skillPackageRepository) {
-  context.push(
-    "- Workspace kind: `skill-package`. Requests about skills, operations, hooks, contracts, generators, documentation, or tests are package work; they do not create root FE/BE/SQL product artifacts unless the requester explicitly authorizes a fixture/example target and exact path.",
-  );
-}
-
-if (sqlProductRoutingRequired) {
-  context.push(
-    "- Operation routing gate: Primary SQL product intent detected. Invoke the dedicated `agm-sql` operation and resolve exactly one action before target inspection or product writes. This routing requirement grants no write authority.",
-  );
-}
-
-if (mode !== "task" && (activeTask?.executionId || activeTask?.taskId)) {
-  context.push(`- Active execution: ${activeTask.executionId || activeTask.taskId}${activeTask.taskId ? `; task ${activeTask.taskId}` : "; light/artifactless"} (${activeTask.operation || "unspecified"}) — pending work carried over; reconcile or close it before starting unrelated work.`);
-}
-
-if (mode === "subagent") {
-  context.push(
-    "- Inherit requestedBy and authority fields from the Leader handoff/session; record configurable modelLabel separately from actual model, role, agent, and provider.",
-    "- Native agent-thread activity is the primary progress channel. Keep the delegated display label and bounded task visible in your thread; the requester can inspect it from the app thread, CLI /agent, or IDE background-agent panel on current Codex releases.",
-    "- Write .agrimap-agent/runtime/progress/<task-id>.jsonl only when the handoff explicitly declares a fallback because native activity is unavailable. Write started, meaningful phase/status transitions, and finished/blocked; never write per step, tool call, file read, or unchanged poll. Optional unchanged liveness is capped at once per five minutes.",
-    "- Read workspace_need before any write. Verify the required mode, base commit, visibility, ownership, and integration-return method; report unsupported isolation and use only the named fallback.",
-    "- Write only the files and logical contract assigned to you. One writer owns them per integration wave; stop and report overlap not resolved by the Leader.",
-    "- Do not assume a sandbox branch or commit is visible. Return the requested integration artifact for the verified workspace mode.",
-    "- Return a structured handoff: status, requestedBy, requesterAuthority, decisionOwner, displayLabel, nativeThreadId, progressChannel, modelLabel, actual model, role, agent, provider, summary, files_changed, behavior_changed, decisions_and_reasons, commands_and_tests, remaining_risks, memory_facts, integration_artifact, and branch/commit when applicable.",
-  );
-}
-
-if (mode !== "task") {
-  context.push(
-    "- For a generated agm alias, read exactly lifecycle-core.md and its operations/<operation>.md entrypoint; do not preload the glossary or routing umbrella. A missing/corrupt compact route is PACKAGE_ENTRYPOINT_MISSING.",
-    "- Do not add permission gates. Discuss only material logic/contract/data/architecture trade-offs.",
-    "- Select light|standard|regulated, identify the requester, and start execution state before substantive work. Light writes memory/logs without tasks/**; standard and regulated also write the five tracked task artifacts.",
-    "- Raw requester submits contain no AI answers and belong only in .agrimap-agent/prompts/YYYY-MM/<conversation>/history.md. Versioned Prompt Results belong in .agrimap-agent/prompts/YYYY-MM/<conversation>/<context>-vNNN.md; generated execution-only role instructions belong under .agrimap-agent/instructions/.",
-    "- Reopen project memory on demand and update current execution memory only at defined milestones; do not inject unrelated project memory into the execution.",
-  );
-  if (currentTaskMemory) context.push("\nCurrent tracked-task memory:\n", currentTaskMemory);
-}
-
-const hookEventName = input.hook_event_name || input.hookEventName || "SessionStart";
-const additionalContext = context.join("\n");
-
-if (mode === "task") {
-  await writeJson(hookStatePath, { version: 2, memoryFingerprint });
-} else if (mode === "session") {
-  await writeJson(hookStatePath, { version: 2, memoryFingerprint });
-}
-
-const output = {
-  continue: true,
-  suppressOutput: true,
-};
-if (additionalContext) {
-  output.hookSpecificOutput = {
-    hookEventName,
-    additionalContext,
-  };
-}
-
-process.stdout.write(
-  JSON.stringify(output),
-);
+process.stdout.write(JSON.stringify(output));

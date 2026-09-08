@@ -3,6 +3,7 @@
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 
 const PERIOD_PATTERN = /^\d{4}-\d{2}$/;
 const VERSION_PATTERN = /-v(\d{3,})\.md$/;
@@ -172,6 +173,8 @@ function renderPromptPackage(metadata, body) {
     `source_selection_method: ${quote(metadata.sourceSelectionMethod)}`,
     `prompt_status: ${quote(metadata.status)}`,
     `intended_execution_operation: ${quote(metadata.intendedExecutionOperation)}`,
+    `change_summary: ${quote(metadata.changeSummary || '')}`,
+    `source_evidence: ${quote(metadata.sourceEvidence || '')}`,
     "---",
     "",
     body.trim(),
@@ -213,8 +216,21 @@ export async function createPromptVersion({
   sourcePath,
   status = "draft",
   intendedExecutionOperation = "execute",
+  intent = 'revise',
+  changeSummary = '',
+  sourceEvidence = '',
   now = new Date(),
 }) {
+  if (!['revise', 'create', 'explain', 'compare', 'propose', 'acknowledge', 'approve', 'execute'].includes(intent)) throw new PromptVersionError('INVALID_PROMPT_INTENT', 'Unknown prompt intent.');
+  if (['explain', 'compare', 'propose', 'acknowledge', 'approve', 'execute'].includes(intent)) {
+    if (intent === 'approve' || intent === 'execute') {
+      const resolved = await resolvePromptSource({cwd, conversationId, context, sourcePath, now});
+      if (!resolved.latest) throw new PromptVersionError('PROMPT_SOURCE_CONFIRM_REQUIRED', 'Name an existing Prompt Result before approval or execution.');
+      const content = await readFile(resolved.latest.path);
+      return {ok:true,created:false,reason:'no-content-revision',version:resolved.latest.version,path:posixRelative(path.resolve(cwd),resolved.latest.path),sha256:createHash('sha256').update(content).digest('hex'),approvalRecorded:false,next:'Record current requester approval and this exact file/hash in the active audit checkpoint; this helper grants no authority.'};
+    }
+    return { ok: true, created: false, reason: 'no-content-revision' };
+  }
   validateBody(body);
   if (!new Set(["draft", "owner-approved", "superseded", "executed"]).has(status)) {
     throw new PromptVersionError("INVALID_PROMPT_STATUS", "prompt status must be draft|owner-approved|superseded|executed.");
@@ -225,6 +241,13 @@ export async function createPromptVersion({
   const lockPath = await acquireFamilyLock(promptRoot, safeConversation, safeContext);
   try {
     const resolved = await resolvePromptSource({ cwd, conversationId: safeConversation, context: safeContext, sourcePath, now });
+    if (resolved.latest) {
+      const previous = await readFile(resolved.latest.path, 'utf8');
+      const priorBody = previous.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '').trim();
+      const normalize = (value) => value.replace(/\r\n/g, '\n').trim();
+      if (normalize(priorBody) === normalize(body)) return { ok: true, created: false, reason: 'unchanged-content', version: resolved.latest.version, path: posixRelative(path.resolve(cwd), resolved.latest.path) };
+      if (!changeSummary.trim() || !sourceEvidence.trim()) throw new PromptVersionError('PROMPT_CHANGE_EVIDENCE_REQUIRED', 'A revision needs changeSummary and sourceEvidence from the requester; suggestions alone are not requirements.');
+    }
     const version = (resolved.latest?.version || 0) + 1;
     const fileName = `${safeContext}-v${String(version).padStart(3, "0")}.md`;
     const outputDirectory = path.join(promptRoot, resolved.period, safeConversation);
@@ -241,9 +264,12 @@ export async function createPromptVersion({
       sourceSelectionMethod: resolved.method,
       status,
       intendedExecutionOperation,
+      changeSummary,
+      sourceEvidence,
     };
-    await writeFile(outputPath, renderPromptPackage(metadata, body), { encoding: "utf8", flag: "wx" });
-    return { ok: true, path: posixRelative(path.resolve(cwd), outputPath), period: resolved.period, ...metadata };
+    const content = renderPromptPackage(metadata, body);
+    await writeFile(outputPath, content, { encoding: "utf8", flag: "wx" });
+    return { ok: true, created: true, sha256: createHash('sha256').update(content).digest('hex'), path: posixRelative(path.resolve(cwd), outputPath), period: resolved.period, ...metadata };
   } finally {
     await rm(lockPath, { recursive: true, force: true });
   }
@@ -272,7 +298,7 @@ async function runCli() {
     throw new PromptVersionError("INVALID_ARGUMENTS", "Usage: agm-prompt-version.mjs create --cwd . --conversation <id> --context <slug> --content-file <path> --requester <name> --provider <name> --model <name> [--source <path>] [--status <status>]");
   }
   const cwd = path.resolve(args.cwd || process.cwd());
-  const body = await readFile(path.resolve(cwd, args["content-file"]), "utf8");
+  const body = args["content-file"] ? await readFile(path.resolve(cwd, args["content-file"]), "utf8") : undefined;
   return createPromptVersion({
     cwd,
     conversationId: args.conversation,
@@ -283,6 +309,9 @@ async function runCli() {
     model: args.model,
     sourcePath: args.source,
     status: args.status || "draft",
+    intent: args.intent || 'revise',
+    changeSummary: args['change-summary'] || '',
+    sourceEvidence: args['source-evidence'] || '',
   });
 }
 

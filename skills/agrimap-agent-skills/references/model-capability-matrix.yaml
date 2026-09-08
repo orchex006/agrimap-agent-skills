@@ -1,75 +1,23 @@
-schema_version: 1
+schema_version: 2
 model_identity_policy:
-  provider_entries_are: configurable_model_labels
   configured_field: modelLabel
   execution_field: model
   execution_field_semantics: actual_host_reported_model_or_unknown
-  resolution: resolve_each_label_against_the_active_host_before_dispatch
 selection_policy:
   project_override_file: .agrimap-agent/model-capability-matrix.yaml
-  max_active_subagents: 5
-  leader_integrates_and_dispatches_independent_qa: true
+  default_profile: guided
   rules:
-    - Use a reasoning/review profile for decomposition, high-impact design, QA, and final review.
-    - Use a hard executor only when complexity or coupling justifies the cost.
-    - Use a standard executor for bounded implementation with explicit steps.
-    - Use a lightweight executor only when files, lines, steps, tests, and output contract are fully specified.
-    - Preserve decision-owner/project-provided model names as configurable labels; do not silently present them as actual models.
-    - Treat gemini-cli-default as a routing label; resolve it to the active host-selected Gemini model at dispatch and record the actual model in execution identity.
-    - Model capability and provider affect assignment only; they never change workflow depth, QA mode, allowed tools, verification scope, or acceptance rules.
-    - Higher-capability models do not earn larger briefs, memory, logs, checklists, or results; artifact phase and compact field budgets are provider-neutral.
-
-providers:
-  claude:
-    reasoning_review:
-      - fable
-      - opus4.8
-    execution_hard:
-      - fable
-    execution_standard:
-      - sonnet5
-      - sonnet4.6
-    execution_light:
-      - haiku4.5
-  codex:
-    reasoning_review:
-      - GPT-5.6-sol
-    execution_hard:
-      - gpt-5.6-sol
-    execution_standard:
-      - gpt-5.4
-    execution_light:
-      - gpt-5.4-mini
-  gemini:
-    reasoning_review:
-      - gemini-cli-default
-    execution_hard:
-      - gemini-cli-default
-    execution_standard:
-      - gemini-cli-default
-    execution_light:
-      - gemini-cli-default
-
-task_profiles:
-  frontier_analysis:
-    capability: reasoning_review
-  architecture_or_logic_change:
-    capability: reasoning_review
-  qa_or_review:
-    capability: reasoning_review
-  difficult_implementation:
-    capability: execution_hard
-  bounded_implementation:
-    capability: execution_standard
-  mechanical_or_fully_specified:
-    capability: execution_light
-
-display_label_policy:
-  mode: sparse_overrides
-  fallback: model_key
-
-display_labels:
-  claude:
-    fable: Fable 5
-  gemini:
-    gemini-cli-default: Gemini CLI active model
+    - Select outcome, guided or bounded per measured task-family performance.
+    - Model capability changes scaffolding only, never authority, acceptance, workflow risk or SQL permissions.
+    - Unknown models start guided; preserve actual identity without inventing availability or rankings.
+    - Bounded work uses coherent behavior units, precise inputs/outputs and relevant examples.
+    - Outcome work gives constraints and acceptance while allowing implementation choices.
+    - Guided work adds a short dependency-aware checklist and one relevant example.
+    - Host tool/session/isolation support is separate from reasoning ability.
+    - Use one model sequentially when no appropriate delegation is available.
+candidate_labels:
+  openai: [GPT-5.2, GPT-5.4, GPT-5.5, GPT5.6-Luna, GPT5.6-Terra, GPT5.6-Sol, GPT6]
+  claude: [Sonnet5, Opus4.8, Opus5, Fable5, Fable5.1]
+  gemini: [Gemini-3.5-Flash, Gemini-3.6-Flash, Gemini-3.7-Flash, Gemini-3.8-Flash, Gemini-3.1-Pro]
+  qwen: [QWEN3.8-30B]
+# Requester-provided routing labels only, not availability or capability claims.

@@ -22,6 +22,8 @@ import {
 
 const root = process.cwd();
 const errors = [];
+const { validateDocumentation } = await import('./validate-docs.mjs');
+errors.push(...(await validateDocumentation(root)).errors);
 
 async function exists(filePath) {
   try {
@@ -216,7 +218,7 @@ if (passiveSkillMap) {
     if (referenceFile && !(await exists(path.join(root, "skills", "agrimap-agent-skills", "references", referenceFile)))) errors.push(`Passive capability ${capability?.id} reference is missing: ${referenceFile}.`);
   }
   const goalRules = capabilities.find((item) => item.id === "goal-rules");
-  const requiredGoalOperations = ["analyze", "architect", "be", "design", "diagnose", "fe", "sql", "review", "simulate", "execute", "plan", "qa", "prompt"];
+  const requiredGoalOperations = ["analyze", "architect", "be", "diagnose", "fe", "sql", "execute", "plan", "qa", "prompt"];
   if (JSON.stringify(goalRules?.operations) !== JSON.stringify(requiredGoalOperations)) errors.push("goal-rules operation mapping is incomplete or reordered unexpectedly.");
   for (const operation of requiredGoalOperations) {
     const item = operations?.operations?.find((candidate) => candidate.operation === operation);
@@ -224,264 +226,27 @@ if (passiveSkillMap) {
   }
 }
 
-if (!packageManifest?.scripts?.test?.includes("npm run verify:golden")) errors.push("npm test must include golden verification.");
-if (!packageManifest?.scripts?.test?.includes("npm run validate")) errors.push("npm test must include package validation before behavioral suites.");
-if (!packageManifest?.scripts?.["test:unit"]?.includes("fe-scenarios.test.mjs")) errors.push("Frontend scenario eval is not wired into the automated unit suite.");
-if (!packageManifest?.scripts?.["test:unit"]?.includes("feature-lifecycle-policy.test.mjs")) errors.push("Feature lifecycle policy test is not wired into the automated unit suite.");
-if (!packageManifest?.scripts?.["test:unit"]?.includes("governance-policy.test.mjs")) errors.push("Governance policy test is not wired into the automated unit suite.");
-if (!packageManifest?.scripts?.["test:unit"]?.includes("qa-policy.test.mjs")) errors.push("QA provider-neutral policy test is not wired into the automated unit suite.");
-if (!packageManifest?.scripts?.["test:unit"]?.includes("task-artifact-schema.test.mjs")) errors.push("Task artifact schema contract test is not wired into the automated unit suite.");
-if (!packageManifest?.scripts?.["test:unit"]?.includes("token-coverage.test.mjs")) errors.push("Token coverage audit test is not wired into the automated unit suite.");
-if (!packageManifest?.scripts?.["test:unit"]?.includes("prompt-version.test.mjs")) errors.push("Prompt version contract test is not wired into the automated unit suite.");
-if (!packageManifest?.scripts?.["test:unit"]?.includes("sql-artifacts.test.mjs")) errors.push("SQL artifact contract test is not wired into the automated unit suite.");
-if (!packageManifest?.scripts?.["test:unit"]?.includes("sql-scenarios.test.mjs")) errors.push("SQL cross-provider scenario eval is not wired into the automated unit suite.");
-if (!packageManifest?.scripts?.["audit:tokens"]?.includes("token-coverage.mjs")) errors.push("Token coverage audit command is missing.");
-for (const scriptName of ["test:unit", "test:integration", "test:workspace", "test:usage"]) {
-  if (!packageManifest?.scripts?.[scriptName]) errors.push(`package.json script is missing: ${scriptName}`);
-}
-if (!packageManifest?.scripts?.test?.includes("npm run test:unit") || !packageManifest?.scripts?.test?.includes("npm run test:integration")) {
-  errors.push("npm test must run the categorized unit and integration suites.");
-}
 
-const canonicalSkill = await readFile(path.join(root, "skills", "agrimap-agent-skills", "SKILL.md"), "utf8");
-if (!/^---\r?\nname: agrimap-agent-skills\r?\ndescription: .+\r?\n---/s.test(canonicalSkill)) errors.push("Canonical SKILL.md frontmatter is invalid.");
-if (canonicalSkill.split(/\r?\n/).length > 80) errors.push("Routing SKILL.md exceeds the 80-line single-purpose limit.");
-for (const marker of ["Perform one task only", "[operation-index.md](references/operation-index.md)", "Select exactly one", "AgriMap router active", "Stop.", "PACKAGE_ENTRYPOINT_MISSING", "not a fallback execution engine"])
-  if (!canonicalSkill.includes(marker)) errors.push(`Routing-only skill contract missing marker: ${marker}`);
-for (const forbidden of ["## Start every task", "## Owner reference library", "## Analyze before editing", "## Route technical patterns", "## Delegate deliberately", "## Checkpoint every durable state transition", "## Verify and close"])
-  if (canonicalSkill.includes(forbidden)) errors.push(`Routing skill contains execution responsibility: ${forbidden}`);
-
-const lifecycleCorePath = path.join(root, "skills", "agrimap-agent-skills", "references", "lifecycle-core.md");
-const lifecycleCoreReference = await readFile(lifecycleCorePath, "utf8");
-for (const marker of ["Select `workflow_depth`", "`light`", "`standard`", "`regulated`", "Help and history remain light diagnostics", "Persistence by depth", "Only `standard|regulated` write", "Terminal lifecycle", "Milestone checkpoints", "behaviorally complete acceptance slice", "Boundaries"])
-  if (!lifecycleCoreReference.includes(marker)) errors.push(`Lifecycle core missing marker: ${marker}`);
-for (const marker of ["For `action-routed` operations", "resolve one action before target inspection", "Embedded passive capabilities support the selected read or authorized write action", "creating write intent", "must not create anything under `tasks/**`"])
-  if (!lifecycleCoreReference.includes(marker)) errors.push(`Domain action boundary missing marker: ${marker}`);
-if (lifecycleCoreReference.split(/\r?\n/).length > 70) errors.push("Lifecycle core exceeds its 70-line budget.");
-const runtimeCoreReference = await readFile(path.join(root, "skills", "agrimap-agent-skills", "references", "runtime-core.md"), "utf8");
-if (!runtimeCoreReference.includes("compatibility pointer") || !runtimeCoreReference.includes("lifecycle-core.md")) errors.push("Legacy runtime-core.md must be only a compatibility pointer to lifecycle-core.md.");
-if (runtimeCoreReference.split(/\r?\n/).length > 8) errors.push("Legacy runtime-core compatibility pointer has regrown into policy.");
-
-const frontendEngineerReference = await readFile(path.join(root, "skills", "agrimap-agent-skills", "references", "frontend-engineer.md"), "utf8");
-if (!frontendEngineerReference.includes("[fe-scenarios.md](evals/fe-scenarios.md)")) errors.push("Frontend eval catalog is unreachable from the dedicated frontend discipline.");
-const sqlPatternReference = await readFile(path.join(root, "skills", "agrimap-agent-skills", "references", "patterns", "sql.md"), "utf8");
-if (!sqlPatternReference.includes("[sql-scenarios.md](../evals/sql-scenarios.md)")) errors.push("SQL eval catalog is unreachable from the SQL discipline.");
-
-const glossaryReference = await readFile(path.join(root, "skills", "agrimap-agent-skills", "references", "glossary.md"), "utf8");
-for (const marker of [
-  "Requester authority",
-  "Substantive work",
-  "Milestone checkpoint",
-  "Material choice/change",
-  "Complex work",
-  "Few files / small task",
-  "Proportional verification",
-  "third closure for that key must use `full`",
-  "Verification-only QA",
-  "Configurable model label",
-  "Actual model",
-]) {
-  if (!glossaryReference.includes(marker)) errors.push(`Workflow glossary missing marker: ${marker}`);
+if (!packageManifest.scripts.test.includes("npm run validate") || !packageManifest.scripts["test:unit"].includes("v3-governance.test.mjs")) errors.push("v3 validation and behavioral tests must be release gates.");
+for (const issue of taskArtifactSchemaIssues(taskArtifactSchema)) errors.push(issue);
+if (taskArtifactSchema.runtimeArtifactVersion !== 3) errors.push("Runtime artifact schema must be v3.");
+for (const file of ["README.md", "docs/USAGE.md"]) {
+  if (!(await readFile(path.join(root,file),"utf8")).includes(renderTaskArtifactSchemaDocs(taskArtifactSchema).trim())) errors.push(file + ": stale artifact schema documentation");
 }
-
-const memoryAndLogsReference = await readFile(path.join(root, "skills", "agrimap-agent-skills", "references", "memory-and-logs.md"), "utf8");
-const documentedLogEvents = memoryAndLogsReference.match(/Canonical events:\s*`([^`]+)`/)?.[1]?.split("|") || [];
-if (JSON.stringify(documentedLogEvents) !== JSON.stringify(LOG_EVENTS)) {
-  errors.push(`Documented log event enum differs from scripts/log-events.mjs: ${documentedLogEvents.join("|") || "missing"}`);
+const bootstrapRoot = path.join(root,"skills/agrimap-agent-skills/assets/bootstrap");
+const bootstrapManifest = JSON.parse(await readFile(path.join(bootstrapRoot,"manifest.json"),"utf8"));
+if (bootstrapManifest.version !== packageManifest.version) errors.push("Bootstrap version drift");
+const { createHash } = await import("node:crypto");
+for (const item of bootstrapManifest.files) {
+  const content = await readFile(path.join(bootstrapRoot,item.source));
+  if (createHash("sha256").update(content).digest("hex") !== item.sha256) errors.push("Bootstrap hash drift: " + item.source);
 }
-const documentedMilestones = memoryAndLogsReference.match(/Canonical milestones:\s*`([^`]+)`/)?.[1]?.split("|") || [];
-if (JSON.stringify(documentedMilestones) !== JSON.stringify(MILESTONE_TYPES)) {
-  errors.push(`Documented milestone enum differs from scripts/log-events.mjs: ${documentedMilestones.join("|") || "missing"}`);
-}
-const workspaceScriptReference = await readFile(path.join(root, "skills", "agrimap-agent-skills", "scripts", "agm-workspace.mjs"), "utf8");
-if (!workspaceScriptReference.includes('from "./log-events.mjs"')) {
-  errors.push("agm-workspace.mjs does not enforce the canonical log event enum.");
-}
-for (const marker of ["auditEventIssues", 'case "history"', "REQUEST_OBJECTIVE_REQUIRED", "TASK_ID_EXISTS", "AMBIGUOUS_ACTIVE_TASK", "QA_CORRECTION_LIMIT", "QA_FINDING_PRODUCT_FILES_FORBIDDEN", "INVALID_WORKFLOW_DEPTH", "CHECKPOINT_EVENT_NOT_MILESTONE", "INVALID_MILESTONE"])
-  if (!workspaceScriptReference.includes(marker)) errors.push(`Workspace audit implementation missing marker: ${marker}`);
-const terminalEventDeclaration = workspaceScriptReference.match(/const TERMINAL_AUDIT_EVENTS = new Set\(\[[^\]]+\]\)/)?.[0] || "";
-if (!terminalEventDeclaration || terminalEventDeclaration.includes('"qa-finding"')) errors.push("qa-finding must exist as a non-terminal audit checkpoint, not a terminal task outcome.");
-for (const marker of ["loadTaskArtifactSchema", "taskArtifactSchema.scaffoldOrder", "renderTaskArtifact"])
-  if (!workspaceScriptReference.includes(marker)) errors.push(`Workspace task-artifact schema integration missing marker: ${marker}`);
-for (const hardcodedTemplate of ['renderAssetTemplate("task-brief.md"', 'renderAssetTemplate("checklist.md"'])
-  if (workspaceScriptReference.includes(hardcodedTemplate)) errors.push(`Workspace scaffold bypasses task-artifact schema: ${hardcodedTemplate}`);
-
-if (taskArtifactSchema) {
-  for (const issue of taskArtifactSchemaIssues(taskArtifactSchema)) errors.push(`Task artifact schema: ${issue}`);
-  if (JSON.stringify(taskArtifactSchema.workflowDepths) !== JSON.stringify(["light", "standard", "regulated"])) errors.push("Task artifact schema workflowDepths must be light|standard|regulated.");
-  if (JSON.stringify(taskArtifactSchema.artifacts?.["qa.md"]?.requiredForDepths) !== JSON.stringify(["standard", "regulated"])) errors.push("qa.md must be required for both tracked depths.");
-  for (const [artifact, definition] of Object.entries(taskArtifactSchema.artifacts || {})) {
-    const templatePath = path.join(root, "skills", "agrimap-agent-skills", "assets", "templates", definition.template || "");
-    if (!(await exists(templatePath))) {
-      errors.push(`${artifact}: schema template is missing: ${definition.template || "undefined"}`);
-      continue;
-    }
-    const template = await readFile(templatePath, "utf8");
-    for (const field of definition.requiredFields || []) {
-      const escaped = String(field.label).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      if (!new RegExp(`^\\s*-\\s*${escaped}:`, "m").test(template)) {
-        errors.push(`${artifact}: template ${definition.template} is missing required field: ${field.label}`);
-      }
-    }
-    for (const heading of taskArtifactRequiredSections(definition)) {
-      const escaped = String(heading).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      if (!new RegExp(`^##\\s+${escaped}\\s*$`, "m").test(template)) {
-        errors.push(`${artifact}: template ${definition.template} is missing required section: ${heading}`);
-      }
-    }
-    if (definition.kind === "checklist" && !/^\s*- \[[ xX]\]\s+/m.test(template)) {
-      errors.push(`${artifact}: checklist template has no checkbox item.`);
-    }
-  }
-  const generatedSchemaDocs = renderTaskArtifactSchemaDocs(taskArtifactSchema);
-  for (const relativePath of ["README.md", "docs/USAGE.md"]) {
-    const content = await readFile(path.join(root, relativePath), "utf8");
-    if (!content.includes(generatedSchemaDocs)) errors.push(`${relativePath}: generated task-artifact schema block is stale; run npm run sync.`);
+for (const item of operations.operations) {
+  for (const ref of [...(item.references || []), ...(item.conditionalReferences || [])]) {
+    const relative = typeof ref === "string" ? ref : ref.path;
+    if (relative && !(await exists(path.join(root,"skills/agrimap-agent-skills/references",relative.split("#")[0])))) errors.push("Missing operation reference: " + relative);
   }
 }
-
-const syncAdapter = await readFile(path.join(root, "tools", "sync-adapters.mjs"), "utf8");
-if (!syncAdapter.includes("packageManifest.version")) errors.push("Sync adapter does not read the canonical package version.");
-if (/\bversion\s*:\s*["']\d+\.\d+\.\d+/.test(syncAdapter)) errors.push("Sync adapter contains a hardcoded semantic version.");
-
-const ownerExampleStatus = "missing-owner-example";
-for (const relativePath of [
-  "README.md",
-  "skills/agrimap-agent-skills/references/patterns/conflict-resolution.md",
-  "skills/agrimap-agent-skills/references/patterns/pattern-status.md",
-]) {
-  const content = await readFile(path.join(root, relativePath), "utf8");
-  if (!content.includes(ownerExampleStatus)) errors.push(`${relativePath}: canonical owner-example status is missing`);
-  if (content.includes("needs-owner-example")) errors.push(`${relativePath}: obsolete owner-example status found`);
-}
-
-for (const relativePath of [
-  "skills/agrimap-agent-skills/references/patterns/frontend.md",
-  "skills/agrimap-agent-skills/references/patterns/backend.md",
-  "skills/agrimap-agent-skills/references/patterns/sql.md",
-]) {
-  const content = await readFile(path.join(root, relativePath), "utf8");
-  if (!content.includes("conflict-resolution.md")) errors.push(`${relativePath}: conflict-resolution link missing`);
-}
-
-const delegationReference = await readFile(path.join(root, "skills", "agrimap-agent-skills", "references", "subagents-and-branches.md"), "utf8");
-for (const marker of ["one writer model per wave", "workspace_need", "base commit", "isolated-sandbox", "portable patch", "Neither the requester nor decision owner is responsible"])
-  if (!delegationReference.includes(marker)) errors.push(`Delegation contract missing marker: ${marker}`);
-for (const marker of ["For QA delegation, import [qa-and-done.md]", "single policy source", "do not restate", "isolation: worktree", "normal subagent starts in the current working directory"])
-  if (!delegationReference.includes(marker)) errors.push(`Delegation composition contract missing marker: ${marker}`);
-for (const forbidden of ["product_artifacts: read-only", "workflow_writes:", QA_FAILED_EVENT])
-  if (delegationReference.includes(forbidden)) errors.push(`Delegation reference duplicates canonical QA policy: ${forbidden}`);
-for (const marker of ["Current Codex surfaces expose native agent activity", "CLI `/agent`", "background-agent panel", "at least every 60 seconds", "Only when the active surface genuinely lacks it", "do not write per step", "once per five minutes"])
-  if (!delegationReference.includes(marker)) errors.push(`Native subagent visibility contract missing marker: ${marker}`);
-if (delegationReference.includes("one `step` line per ordered step")) errors.push("Subagent progress contract still requires per-step heartbeat writes.");
-
-const workflowReference = await readFile(path.join(root, "skills", "agrimap-agent-skills", "references", "workflows.md"), "utf8");
-for (const marker of ["contains no executable lifecycle or operation rules", "Normal `agm-*` invocations must not load it", "lifecycle-core.md", "generated `operations/<operation>.md`", "do not merge multiple operation contracts"])
-  if (!workflowReference.includes(marker)) errors.push(`Workflow source map missing marker: ${marker}`);
-if (workflowReference.split(/\r?\n/).length > 30) errors.push("Workflow source map has regrown into a duplicated execution contract.");
-
-const rolesReference = await readFile(path.join(root, "skills", "agrimap-agent-skills", "references", "roles.md"), "utf8");
-if (rolesReference.split(/\r?\n/).length > 40) errors.push("Role map has regrown into a duplicated execution contract.");
-
-const sqlPattern = await readFile(path.join(root, "skills", "agrimap-agent-skills", "references", "patterns", "sql.md"), "utf8");
-for (const marker of ["sql-contract-preflight.mjs --target-kind sql-table|sql-procedure --object <OBJECT>", "install-sqlfluff.mjs", "CommandNotFound", "ENOENT", "other failures never install", "sqlfluff format --exclude-rules \"CP02, LT01, RF06\" --dialect tsql <FILE>.sql", "sqlfluff format --exclude-rules \"CP02, LT01, RF06\" --dialect tsql .", "format_set", "formatted N/N", "Do not hand-tune cosmetic indentation, alignment, wrapping, or whitespace", "nonzero folder exit is incomplete", "validate-sql-artifacts.mjs --files", "Use OS temp for probes and always clean it", "never create `.tmp-*` under project/workspace", "Every new table and procedure belongs to `[agrimap_app]`", "CREATE OR ALTER PROCEDURE", "Standalone `CREATE PROCEDURE`", "## Message collection gate", "`messages.sql`", "[agrimap_app].[LUT_APP_MESSAGES] ([ID], [DESCR])", "same code + same meaning", "same code + different or ambiguous meaning", "`IF NOT EXISTS`", "`no message changes`", "`readability-organization`", "`strict-preserve-logic`", "Neither lane uses ScriptDom"])
-  if (!sqlPattern.includes(marker)) errors.push(`SQL message-collection contract missing marker: ${marker}`);
-for (const marker of ["### Stored procedure section comments", "-- Validate required parameters", "-- Validate WIDGET_TYPE_ID", "-- Begin Transaction", "-- Step 1: Insert dashboard widget", "-- Return PO_DATA", "-- Commit Transaction", "-- Rollback Transaction"])
-  if (!sqlPattern.includes(marker)) errors.push(`SQL procedure-comment contract missing marker: ${marker}`);
-
-const promptReference = await readFile(path.join(root, "skills", "agrimap-agent-skills", "references", "prompt.md"), "utf8");
-for (const marker of ["V0 is only the requester input/start state", "first finalized model answer creates V1", "Never overwrite", "PROMPT_SOURCE_CONFIRM_REQUIRED", "one Prompt Package file", "## Main Assignment", "## Subagent Assignments", "Main ownership of integration", "scripts/agm-prompt-version.mjs create", "never product files or `tasks/**`", "agm-exec` accepts only an approved Prompt Result"])
-  if (!promptReference.includes(marker)) errors.push(`agm-prompt contract missing marker: ${marker}`);
-
-const executionReportTemplate = await readFile(path.join(root, "skills", "agrimap-agent-skills", "assets", "templates", "execution-report.md"), "utf8");
-for (const marker of ["# Execution Log — {{TASK_TITLE}}", ".agrimap-agent/reports/<year>-<month>/<ddHHmmss>-<context>.md", "## Metadata", "## Linked Artifacts", "## Objectives", "## Files Read (Analysis Phase)", "## Files Generated (NEW)", "## Files Modified", "## Issues Found & Resolved", "## Task Files Status", "## Summary", "## Completion Checklist", "# Appendix — Task File Mini-Templates", ".agrimap-agent/prompts/<year>-<month>/<session_id|context_id|room_id>/<context>.md"])
-  if (!executionReportTemplate.includes(marker)) errors.push(`Execution report template missing marker: ${marker}`);
-if (executionReportTemplate.includes("tasks/<year>-<month>/<task_id>/execution_log.md")) errors.push("Execution report template still claims it lives under tasks/**.");
-if (!workspaceScriptReference.includes('renderAssetTemplate("execution-report.md"')) errors.push("Workspace completion does not render the canonical execution-report.md template.");
-for (const forbidden of ["./agrimap-agent/prompts", "agrimap-agent/requirements", 'path.join(root, "agrimap-agent")', 'path.join(cwd, "agrimap-agent")']) {
-  if (workspaceScriptReference.includes(forbidden)) errors.push(`Non-dot workflow state path is forbidden: ${forbidden}`);
-}
-
-const urlMatrixReference = await readFile(path.join(root, "skills", "agrimap-agent-skills", "references", "application-url-matrix.md"), "utf8");
-for (const marker of [
-  "http://localhost:4200/callback",
-  "http://localhost:4201/agrimap-platform-wa/callback",
-  "http://localhost:4202/agrimap-suite-wa/ii-online",
-  "http://localhost:4202/agrimap-suite-wa/executive",
-  "https://appserv2.cdg.co.th/agrimap-suite-wa/callback",
-  "https://agrimap-online.cdg.co.th/callback",
-  "https://agrimap-ex.ldd.go.th/callback",
-  "https://agrimap-pro.ldd.go.th/callback",
-  "Default` and `Normal` share the callback URL",
-  "Never synthesize a URL by generic string concatenation",
-  "Unsupported combinations return an explicit unsupported result",
-]) {
-  if (!urlMatrixReference.includes(marker)) errors.push(`Application URL matrix missing marker: ${marker}`);
-}
-for (const operation of ["analyze", "diagnose", "simulate", "plan", "design", "architect", "review", "fe", "be", "qa", "prompt", "execute"]) {
-  const item = operations?.operations?.find((candidate) => candidate.operation === operation);
-  if (!item?.conditionalReferences?.some((reference) => reference.path === "application-url-matrix.md")) errors.push(`${operation} must conditionally route to application-url-matrix.md.`);
-}
-
-for (const marker of ["PREMATURE_RESULT_ARTIFACT", "PREMATURE_QA_ARTIFACT", "CHECKPOINT_FIELD_BUDGETS"])
-  if (!workspaceScriptReference.includes(marker)) errors.push(`Workspace phase/budget guard missing marker: ${marker}`);
-
-const qaReference = await readFile(path.join(root, "skills", "agrimap-agent-skills", "references", "qa-and-done.md"), "utf8");
-for (const marker of ["single policy source", "Start every QA request at `depth=light` and `qa_mode=light`", "Product artifacts are read-only", "Result Package as testimony", "Verification tool allowlist", "SQLFluff installation and formatting are writer actions and are excluded", "Do not use LocalDB, dbserver, SQL Server", "dotnet build <existing-project-or-solution>", "npm run start:agrimap:development", "There is no conditional pass", "non-terminal `qa-finding`", "fresh verifier runs full QA", `terminal audit event is \`${QA_FAILED_EVENT}\``, "Regulated completion gate"])
-  if (!qaReference.includes(marker)) errors.push(`QA contract missing marker: ${marker}`);
-if ((qaReference.match(new RegExp(QA_FAILED_EVENT, "g")) || []).length !== 1) errors.push("qa-and-done.md must own exactly one literal terminal QA event name.");
-if (qaReference.split(/\r?\n/).length > 80) errors.push("Canonical QA contract exceeds its 80-line budget.");
-
-const compactPolicySources = new Map([
-  ["SKILL.md", canonicalSkill],
-  ["lifecycle-core.md", lifecycleCoreReference],
-  ["runtime-core.md", runtimeCoreReference],
-  ["workflows.md", workflowReference],
-  ["roles.md", rolesReference],
-  ["subagents-and-branches.md", delegationReference],
-  ["prompt.md", promptReference],
-]);
-for (const [sourceName, content] of compactPolicySources) {
-  if (content.includes(QA_FAILED_EVENT)) errors.push(`${sourceName} duplicates the terminal QA event owned by qa-and-done.md.`);
-  if (/independent\s+(?:read-only|verification-only)?\s*QA/i.test(content)) errors.push(`${sourceName} duplicates the verifier boundary owned by qa-and-done.md.`);
-}
-if (delegationReference.split(/\r?\n/).length > 80) errors.push("Delegation reference exceeds its 80-line budget.");
-
-const hookContextReference = await readFile(path.join(root, "skills", "agrimap-agent-skills", "scripts", "hook-context.mjs"), "utf8");
-for (const forbidden of ["./agrimap-agent/prompts", "agrimap-agent/requirements", 'path.join(root, "agrimap-agent")', 'path.join(cwd, "agrimap-agent")']) {
-  if (hookContextReference.includes(forbidden)) errors.push(`Hook contains a non-dot workflow state path: ${forbidden}`);
-}
-for (const marker of ["light creates no tasks/** artifacts", "every depth requires memory and audit attribution", "Reopen project memory on demand", "lifecycle-core.md", "Raw requester submits contain no AI answers"])
-  if (!hookContextReference.includes(marker)) errors.push(`Hook lifecycle guidance missing marker: ${marker}`);
-
-const frontendDiscipline = await readFile(path.join(root, "skills", "agrimap-agent-skills", "references", "frontend-engineer.md"), "utf8");
-if (!frontendDiscipline.includes("embedded supporting discipline is not a standalone workflow/alias")) errors.push("Frontend engineering is not defined as a composable discipline.");
-if (frontendDiscipline.includes("`/agm-fe-engineer`")) errors.push("Frontend engineering still declares a standalone alias.");
-
-const backendDiscipline = await readFile(path.join(root, "skills", "agrimap-agent-skills", "references", "backend-engineer.md"), "utf8");
-for (const marker of ["embedded supporting discipline", "`be-main`", "`be-library`", "`agmws`", "`agmbo`", "`foundation`", "`active-development`", "`stabilization`", "Do not add Type A/B/C or a required `change_kind`"])
-  if (!backendDiscipline.includes(marker)) errors.push(`Backend discipline missing marker: ${marker}`);
-if (backendDiscipline.includes("Require `change_kind`")) errors.push("Backend discipline incorrectly requires change_kind.");
-for (const marker of ["## HTTP request-value normalization", "013-1-extensions-request-value-normalize.md", "both `be-main` and `be-library`", "direct `Request.Headers`", "require no DI registration", "Do not mass-replace mechanically"])
-  if (!backendDiscipline.includes(marker)) errors.push(`Backend request normalization discipline missing marker: ${marker}`);
-const requestValueReference = "patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md";
-for (const operation of ["analyze", "diagnose", "be", "qa"]) {
-  const item = operations?.operations?.find((candidate) => candidate.operation === operation);
-  const routedReferences = [...(item?.references || []), ...(item?.conditionalReferences || [])];
-  if (!routedReferences.some((reference) => reference.path === requestValueReference)) errors.push(`${operation} does not route to the backend request-value normalization contract.`);
-}
-for (const marker of ["## Error/message reconciliation", "same code + same meaning", "same code + different or ambiguous meaning", "`IF NOT EXISTS`", "`no message changes`"])
-  if (!backendDiscipline.includes(marker)) errors.push(`Backend message-reconciliation contract missing marker: ${marker}`);
-
-const modelMatrix = await readFile(path.join(root, "skills", "agrimap-agent-skills", "references", "model-capability-matrix.yaml"), "utf8");
-if (modelMatrix.includes("fable5")) errors.push("Fable is duplicated as fable and fable5 instead of one model label.");
-if (!modelMatrix.includes("fable: Fable 5")) errors.push("Fable 5 display label is missing.");
-if (!modelMatrix.includes("mode: sparse_overrides") || !modelMatrix.includes("fallback: model_key")) errors.push("Display-label fallback policy must declare sparse overrides with model-key fallback.");
-for (const marker of ["provider_entries_are: configurable_model_labels", "configured_field: modelLabel", "execution_field: model", "actual_host_reported_model_or_unknown"])
-  if (!modelMatrix.includes(marker)) errors.push(`Model identity policy missing marker: ${marker}`);
-if (!/^  gemini:\r?$/m.test(modelMatrix) || !modelMatrix.includes("gemini-cli-default")) errors.push("Gemini model capability routing is missing.");
-if (!promptReference.includes("provider") || !promptReference.includes("model")) errors.push("agm-prompt provider/model metadata contract is missing.");
-
 const rootIgnore = await readFile(path.join(root, ".gitignore"), "utf8").catch(() => "");
 if (!rootIgnore.split(/\r?\n/).includes(".agrimap-agent/")) errors.push("Development repository must ignore its entire local .agrimap-agent state.");
 
@@ -545,7 +310,7 @@ if (operations) {
   const names = operations.operations.map((item) => item.name);
   if (new Set(names).size !== names.length) errors.push("Operation aliases are not unique.");
   if (names.includes("agm-fe-engineer")) errors.push("Passive frontend discipline must not expose agm-fe-engineer.");
-  if (!operations.operations.some((item) => item.name === "agm-history" && item.operation === "history")) errors.push("agm-history operation is required for durable requester/task queries.");
+  for (const removed of ["agm-design","agm-simulate","agm-review","agm-history"]) if (names.includes(removed)) errors.push(`${removed} is removed from the public surface.`);
   for (const [name, actions] of Object.entries({ "agm-fe": ["analyze", "design", "create", "edit", "refactor", "test"], "agm-be": ["analyze", "design", "create", "edit", "refactor", "test"], "agm-sql": ["analyze", "design", "create", "edit", "refactor", "explain"] })) {
     const item = operations.operations.find((candidate) => candidate.name === name);
     if (item?.mode !== "action-routed") errors.push(`${name} must be action-routed.`);
@@ -557,12 +322,12 @@ if (operations) {
       errors.push(`${name} action=refactor must be explicit product-write at light|standard|regulated.`);
     }
   }
-  for (const keptName of ["agm-analyze", "agm-design"])
+  for (const keptName of ["agm-analyze"])
     if (!operations.operations.some((item) => item.name === keptName && item.visibility !== "compatibility")) errors.push(`${keptName} must remain a primary operation.`);
   for (const removedName of ["agm-create-feature", "agm-create-unit-test", "agm-refactor", "agm-refactor-fe", "agm-refactor-be", "agm-refactor-sql", "agm-create-prompt"])
     if (operations.operations.some((item) => item.name === removedName)) errors.push(`${removedName} must be absent from the distributed operation surface.`);
   const promptOperation = operations.operations.find((item) => item.name === "agm-prompt" && item.operation === "prompt");
-  if (promptOperation?.mode !== "workflow-write-only" || JSON.stringify(promptOperation?.depth) !== JSON.stringify({ default: "light", allowed: ["light"] }) || !promptOperation?.deliverable?.includes("never tasks/**")) {
+  if (promptOperation?.mode !== "workflow-write-only" || JSON.stringify(promptOperation?.depth) !== JSON.stringify({ default: "light", allowed: ["light"] }) ) {
     errors.push("agm-prompt must be light-only workflow-write-only and artifactless.");
   }
   for (const name of names) {
@@ -627,5 +392,5 @@ if (errors.length) {
   process.stdout.write(`${JSON.stringify({ ok: false, errors }, null, 2)}\n`);
   process.exitCode = 1;
 } else {
-  process.stdout.write(`${JSON.stringify({ ok: true, aliases: operations.operations.length, checks: "manifests, provider isolation, adapters, routing-only skill, dedicated operation skills, task-artifact schema/templates/docs, glossary, delegation ownership, usage examples, golden sources" }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ ok: true, aliases: operations.operations.length, checks: "manifests, provider isolation, adapters, routing-only skill, dedicated operation skills, v3 behavior gate, legacy schema compatibility, bootstrap hashes, golden sources" }, null, 2)}\n`);
 }

@@ -1,7 +1,7 @@
 import os from "node:os";
 
-export const IDENTITY_SCHEMA_VERSION = 1;
-export const DEFAULT_CONFIRMATION_HOURS = 24;
+export const IDENTITY_SCHEMA_VERSION = 2;
+export const DEFAULT_CONFIRMATION_HOURS = 0;
 export const IDENTITY_SOURCES = Object.freeze([
   "manual-confirmed",
   "git-config-confirmed",
@@ -16,6 +16,7 @@ function validIso(value) {
 }
 
 export function confirmationExpiry(confirmedAt, hours = DEFAULT_CONFIRMATION_HOURS) {
+  if (!Number(hours)) return null;
   const confirmed = Date.parse(String(confirmedAt || ""));
   const boundedHours = Math.min(168, Math.max(1, Number(hours) || DEFAULT_CONFIRMATION_HOURS));
   return Number.isFinite(confirmed)
@@ -26,8 +27,9 @@ export function confirmationExpiry(confirmedAt, hours = DEFAULT_CONFIRMATION_HOU
 export function normalizeIdentity(value, options = {}) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const confirmedAt = validIso(value.confirmedAt || value.updatedAt);
-  const expiresAt = validIso(value.expiresAt)
-    || confirmationExpiry(confirmedAt, options.confirmationHours);
+  const persistent = value.schemaVersion >= 2 && value.expiresAt === null;
+  const expiresAt = persistent ? null : validIso(value.expiresAt)
+    || confirmationExpiry(confirmedAt, options.confirmationHours || 24);
   const requestedBy = String(value.requestedBy || "").trim();
   const identitySource = IDENTITY_SOURCE_SET.has(value.identitySource)
     ? value.identitySource
@@ -50,7 +52,7 @@ export function normalizeIdentity(value, options = {}) {
     provider: String(value.provider || options.defaultProvider || "unknown").trim() || "unknown",
     machine: String(value.machine || "").trim() || null,
     osUser: String(value.osUser || "").trim() || null,
-    expired: !requestedBy || !confirmedAt || !Number.isFinite(expiresMs) || expiresMs <= nowMs,
+    expired: Boolean(value.revoked) || !requestedBy || !confirmedAt || (!persistent && (!Number.isFinite(expiresMs) || expiresMs <= nowMs)),
   };
 }
 

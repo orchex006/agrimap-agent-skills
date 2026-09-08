@@ -78,6 +78,14 @@ function tableCell(values) {
 }
 
 export function renderTaskArtifactSchemaDocs(schema) {
+  if (schema.runtimeArtifactVersion === 3) return [
+    TASK_ARTIFACT_SCHEMA_START,
+    'Ordinary answers: no execution/task artifacts. Bounded writes: concise memory/audit.',
+    'Tracked v3 work: one task.md with scope, acceptance, progress, evidence and result.',
+    'Separate analysis/QA/results/reports are consumer-requested deliverables, not a five-file gate.',
+    'Legacy v2 five-file validation remains in assets/task-artifact-schema.json for existing executions only; it is not the new-work checklist.',
+    TASK_ARTIFACT_SCHEMA_END
+  ].join('\n');
   const rows = Object.entries(schema.artifacts || {}).map(([file, definition]) => {
     const fields = (definition.requiredFields || []).map((field) => field.label);
     const sections = taskArtifactRequiredSections(definition);
