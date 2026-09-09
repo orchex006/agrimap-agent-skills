@@ -54,6 +54,11 @@ for (const item of bootstrapManifest.files) {
 }
 bootstrapManifest.version = packageVersion;
 await writeFile(bootstrapManifestPath, JSON.stringify(bootstrapManifest, null, 2) + '\n', 'utf8');
+const toolLockPath = path.join(canonicalSkill, 'assets/tool-versions.json');
+const toolLock = JSON.parse(await readFile(toolLockPath, 'utf8'));
+if (toolLock.schemaVersion !== 1 || !/^\d+\.\d+\.\d+$/.test(toolLock.sqlfluff?.version || '')) throw new Error('SQLFLUFF_LOCK_INVALID');
+toolLock.skillVersion = packageVersion;
+await writeFile(toolLockPath, JSON.stringify(toolLock, null, 2) + '\n', 'utf8');
 const operations = JSON.parse(await readFile(path.join(root, "config", "operations.json"), "utf8"));
 const operationIssues = operationConfigIssues(operations);
 if (operationIssues.length) throw new Error(`Invalid operation config:\n- ${operationIssues.join("\n- ")}`);

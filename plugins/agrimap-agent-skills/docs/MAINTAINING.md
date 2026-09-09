@@ -137,3 +137,7 @@ Plain init เตรียม local knowledge ไม่ติดตั้ง pro
 ## แหล่งอ้างอิงการติดตั้ง
 
 รูปแบบการติดตั้งแยกตาม host อยู่ที่ [Getting Started](GETTING-STARTED.md) ซึ่งระบุ official sources และวันที่ตรวจ CLI help แล้ว ไม่คัดลอกคู่มือ host ทั้งชุดลง reference ของ Agent
+
+## SQLFluff version lock
+
+Canonical lock: `skills/agrimap-agent-skills/assets/tool-versions.json`. Skill 3.6.0 pins SQLFluff 4.2.2. When changing the library, edit `sqlfluff.version`, validate representative T-SQL formatting and artifact checks, bump the skill version, then run sync. The generator stamps `skillVersion` and distributes the lock. Before SQL writes, the agent runs `install-sqlfluff.mjs`: exact matches are reused; missing, older or newer installs are aligned to the pin and the executable is verified. Installation requires an available Python/pip and package access; failures block formatting with evidence. Plugin installation itself does not execute pip: alignment happens before the next SQL-formatting invocation.

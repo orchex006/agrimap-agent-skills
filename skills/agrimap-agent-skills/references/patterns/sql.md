@@ -64,6 +64,7 @@ sql/
 - List exact paths and owners before writing. Preserve a modified existing path unless migration is authorized.
 - Draft parseable, contract-complete T-SQL. Do not hand-tune cosmetic indentation, alignment, wrapping, or whitespace; examples define semantics, not spacing. SQLFluff owns layout.
 - Format product/draft writes; preserve owner-reference bytes.
+- Before the first format in each SQL-writing invocation, run `node <skill-root>/scripts/install-sqlfluff.mjs`. It reads the exact SQLFluff pin from `assets/tool-versions.json`, reuses a matching executable, or installs/updates/downgrades to that pin and verifies the actual PATH executable. This prerequisite is authorized within SQL authoring; do not ask the requester to install it manually. Stop formatting if it fails, preserving diagnostics. Skill upgrades carry their own tool lock; they do not imply matching numerical versions or always selecting the latest library.
 - For one file, run:
 
 ```powershell
@@ -76,7 +77,7 @@ sqlfluff format --exclude-rules "CP02, LT01, RF06" --dialect tsql <FILE>.sql
 sqlfluff format --exclude-rules "CP02, LT01, RF06" --dialect tsql .
 ```
 
-- Otherwise run the single-file command for every `format_set` path. Missing `sqlfluff` (`CommandNotFound`, `ENOENT`, `127`, `9009`) triggers `node <skill-root>/scripts/install-sqlfluff.mjs` and one retry; other failures never install.
+- Otherwise run the single-file command for every `format_set` path. If the executable disappears after the version check, missing `sqlfluff` (`CommandNotFound`, `ENOENT`, `127`, `9009`) triggers `node <skill-root>/scripts/install-sqlfluff.mjs` and one retry; other failures never install.
 - Handoff requires `formatted N/N`: successful commands cover every path. A nonzero folder exit is incomplete and may be partial; run each changed file separately, fix in-scope parse defects, then rerun the folder command to zero.
 - Validate the same complete `format_set` after formatting:
 

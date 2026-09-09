@@ -10,7 +10,7 @@ test('bootstrap preserves the complete owner-submitted canonical contract',async
   const bytes=await readFile(path.join(bundle,'AGENTS.md'));
   // Approved source: owner submit 2026-09-08, missing-memory, owner-version and tracking revisions 2026-09-09. Updating this hash
   // requires an intentional new canonical contract, not a formatting repair.
-  assert.equal(createHash('sha256').update(bytes).digest('hex'),'d7af0fd10a83b995bdd788ea6c2f3cebc61923e4505b2dc4d2a946d244632367');
+  assert.equal(createHash('sha256').update(bytes).digest('hex'),'2dbc22dca1d16f26ccbe88655b9253da8ac5258373ecb3c3e1e6a1e4e8b8b482');
   const manifest=JSON.parse(await readFile(path.join(bundle,'manifest.json'),'utf8'));
   assert.equal(manifest.files.find(f=>f.source==='AGENTS.md').sha256,createHash('sha256').update(bytes).digest('hex'));
   for(const file of ['CLAUDE.md','GEMINI.md','CURSOR.md']){

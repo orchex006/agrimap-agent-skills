@@ -2,13 +2,18 @@
 
 import { spawnSync } from "node:child_process";
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
+const lock = JSON.parse(readFileSync(new URL('../assets/tool-versions.json', import.meta.url), 'utf8'));
+export const SQLFLUFF_VERSION = lock.sqlfluff?.version;
+if (lock.schemaVersion !== 1 || !/^\d+\.\d+\.\d+$/.test(SQLFLUFF_VERSION || '')) throw new Error('SQLFLUFF_LOCK_INVALID');
 const installers = [
-  ["pip", ["install", "sqlfluff"]],
-  ["python", ["-m", "pip", "install", "sqlfluff"]],
-  ["py", ["-m", "pip", "install", "sqlfluff"]],
+  ['python', ['-m', 'pip']],
+  ['py', ['-m', 'pip']],
+  ['pip', []],
 ];
+const matches = result => result.status === 0 && result.stdout.match(/^sqlfluff, version (\S+)$/m)?.[1] === SQLFLUFF_VERSION;
 
 function defaultRun(command, args) {
   return spawnSync(command, args, { encoding: "utf8", windowsHide: true });
@@ -29,20 +34,21 @@ function invoke(run, command, args) {
 }
 
 export function installSqlfluff({ run = defaultRun } = {}) {
-  const attempts = [];
-  for (const [command, args] of installers) {
+  const initial = invoke(run, 'sqlfluff', ['--version']);
+  const attempts = [initial];
+  const evidence = { skillVersion: lock.skillVersion, expectedVersion: SQLFLUFF_VERSION };
+  if (matches(initial)) return {ok:true, ...evidence, changed:false, installer:null, version:initial.stdout};
+  for (const [command, prefix] of installers) {
+    const args = [...prefix, 'install', '--upgrade', `sqlfluff==${SQLFLUFF_VERSION}`];
     const installation = invoke(run, command, args);
     attempts.push(installation);
     if (installation.status !== 0) continue;
-
-    const verification = invoke(run, "sqlfluff", ["--version"]);
-    if (verification.status === 0) {
-      return { ok: true, installer: installation.command, version: verification.stdout };
-    }
+    const verification = invoke(run, 'sqlfluff', ['--version']);
     attempts.push(verification);
+    if (matches(verification)) return {ok:true, ...evidence, changed:true, installer:installation.command, version:verification.stdout};
   }
 
-  const error = new Error("Automatic installation did not produce a runnable sqlfluff command.");
+  const error = new Error("Automatic installation did not produce the locked SQLFluff version on PATH.");
   error.code = "SQLFLUFF_INSTALL_FAILED";
   error.attempts = attempts;
   throw error;

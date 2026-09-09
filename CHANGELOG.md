@@ -2,6 +2,11 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 3.6.0 — 2026-09-09
+
+- Pin SQLFluff 4.2.2 in the distributed tool lock associated with the skill version.
+- Verify before SQL formatting; reuse exact matches and automatically install or align mismatched versions, checking the actual executable after installation.
+
 ## 3.5.0 — 2026-09-09
 
 - Add Antigravity CLI recording examples and provider metadata support while preserving legacy Gemini records and adapter compatibility.
