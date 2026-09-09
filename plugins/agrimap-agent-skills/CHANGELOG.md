@@ -2,6 +2,11 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 3.2.3 — 2026-09-09
+
+- Release indexing/preparation now creates missing `.agrimap-agent/memory/project.md` and required recording directories from scoped evidence, then continues without a separate Project Backfill invocation.
+- Align bootstrap preflight and lifecycle instructions with missing-memory recovery while preserving history and prepared-candidate safeguards for standalone pipeline/promote.
+
 ## 3.2.2 — 2026-09-09
 
 - Integrate compatible missing bootstrap installation into scoped agm-release readiness before audit, with verification and continuation in the same invocation.

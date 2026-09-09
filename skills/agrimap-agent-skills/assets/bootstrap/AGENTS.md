@@ -90,7 +90,7 @@ Normalize ได้เฉพาะ case/whitespace และ semantic phrase bou
 
 ## 3. Preflight และ safety invariants
 
-- อ่าน `.agrimap-agent/memory/project.md` เป็น canonical project memory/index; ถ้าไม่มีให้หยุดและขอ bootstrap ยกเว้น owner สั่ง `project-backfill`/`Bootstrap Project Memory` อยู่แล้ว ให้สร้าง canonical path นี้จากหลักฐานได้เลย ห้ามสร้าง root `project.md`
+- อ่าน `.agrimap-agent/memory/project.md` เป็น canonical project memory/index; หากไม่มี ในงาน indexing/prepare/release ที่ได้รับอนุญาตให้ทำ indexing ตามปกติและสร้าง `.agrimap-agent/memory/` พร้อม `project.md` จาก source, Git history และ dirty coverage ในขอบเขตงานก่อน gate ที่ต้องใช้ memory แล้วทำต่อใน invocation เดิม ไม่หยุดเพื่อขอ `Project Backfill` หรือ bootstrap แยก สร้างโฟลเดอร์บันทึกอื่นใต้ `.agrimap-agent/` ตาม §9 เมื่อจำเป็น รักษาไฟล์และประวัติเดิม ระบุ facts/capabilities, evidence, owner versions, coverage limits และ checkpoints จริง ไม่สร้าง placeholder เปล่าหรืออ้างว่าทำ full-history backfill แล้ว; full-history backfill ใช้เมื่อ owner สั่งเท่านั้น สำหรับ standalone pipeline/promote ให้ reconstruct memory จาก candidate ที่เตรียมแล้วและพิสูจน์ด้วย notes/diffs/Git ได้ ห้ามสร้าง candidate หรือ bump เพิ่มและห้ามแก้ frozen candidate หาก provenance ไม่ชัดให้หยุดเฉพาะขั้นที่พึ่งหลักฐานนั้น ห้ามสร้าง root `project.md`
 - ก่อน network mutation รันและบันทึกผลจริง:
 
   ```text
@@ -419,7 +419,7 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 
 ### 9.4 Portable lifecycle
 
-1. อ่าน `AGENTS.md`, `.agrimap-agent/memory/project.md`, `git status --short`, staged/unstaged/untracked และ branch/HEAD ก่อนเขียน
+1. อ่าน `AGENTS.md`, `.agrimap-agent/memory/project.md` ถ้ามี, `git status --short`, staged/unstaged/untracked และ branch/HEAD ก่อนเขียน; หาก memory ไม่มีให้ทำ indexing และสร้าง path ตาม §3 ภายในงานที่ได้รับอนุญาต
 2. ยืนยัน requester, สร้าง `RUN_ID`, current/recent memory และ append `created` log โดยไม่พึ่ง skill หรือ helper script
 3. ก่อน mutation ระบุ objective/non-goals, exact write boundary, logic ที่เปลี่ยน/ต้องคงเดิม, วิธีที่เล็กสุด และ acceptance/verification
 4. ระหว่างทำงาน บันทึกเฉพาะ material decision หรือ milestone ที่ outcome เปลี่ยน; raw command output อยู่ใน terminal ไม่คัดลอกลง memory/log

@@ -1,4 +1,4 @@
-# AgriMap Agent Skills 3.2.2
+# AgriMap Agent Skills 3.2.3
 
 ชุดคำสั่งสำหรับให้ Agent ช่วยงาน AgriMap ตั้งแต่วิเคราะห์ ออกแบบ แก้โค้ด ตรวจงาน จนถึงเตรียม release ใช้กับ Codex, Claude Code และ Gemini CLI โดยเลือกคำสั่งตามงาน ไม่ต้องเดินครบทุก workflow
 
@@ -62,6 +62,8 @@ Design ทำงานแบบ passive ในคำสั่งที่เห�
 | `$agm-release release inhouse` | indexing → prepare Inhouse → pipeline Inhouse | Inhouse +0.0.1 | `develop → jenkins`; ไม่มี Production/tag | ไม่เกี่ยวข้อง |
 
 `project.md` ใน Flow นี้คือ `.agrimap-agent/memory/project.md` ส่วน changelog คือ `changelog.md` ที่ root ของโครงการ เปลี่ยน PATCH เช่น `1.2.9 → 1.2.10` โดยอ่าน Inhouse จาก `Jenkinsfile` และ Production จาก `Jenkinsfile_Production` หากทำต่อจาก candidate เดิมจะไม่เพิ่มเลขซ้ำ
+
+หากยังไม่มี Project Memory คำสั่ง indexing/prepare/release จะทำ indexing จากหลักฐานและสร้าง `.agrimap-agent/memory/project.md` พร้อมโฟลเดอร์ที่จำเป็นให้ใน flow เดิม ไม่ต้องสั่ง Project Backfill หรือ bootstrap แยก และไม่อ้างว่าได้ backfill ประวัติทั้งโครงการแล้ว ส่วน standalone pipeline/promote ต้องพิสูจน์ candidate ที่เตรียมแล้วก่อน reconstruct memory
 
 **Release notes และ tag เป็นของ Production เท่านั้น:** ถ้า candidate Inhouse เป็น `1.0.6` และ Production เป็น `1.0.3` ให้สร้าง `release-notes/1.0.3.md` และใช้ tag `v1.0.3` ห้ามนำเลข Inhouse ไปสร้าง `release-notes/1.0.6.md` งาน Inhouse-only ไม่แก้ `release.md` หรือ versioned notes ประวัติเดิมต้องคงอยู่
 

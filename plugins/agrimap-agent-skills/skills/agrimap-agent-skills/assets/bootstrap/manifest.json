@@ -1,12 +1,12 @@
 {
-  "version": "3.2.2",
-  "source": "Owner-supplied canonical Changelog Release Deployment contract submitted 2026-09-08; AGENTS body preserved in full",
+  "version": "3.2.3",
+  "source": "Owner-supplied canonical contract submitted 2026-09-08; owner-authorized missing-memory indexing revision 2026-09-09",
   "files": [
     {
       "source": "AGENTS.md",
       "target": "AGENTS.md",
       "mode": "copy",
-      "sha256": "50adc6c7769bda91247f0c8a0abc4cab97c7f5a548fa77758852ae5d783c36d7"
+      "sha256": "f36d786b5af3897f548b5aa7fd9380a553e72d6352705b78095e72a54959845d"
     },
     {
       "source": "CLAUDE.md",
