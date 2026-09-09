@@ -2,6 +2,12 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 3.5.0 — 2026-09-09
+
+- Add Antigravity CLI recording examples and provider metadata support while preserving legacy Gemini records and adapter compatibility.
+- Separate host identity from actual model identity; replace speculative Gemini model examples with runtime-reported model IDs or unknown.
+- SQL authoring continues to use SQLFluff with the T-SQL dialect and the existing scoped formatting/validation contract.
+
 ## 3.4.5 — 2026-09-09
 
 - Recover release preparation from dirty or occupied caller checkouts using isolated develop worktrees or separate clones, preserving original changes and classifying migration artifacts by evidence.

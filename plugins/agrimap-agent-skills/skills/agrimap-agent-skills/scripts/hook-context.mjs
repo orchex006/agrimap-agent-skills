@@ -179,7 +179,7 @@ function fingerprint(value) {
 
 function normalizeProvider(value) {
   const provider = typeof value === "string" ? value.toLowerCase() : "";
-  return new Set(["codex", "claude", "gemini"]).has(provider)
+  return new Set(["codex", "claude", "gemini", "antigravity"]).has(provider)
     ? provider
     : "unknown";
 }

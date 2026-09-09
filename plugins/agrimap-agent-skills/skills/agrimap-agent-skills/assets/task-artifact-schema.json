@@ -77,7 +77,8 @@
           "enum": [
             "codex",
             "claude",
-            "gemini"
+            "gemini",
+            "antigravity"
           ]
         },
         {
@@ -211,7 +212,8 @@
           "enum": [
             "codex",
             "claude",
-            "gemini"
+            "gemini",
+            "antigravity"
           ]
         },
         {
@@ -238,7 +240,8 @@
           "enum": [
             "codex",
             "claude",
-            "gemini"
+            "gemini",
+            "antigravity"
           ]
         }
       ],
@@ -294,7 +297,8 @@
           "enum": [
             "codex",
             "claude",
-            "gemini"
+            "gemini",
+            "antigravity"
           ]
         },
         {

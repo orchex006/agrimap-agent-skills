@@ -1,4 +1,4 @@
-# AgriMap Agent Skills 3.4.5
+# AgriMap Agent Skills 3.5.0
 
 ชุดคำสั่งสำหรับให้ Agent ช่วยงาน AgriMap ตั้งแต่วิเคราะห์ ออกแบบ แก้โค้ด ตรวจงาน จนถึงเตรียม release ใช้กับ Codex, Claude Code และ Gemini CLI โดยเลือกคำสั่งตามงาน ไม่ต้องเดินครบทุก workflow
 
@@ -80,7 +80,7 @@ Pipeline ในตารางหมายถึงส่ง Git branch ตา�
 
 ขั้นตอนครบทั้ง 9 คำสั่ง: [Release steps](skills/agrimap-agent-skills/references/release-steps.md) · ตรวจ/ติดตั้ง .NET Tool และแก้ปัญหา: [Release tools](skills/agrimap-agent-skills/references/release-tools.md)
 
-กฎเดียวกันใช้กับกลุ่มโมเดลที่ผู้ใช้ระบุ: GPT-5.4/5.5, GPT-5.6 Luna/Terra/Sol, GPT-6 Astra ขึ้นไป; Claude Sonnet 5, Opus 4.8/5; Gemini 3.6 Flash ขึ้นไป รายชื่อนี้เป็นเป้าหมายการใช้งาน ไม่ใช่ผลรับรองว่าทดลองทุกโมเดลแล้ว
+กฎเดียวกันใช้กับกลุ่มโมเดลที่ผู้ใช้ระบุ: GPT-5.4/5.5, GPT-5.6 Luna/Terra/Sol, GPT-6 Astra ขึ้นไป; Claude Sonnet 5, Opus 4.8/5; Antigravity CLI โดยบันทึก model จริงที่ runtime แจ้ง หรือ unknown รายชื่อนี้เป็นเป้าหมายการใช้งาน ไม่ใช่ผลรับรองว่าทดลองทุกโมเดลแล้ว
 
 ## การบันทึกงาน
 
@@ -98,3 +98,5 @@ Legacy v2 five-file validation remains in assets/task-artifact-schema.json for e
 Repository: [orchex006/agrimap-agent-skills](https://github.com/orchex006/agrimap-agent-skills) · [Changelog](CHANGELOG.md)
 
 เลขเวอร์ชันใน source ไม่ได้ยืนยันว่า remote หรือ plugin cache ของผู้ใช้ได้รับเวอร์ชันนั้นแล้ว
+
+ตัวอย่างการบันทึก host ใหม่ใช้ **Antigravity CLI**: `provider=antigravity`, `model=unknown` เมื่อ runtime ไม่แจ้ง model ดู [ตัวอย่าง recording](docs/USAGE.md#antigravity-cli-recording-example) ส่วน Gemini CLI adapter เดิมยังเก็บเพื่อ compatibility

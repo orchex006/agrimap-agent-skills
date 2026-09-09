@@ -205,3 +205,20 @@ test('upgrade refuses ambiguous README blocks without partial writes',async t=>{
  assert.equal((await applyBootstrap({target:h.temp,kind:'be-main',upgrade:true})).applied,false);
  assert.equal(await readFile(path.join(h.temp,'AGENTS.md'),'utf8'),'Keep old contract');
 });
+
+
+test('Antigravity recording keeps host separate from actual model and preserves legacy Gemini',async t=>{
+ const h=await fixture(t);
+ const saved=h.run(h.scripts.workspace,['identify','--session','agy-example','--owner','006006','--provider','antigravity','--model','unknown']);
+ assert.equal(saved.identity.provider,'antigravity');assert.equal(saved.identity.model,'unknown');
+ const actual=normalizeIdentity({...saved.identity,model:'runtime-reported-id'});
+ assert.equal(actual.provider,'antigravity');assert.equal(actual.model,'runtime-reported-id');
+ const legacy=normalizeIdentity({...saved.identity,provider:'gemini',model:'legacy-model-id'});
+ assert.equal(legacy.provider,'gemini');assert.equal(legacy.model,'legacy-model-id');
+ const schema=JSON.parse(await readFile(path.join(projectRoot,'skills/agrimap-agent-skills/assets/task-artifact-schema.json'),'utf8'));
+ const inspect=value=>{
+  if(!value || typeof value!=='object')return;
+  if(value.label==='Provider' && value.enum){assert.ok(value.enum.includes('antigravity'));assert.ok(value.enum.includes('gemini'));}
+  Object.values(value).forEach(inspect);
+ };inspect(schema);
+});

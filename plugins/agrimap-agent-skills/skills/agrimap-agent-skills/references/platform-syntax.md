@@ -27,3 +27,21 @@ Each alias loads lifecycle-core.md and one operations/<operation>.md. Additional
 ## Input and host capabilities
 
 Use [input-and-scope.md](input-and-scope.md) for attachments and pointed code. Preserve raw requester intent; do not invent portable attachment tokens. Establish actual tool/isolation support before delegation, not from model names or assumed host defaults.
+
+## Antigravity CLI recording example
+
+For new runs in Antigravity CLI, record `provider: antigravity`. Keep `model` as the actual runtime-reported model ID, or `unknown` when unavailable; `modelLabel` is only an optional configured label. Never put Antigravity CLI in the model field or infer a Gemini version from the host. Existing Gemini CLI records retain `provider: gemini` and their original model evidence.
+
+```json
+{
+  "provider": "antigravity",
+  "model": "unknown",
+  "modelLabel": "not-configured",
+  "role": "leader",
+  "agent": "primary"
+}
+```
+
+Example human-readable report: `Host: Antigravity CLI; Provider: antigravity; Actual model: unknown`. This is recording metadata, not a claim that a particular model executed the work. The AgriMap runtime accepts `--provider antigravity --model unknown` on its existing identity/recording commands; use the confirmed requester and actual session, never an example identity.
+
+Official host reference: [Using AGY CLI](https://www.antigravity.google/docs/cli/using). Keep the legacy Gemini extension/commands for compatibility. Antigravity registration, aliases and hook payload compatibility must be verified in that host; recording support does not certify a full plugin adapter or authorize installation.

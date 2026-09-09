@@ -18,6 +18,13 @@ selection_policy:
 candidate_labels:
   openai: [GPT-5.2, GPT-5.4, GPT-5.5, GPT5.6-Luna, GPT5.6-Terra, GPT5.6-Sol, GPT6]
   claude: [Sonnet5, Opus4.8, Opus5, Fable5, Fable5.1]
-  gemini: [Gemini-3.5-Flash, Gemini-3.6-Flash, Gemini-3.7-Flash, Gemini-3.8-Flash, Gemini-3.1-Pro]
+  google: [] # Record the actual model reported by the runtime; no guessed Gemini version.
   qwen: [QWEN3.8-30B]
 # Requester-provided routing labels only, not availability or capability claims.
+
+host_recording_examples:
+  antigravity_cli:
+    provider: antigravity
+    model: unknown
+    modelLabel: not-configured
+# Antigravity CLI is a host, not a model identifier. Keep legacy gemini records unchanged.

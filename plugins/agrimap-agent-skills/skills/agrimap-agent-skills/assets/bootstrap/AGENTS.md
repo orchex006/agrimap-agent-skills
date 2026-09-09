@@ -1,6 +1,6 @@
 # กติกากลาง Changelog, Release และ Deployment
 
-<!-- AGRIMAP BOOTSTRAP VERSION: 3.4.5 -->
+<!-- AGRIMAP BOOTSTRAP VERSION: 3.5.0 -->
 
 ไฟล์นี้เป็น canonical instruction ของ repository สำหรับ Codex, Claude Code, Gemini CLI, Cursor และผู้พัฒนา โดยไม่ต้องมี AgriMap skills หรือ local Git hook กติกา Markdown ช่วยกำกับพฤติกรรม; Agent ใช้ .NET Global Tool `agm-release` ตรวจ local gate และตรวจหลักฐาน Git ตามไฟล์นี้ ห้ามอนุมานว่า Jenkins บังคับ release gate อยู่ ส่วน GitLab Protected Branch/Tag ต้องตั้งค่าฝั่ง server แยกต่างหาก
 
@@ -441,3 +441,7 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 ## Bootstrap contract freshness
 
 Before relevant durable project work, compare the AGRIMAP BOOTSTRAP VERSION marker and `.agrimap-agent/runtime/bootstrap.json` with the active skill bootstrap manifest. Missing markers mean legacy/untracked, not current. Use the active skill project-bootstrap plan/apply to update recognized unmodified installed templates automatically, with backup and receipt; do not require a separate bootstrap invocation. Preserve project-specific rules: unknown or modified content requires a scoped merge from the actual prior/current templates, never blanket replacement or merely changing the version marker. Verify the installed contract after update before continuing. Read-only questions do not write files. Explicit owner version targets remain authoritative during migration.
+
+### Host recording example
+
+สำหรับงานใน Antigravity CLI ให้บันทึก `provider: antigravity`, `model: <actual runtime model ID>` หรือ `unknown` เมื่อไม่มีหลักฐาน และ `modelLabel: not-configured` เมื่อไม่ได้กำหนด label; Antigravity CLI เป็นชื่อ host ไม่ใช่ชื่อ model ห้ามเดา Gemini version จากชื่อ host ประวัติ Gemini CLI เดิมคง provider/model ตามหลักฐานเดิม ตัวอย่าง: `Provider: antigravity | Actual model: unknown`
