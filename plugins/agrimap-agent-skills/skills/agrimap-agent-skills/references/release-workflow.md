@@ -26,6 +26,10 @@ The Agent discovers all paths, versions and SHAs and resolves routine tool/envir
 
 Preparing both owners is internal to release full; it is not permission to blindly call CLI prepare both. First prove the CLI respects Production-only notes as described in release-tools.md. Full flow reuses one frozen candidate through both pipeline steps; do not recommit, bump or push the same checkpoint twice. No arguments, unknown arguments or an unspecified environment require clarification before mutation. Help/explanations are artifactless.
 
+## Prerequisite readiness before audit
+
+Execute the release prerequisite repair in [release-and-bootstrap.md](release-and-bootstrap.md) as part of readiness: check the synchronized target branch, plan/apply compatible missing bootstrap files, verify the result, and continue into audit/preparation in the same invocation. A missing AGENTS.md does not require a separate user-run initialization. Existing-file adoption conflicts and incompatible profiles still require resolution before affected writes. Keep the selected command's local/publication boundary and prepared-candidate constraints.
+
 ## Tool readiness
 
 1. Inspect OS, target root, project instructions, Git remote, branch/HEAD and worktree. Check `git --version`, `dotnet --info`, `dotnet --list-sdks`, `dotnet --list-runtimes`, `dotnet tool list --global` and executable resolution for agm-release. Check exit codes individually. An installed package with an unresolved shim is a PATH problem, not grounds to reinstall.

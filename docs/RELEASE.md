@@ -77,13 +77,15 @@ AGENTS §9 ใช้ได้โดยไม่มี skills หรือ hooks 
 <a id="bootstrap"></a>
 ## Bootstrap ไม่ใช่ release
 
-ติดตั้ง explicit init/adopt target เท่านั้น ไม่ทำเมื่อ identify หรือเปิด session:
+ติดตั้งเมื่อ explicit init/adopt หรือเป็น prerequisite ที่ตรงขอบเขตคำสั่ง agm-release ของ product target ไม่ทำเมื่อ identify หรือเปิด session:
 
 - Copy byte-exact: AGENTS.md, GEMINI.md, CLAUDE.md, CURSOR.md, release-notes/README.md
 - Pointer files ชี้ AGENTS เท่านั้น ไม่คัดกฎซ้ำ
 - README แทรกเฉพาะ Deployment block; ไม่ copy ทั้งไฟล์
 - ไม่ copy .gitignore/Jenkinsfiles/changelog/notes ราย version ไม่ reset version หรือสร้าง branches
 - Existing differing content เป็น conflict ต้องตกลง adoption ก่อน ไม่ overwrite เงียบ ๆ
+
+ตั้งแต่ 3.2.2 Agent ตรวจและ plan/apply ไฟล์ bootstrap ที่ขาดและเข้ากันได้ก่อน audit ได้เอง แล้วตรวจซ้ำและทำคำสั่งเดิมต่อ ไม่ต้องให้ผู้ใช้เรียก init หรือ restore/commit เอง หากต้องแทนที่ไฟล์เดิมที่ขัดแย้ง ให้แสดง diff และขอยืนยัน adoption ตามจำเป็น กฎยืนยัน Production/tag ยังเหมือนเดิม; standalone pipeline/promote ไม่เพิ่มเวอร์ชันหรือเปลี่ยน candidate ที่เตรียมไว้โดยอัตโนมัติ ดู [ขอบเขตการซ่อม prerequisite](../skills/agrimap-agent-skills/references/release-and-bootstrap.md#release-prerequisite-repair)
 
 ตัวอย่าง **Agent chat / Codex**:
 

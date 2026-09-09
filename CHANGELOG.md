@@ -2,6 +2,12 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 3.2.2 — 2026-09-09
+
+- Integrate compatible missing bootstrap installation into scoped agm-release readiness before audit, with verification and continuation in the same invocation.
+- Retain concrete adoption decisions for conflicting replacements, prepared-candidate boundaries, and Production/tag confirmation.
+- Distinguish missing project files from CLI installation failures; keep Jenkinsfile reconstruction outside bootstrap.
+
 ## 3.2.1 — 2026-09-09
 
 - Synchronize each release-stage branch with its remote using fast-forward-only semantics before evaluating publication gates.

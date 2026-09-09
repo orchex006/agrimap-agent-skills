@@ -9,6 +9,8 @@ The Agent runs these checks, not the requester. Execute commands individually an
 3. Invoke usage without arguments. The observed CLI emits usage and exits nonzero for missing command; that is not installation failure. It does not support --help or arbitrary --version. Use dotnet tool list --global for CLI version. Confirm runtime readiness with a supported read-only audit against the explicit target and distinguish application precondition failures from runtime-launch failures.
 4. If package is present but shim/runtime is broken, diagnose that specific failure first. Install a missing required runtime/SDK from the official vendor or a verified configured OS package manager, respecting platform permissions. Never change global feeds, credentials or TLS settings. Do not prompt for credentials in logs or expose secrets.
 
+An audit error such as `Expected AGENTS.md and Jenkinsfile` is an application prerequisite failure, not proof of a broken CLI installation. Inspect each named path on the synchronized target branch; handle bundled files through release-and-bootstrap.md before retrying. Jenkinsfiles require project-specific evidence and are never synthesized by bootstrap.
+
 ## Canonical source and installation
 
 Canonical clone URL: https://gitlab.gisc.cdg.co.th/e26-5002.agrimap/standards/tools/cli/netcore/agrimap.projectdevkit.netcore.release.git

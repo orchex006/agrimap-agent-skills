@@ -6,11 +6,25 @@ For existing project work, read the target repository's applicable AGENTS.md com
 
 ## Bootstrap
 
-Use scripts/project-bootstrap.mjs plan --target <project> --kind fe-main|be-main|fe-library|be-library, then apply only within authorized initialization. agm-workspace init --bootstrap uses the same installer. No installation on identify/session start; never target the skill-package root.
+Use scripts/project-bootstrap.mjs plan --target <project> --kind fe-main|be-main|fe-library|be-library, then apply within authorized initialization or the scoped release prerequisite repair below. agm-workspace init --bootstrap uses the same installer. No installation on identify/session start; never target the skill-package root.
 
 Copy AGENTS.md, GEMINI.md, CLAUDE.md, CURSOR.md and release-notes/README.md byte-exactly from assets/bootstrap; insert only its Deployment block into README. Hashes and conflict checks apply; changed existing files require explicit adoption. Do not copy root .gitignore, Jenkinsfiles, changelog or version-specific notes. Bootstrap does not bump, commit, push or deploy.
 
 New main FE/BE scaffolds start 1.0.0 and libraries 0.0.x; adoption never resets existing owners. The supplied release contract describes a .NET main-service profile. Verify actual FE/library tool and pipeline applicability; do not invent support, stages or server triggers.
+
+## Release prerequisite repair
+
+An executable agm-release command authorizes checking and installing compatible missing bootstrap prerequisites needed by that command in its named product target. No separate init invocation is required. Help, quoted commands and skill-package maintenance do not authorize product bootstrap.
+
+Before audit, inspect applicable parent/target instructions, actual project kind, worktree and the synchronized branch used by the selected stage (develop for indexing/preparation). If target AGENTS.md is missing, inspect the bundled AGENTS.md completely and prove its profile applies before installing it; absence is a repair condition, not by itself a terminal blocker. Never copy from another branch without proving provenance, or carry unrelated changes across branches.
+
+Run the installer plan with the proven target/kind. Inspect every planned path and the bundle hashes. A compatible plan containing only create, insert-section and unchanged entries may be applied immediately with the same arguments; verify applied=true, hashes and actual diff, then read the installed target instructions and rerun the failed audit/check in this invocation. The bootstrap file set and README section above are the installation boundary. Preserve existing memory/history and unrelated README content.
+
+The installer refuses the entire plan when any entry conflicts. Do not loop apply or invent a force flag. Inspect the exact differing files/README block and applicable authority. Keep valid project-specific instructions; a difference alone does not require template replacement. If replacement is necessary, present the concrete adoption diff and request confirmation unless that exact change is already authorized. After adoption is authorized, perform only the reviewed file/block edits from the verified bundle, rerun plan/apply and verification, then continue. An incompatible project profile or unresolved instruction conflict blocks only dependent work; report the evidence and decision needed, not instructions for the requester to restore/commit files manually.
+
+Missing Jenkinsfiles are outside this bundle: inspect tracked history and remote state for a proven recovery within scope; do not invent pipeline configuration. Tool repair follows release-tools.md. Bootstrap cannot resolve an incompatible mandatory CLI gate by itself.
+
+For indexing/prepare, bootstrap changes remain local. Composite release commands include reviewed prerequisite paths in their normal content publication before the version metadata commit. Standalone pipeline/promote still require a prepared candidate: do not alter a frozen candidate or bump versions to add bootstrap files; repair in a separate preparation workspace and report the required candidate refresh when needed. Any refreshed candidate must pass the usual checks and Production confirmation. Bootstrap itself never commits, pushes or tags, and does not remove any confirmation gate.
 
 ## Release distinctions
 
