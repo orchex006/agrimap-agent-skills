@@ -218,7 +218,7 @@ if (passiveSkillMap) {
     if (referenceFile && !(await exists(path.join(root, "skills", "agrimap-agent-skills", "references", referenceFile)))) errors.push(`Passive capability ${capability?.id} reference is missing: ${referenceFile}.`);
   }
   const goalRules = capabilities.find((item) => item.id === "goal-rules");
-  const requiredGoalOperations = ["analyze", "architect", "be", "diagnose", "fe", "sql", "execute", "plan", "qa", "prompt"];
+  const requiredGoalOperations = ["analyze", "architect", "be", "diagnose", "fe", "sql", "execute", "plan", "qa", "prompt", "release"];
   if (JSON.stringify(goalRules?.operations) !== JSON.stringify(requiredGoalOperations)) errors.push("goal-rules operation mapping is incomplete or reordered unexpectedly.");
   for (const operation of requiredGoalOperations) {
     const item = operations?.operations?.find((candidate) => candidate.operation === operation);

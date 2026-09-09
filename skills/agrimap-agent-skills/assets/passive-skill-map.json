@@ -15,7 +15,8 @@
         "execute",
         "plan",
         "qa",
-        "prompt"
+        "prompt",
+        "release"
       ],
       "actions": [
         "*"
@@ -107,7 +108,8 @@
         "sql",
         "qa",
         "prompt",
-        "execute"
+        "execute",
+        "release"
       ],
       "actions": [
         "*"

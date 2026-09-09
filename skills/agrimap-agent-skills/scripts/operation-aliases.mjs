@@ -11,7 +11,8 @@ export const AGRIMAP_OPERATION_ALIASES = Object.freeze([
   "agm-sql",
   "agm-qa",
   "agm-prompt",
-  "agm-exec"
+  "agm-exec",
+  "agm-release"
 ]);
 export const AGRIMAP_PUBLIC_OPERATION_ALIASES = Object.freeze([
   "agm-analyze",
@@ -23,6 +24,7 @@ export const AGRIMAP_PUBLIC_OPERATION_ALIASES = Object.freeze([
   "agm-sql",
   "agm-qa",
   "agm-prompt",
-  "agm-exec"
+  "agm-exec",
+  "agm-release"
 ]);
 export const AGRIMAP_COMPATIBILITY_ALIASES = Object.freeze([]);

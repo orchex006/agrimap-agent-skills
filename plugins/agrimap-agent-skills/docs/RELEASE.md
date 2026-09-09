@@ -29,6 +29,10 @@ Flow: develop → push/verify jenkins → push/verify jenkins-release โดย�
 
 ## Intent สำหรับมนุษย์
 
+ใน 3.2.0 คำสั่งใหม่ทั้ง 9 แบบใช้ [ขั้นตอนที่ล็อกไว้](../skills/agrimap-agent-skills/references/release-steps.md) โดย release-notes และ release.md ใช้ Production version เท่านั้น; Inhouse-only ไม่สร้าง versioned notes คำอธิบาย notes ตาม environment และ legacy intents ด้านล่างไม่ใช้แทน contract ใหม่นี้ ตรวจ [CLI compatibility](../skills/agrimap-agent-skills/references/release-tools.md) ก่อน mutation; การอัปเดต skill package ไม่ได้แก้ CLI หรือ migrate AGENTS ใน product repo
+
+ตั้งแต่ 3.1.0 ใช้ `$agm-release` ตาม [ตารางคำสั่งใน README](../README.md#agm-release) และ [contract ของสกิล](../skills/agrimap-agent-skills/references/release-workflow.md) ได้โดยตรง คำสั่งใหม่นี้มีขอบเขตแยกจาก legacy intents ด้านล่าง: prepare เก็บ candidate ในเครื่อง, pipeline production หยุดก่อน push Production และ promote ต้องขอยืนยัน SHA/branch/tag ที่เตรียมแล้วเสมอ ไม่รับสิทธิ์อัตโนมัติจากกลุ่ม B
+
 พิมพ์ใน Agent chat หลังระบุโครงการเป้าหมาย Agent เป็นผู้รัน agm-release และ Git เอง ไม่ส่งคู่มือให้คนไปรันต่อ
 
 | Intent | ผลหลัก | จุดจบ |

@@ -1053,6 +1053,57 @@
           "why": "project-specific adoption and release knowledge"
         }
       ]
+    },
+    {
+      "name": "agm-release",
+      "operation": "release",
+      "depth": {
+        "default": "light",
+        "allowed": [
+          "light",
+          "standard",
+          "regulated"
+        ]
+      },
+      "description": "Index AgriMap projects, prepare patch versions, publish Inhouse pipelines, and promote Production with explicit confirmation",
+      "mode": "product-write",
+      "deliverable": "verified checkpoints for the selected release command; explicit confirmation before Production promotion and tag publication",
+      "requiredInputs": [
+        "target repository and one explicit release command"
+      ],
+      "conditionalInputs": [
+        "confirmation of the concrete Production SHA, version, remote branch and tag immediately before promote"
+      ],
+      "example": "$agm-release release production",
+      "instructions": [
+        "Resolve indexing, prepare inhouse|production, pipeline inhouse|production, promote, or release full|production|inhouse using release-workflow.md. These are Agent commands, not CLI subcommands. Quoted examples and help never authorize release.",
+        "Check tools first and install missing prerequisites from their verified official or project-approved sources; reuse working installations. Execute only the selected flow and resume recorded candidates without bumping again.",
+        "Complete all preparation before asking for Production confirmation. Never infer that confirmation from promote/release invocation or legacy Version + Tags authorization. Changed candidate or destination invalidates confirmation.",
+        "Read release-steps.md and release-tools.md before execution. Production alone owns versioned notes, release.md and tags. Standalone pipeline/promote never invent missing preparation; enforce exact owner diffs and stage-specific completion for all nine commands."
+      ],
+      "references": [
+        {
+          "path": "release-workflow.md",
+          "why": "command semantics, tool readiness, publication boundary, confirmation and recovery"
+        },
+        {
+          "path": "goal-rules.md",
+          "why": "scope and proportional verification"
+        },
+        {
+          "path": "recommendations.md",
+          "why": "evidence-calibrated communication"
+        },
+        {
+          "path": "release-steps.md",
+          "why": "mandatory exact nine-command sequences and Production artifact ownership"
+        },
+        {
+          "path": "release-tools.md",
+          "why": "mandatory .NET tool discovery and proven CLI compatibility before writes"
+        }
+      ],
+      "conditionalReferences": []
     }
   ]
 }

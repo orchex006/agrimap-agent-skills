@@ -2,6 +2,19 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 3.2.0 — 2026-09-09
+
+- Define nine exact agm-release sequences with explicit prerequisites, owner-specific patching, resume checkpoints, Production confirmation and completion evidence.
+- Restrict versioned release notes, release.md and tags to the Production candidate; Inhouse-only work updates its owner, changelog and project index.
+- Add verified .NET Global Tool discovery/install instructions, PATH fallback and source-backed compatibility diagnosis for environment notes and planned tag metadata.
+- Document model-independent execution for the requested model families without claiming cross-model behavioral certification; the external CLI and installed target contracts are not migrated by this package change.
+
+## 3.1.0 — 2026-09-09
+
+- Add agm-release with tool readiness and missing-tool installation guidance, indexing, patch preparation, pipeline publication, Production promotion, and full/environment release flows.
+- Require confirmation of the concrete candidate before Production branch and annotated tag publication; pipeline production stops at the verified Inhouse checkpoint.
+- Document every command, version owner, push destination, resume behavior, and confirmation boundary in the README.
+
 ## 3.0.1 — 2026-09-08
 
 - Package the current v3 skills and documentation for local Codex plugin installation
