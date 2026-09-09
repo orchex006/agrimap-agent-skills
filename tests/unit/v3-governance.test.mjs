@@ -181,3 +181,27 @@ test('modified legacy contract is preserved and not falsely marked current',asyn
  assert.equal(await readFile(path.join(h.temp,'AGENTS.md'),'utf8'),custom);
  assert.equal(await present(path.join(h.temp,'.agrimap-agent/runtime/bootstrap.json')),false);
 });
+
+
+test('explicit upgrade replaces only contract targets with backups and stays idempotent',async t=>{
+ const h=await fixture(t);
+ await writeFile(path.join(h.temp,'AGENTS.md'),'Custom old contract\n');
+ await writeFile(path.join(h.temp,'README.md'),'# Product\n<!-- BEGIN AGRIMAP DEPLOYMENT -->\nCustom old deployment\n<!-- END AGRIMAP DEPLOYMENT -->\nKeep footer.\n');
+ await writeFile(path.join(h.temp,'Jenkinsfile'),"PROJECT_VERSION = '1.0.8'\n");
+ const opts={target:h.temp,kind:'be-main',upgrade:true};
+ const plan=await planBootstrap(opts);assert.equal(plan.ok,true);assert.equal(plan.upgrade,true);
+ assert.equal(await readFile(path.join(h.temp,'AGENTS.md'),'utf8'),'Custom old contract\n');
+ const result=await applyBootstrap(opts);assert.equal(result.applied,true);
+ for(const e of result.entries.filter(e=>e.status==='update')) assert.equal(await present(path.join(h.temp,'.agrimap-agent/runtime/bootstrap-backups',e.beforeHash,e.target)),true);
+ assert.deepEqual(await readFile(path.join(h.temp,'AGENTS.md')),await readFile(path.join(projectRoot,'skills/agrimap-agent-skills/assets/bootstrap/AGENTS.md')));
+ const readme=await readFile(path.join(h.temp,'README.md'),'utf8');assert.ok(readme.startsWith('# Product'));assert.ok(readme.endsWith('Keep footer.\n'));assert.ok(!readme.includes('Custom old deployment'));
+ assert.equal(await readFile(path.join(h.temp,'Jenkinsfile'),'utf8'),"PROJECT_VERSION = '1.0.8'\n");
+ assert.equal((await planBootstrap(opts)).freshness,'current');
+});
+
+test('upgrade refuses ambiguous README blocks without partial writes',async t=>{
+ const h=await fixture(t);await writeFile(path.join(h.temp,'AGENTS.md'),'Keep old contract');
+ await writeFile(path.join(h.temp,'README.md'),'<!-- BEGIN AGRIMAP DEPLOYMENT -->\nOne\n<!-- END AGRIMAP DEPLOYMENT -->\n<!-- BEGIN AGRIMAP DEPLOYMENT -->\nTwo\n<!-- END AGRIMAP DEPLOYMENT -->');
+ assert.equal((await applyBootstrap({target:h.temp,kind:'be-main',upgrade:true})).applied,false);
+ assert.equal(await readFile(path.join(h.temp,'AGENTS.md'),'utf8'),'Keep old contract');
+});

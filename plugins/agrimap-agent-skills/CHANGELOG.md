@@ -2,6 +2,11 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 3.4.1 — 2026-09-09
+
+- Add explicit agm-release upgrade for scoped contract replacement with backups, version tracking and verification.
+- Keep freshness checks in all nine release actions; explicit upgrade does not grant release publication or replace product files.
+
 ## 3.4.0 — 2026-09-09
 
 - Track installed AGENTS.md contract version and compare it with the active skill before durable project work.

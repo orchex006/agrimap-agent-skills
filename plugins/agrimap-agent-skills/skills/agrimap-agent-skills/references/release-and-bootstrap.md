@@ -16,6 +16,8 @@ Copy AGENTS.md, GEMINI.md, CLAUDE.md, CURSOR.md and release-notes/README.md byte
 
 New main FE/BE scaffolds start 1.0.0 and libraries 0.0.x; adoption never resets existing owners. The supplied release contract describes a .NET main-service profile. Verify actual FE/library tool and pipeline applicability; do not invent support, stages or server triggers.
 
+Explicit `agm-release upgrade` selects replacement mode: plan --upgrade, then upgrade through project-bootstrap.mjs. It replaces customized bundled copy targets and the marked README block after backup; see release-workflow.md for exact boundaries. Normal plan/apply retains custom-content conflict protection. All nine release actions must still run the normal freshness check; upgrade is not a required separate user invocation.
+
 ## Release prerequisite repair
 
 An executable agm-release command authorizes checking and installing compatible missing bootstrap prerequisites needed by that command in its named product target. No separate init invocation is required. Help, quoted commands and skill-package maintenance do not authorize product bootstrap.

@@ -1,4 +1,4 @@
-# AgriMap Agent Skills 3.4.0
+# AgriMap Agent Skills 3.4.1
 
 ชุดคำสั่งสำหรับให้ Agent ช่วยงาน AgriMap ตั้งแต่วิเคราะห์ ออกแบบ แก้โค้ด ตรวจงาน จนถึงเตรียม release ใช้กับ Codex, Claude Code และ Gemini CLI โดยเลือกคำสั่งตามงาน ไม่ต้องเดินครบทุก workflow
 
@@ -47,10 +47,11 @@ Design ทำงานแบบ passive ในคำสั่งที่เห�
 
 ระบุโครงการเป้าหมาย แล้วพิมพ์คำสั่งในช่องสนทนา Agent ตัวอย่าง `$agm-release release production` คำสั่งในตารางเป็นคำสั่งของสกิล ไม่ใช่คำสั่ง PowerShell ของ CLI
 
-ทุก Flow ตรวจ Git, .NET และ CLI `agm-release` ก่อน หากขาดจะติดตั้งจากแหล่งทางการ/แหล่งของโครงการและตรวจซ้ำ หากขาดสิทธิ์หรือเข้าแหล่งติดตั้งไม่ได้ Agent จะแจ้งสาเหตุจริงและขั้นที่ค้าง เครื่องมือที่ใช้งานได้อยู่แล้วจะใช้ต่อ
+ทั้ง 9 release Flow ตรวจ contract version และ Git, .NET และ CLI `agm-release` ก่อน หากขาดจะติดตั้งจากแหล่งทางการ/แหล่งของโครงการและตรวจซ้ำ หากขาดสิทธิ์หรือเข้าแหล่งติดตั้งไม่ได้ Agent จะแจ้งสาเหตุจริงและขั้นที่ค้าง เครื่องมือที่ใช้งานได้อยู่แล้วจะใช้ต่อ
 
 | คำสั่ง | สิ่งที่ Agent ทำตามลำดับ | เพิ่มเวอร์ชัน | Push ไปที่ใด | ต้องยืนยันก่อน Production/tag |
 | --- | --- | --- | --- | --- |
+| `$agm-release upgrade` | สำรองและทับไฟล์ contract ที่อยู่ใน bundle พร้อมอัปเดต version tracking; README ทับเฉพาะ managed Deployment block | ไม่เพิ่ม | ไม่มี | ไม่เกี่ยวข้อง |
 | `$agm-release indexing` | ตรวจ source/diff/history → อัปเดต project index และ changelog | ไม่เพิ่ม | ไม่มี; แก้ไฟล์ในเครื่อง | ไม่เกี่ยวข้อง |
 | `$agm-release prepare inhouse` | เตรียม Inhouse version → อัปเดต index/changelog → ตรวจความถูกต้อง; ไม่สร้าง release notes | Inhouse +0.0.1 | ไม่มี; เตรียมในเครื่อง | ไม่เกี่ยวข้อง |
 | `$agm-release prepare production` | เตรียม version และ notes → ตรวจความถูกต้อง | Production +0.0.1 | ไม่มี; เตรียมในเครื่อง | ยังไม่ถึงขั้น promote |

@@ -24,7 +24,7 @@ async function safeTarget(root, relative) {
   }
   return dest;
 }
-export async function planBootstrap({ target, kind }) {
+export async function planBootstrap({ target, kind, upgrade = false }) {
   if (!target || !kinds.includes(kind)) throw new Error('BOOTSTRAP_TARGET_KIND_REQUIRED');
   const root = path.resolve(target);
   const pkg = await readMaybe(path.join(root, 'package.json'));
@@ -38,19 +38,19 @@ export async function planBootstrap({ target, kind }) {
     const before = await readMaybe(dest);
     const prior = before && (item.previous || []).find(old => old.sha256 === hash(normalized(before)));
     let content = source, status = before ? hash(before) === hash(source) ? 'unchanged' : 'conflict' : 'create';
-    if (prior && status === 'conflict') status = 'update';
+    if ((prior || upgrade === true) && status === 'conflict') status = 'update';
     let previousVersion = prior?.version || null;
     if (item.mode === 'section') {
       const text = before?.toString('utf8') || '';
       const block = source.toString('utf8').trimEnd();
       const managed = `${start}\n${block}\n${end}\n`;
-      if (text.includes(start) || /^## Deployment\s*$/m.test(text)) {
-        const existing = text.match(/<!-- BEGIN AGRIMAP DEPLOYMENT -->\r?\n([\s\S]*?)\r?\n<!-- END AGRIMAP DEPLOYMENT -->/);
+      if (text.includes(start) || text.includes(end) || /^## Deployment\s*$/m.test(text)) {
+        const existing = text.split(start).length === 2 && text.split(end).length === 2 && text.indexOf(start) < text.indexOf(end) ? text.match(/<!-- BEGIN AGRIMAP DEPLOYMENT -->\r?\n([\s\S]*?)\r?\n<!-- END AGRIMAP DEPLOYMENT -->/) : null;
         status = existing && existing[1].replaceAll('\r\n', '\n') === block ? 'unchanged' : 'conflict';
         content = before;
         const previousBlock = existing && (item.previous || []).find(old => old.sha256 === hash(Buffer.from(existing[1].replaceAll('\r\n', '\n') + '\n')));
-        if (status === 'conflict' && previousBlock) {
-          status = 'update'; previousVersion = previousBlock.version;
+        if (status === 'conflict' && existing && (previousBlock || upgrade === true)) {
+          status = 'update'; previousVersion = previousBlock?.version || null;
           content = Buffer.from(text.replace(existing[0], managed.trimEnd()));
         }
       } else {
@@ -66,7 +66,7 @@ export async function planBootstrap({ target, kind }) {
   const receiptBytes = await readMaybe(await safeTarget(root, '.agrimap-agent/runtime/bootstrap.json'));
   let receiptVersion = null;
   try { receiptVersion = receiptBytes ? JSON.parse(receiptBytes).version : null; } catch { /* Rebuild an invalid receipt only after verified apply. */ }
-  return { version: manifest.version, installedVersion, receiptVersion, freshness: receiptVersion === manifest.version && installedVersion === manifest.version && entries.every(e => e.status === 'unchanged') ? 'current' : 'update-required', root, kind, ok: entries.every(e => e.status !== 'conflict'), entries };
+  return { version: manifest.version, installedVersion, receiptVersion, freshness: receiptVersion === manifest.version && installedVersion === manifest.version && entries.every(e => e.status === 'unchanged') ? 'current' : 'update-required', root, kind, upgrade: upgrade === true, ok: entries.every(e => e.status !== 'conflict'), entries };
 }
 export async function applyBootstrap(options) {
   const plan = await planBootstrap(options);
@@ -99,8 +99,8 @@ if (path.resolve(process.argv[1] || '') === fileURLToPath(import.meta.url)) {
   const args = parseCliArgs(process.argv.slice(2));
   const command = args._[0];
   Promise.resolve().then(() => {
-    if (!['plan','apply'].includes(command)) throw new Error('Use plan|apply --target <project> --kind <kind>');
-    return (command === 'apply' ? applyBootstrap : planBootstrap)({ target: args.target, kind: args.kind });
+    if (!['plan','apply','upgrade'].includes(command)) throw new Error('Use plan [--upgrade]|apply|upgrade --target <project> --kind <kind>');
+    return (command === 'plan' ? planBootstrap : applyBootstrap)({ target: args.target, kind: args.kind, upgrade: command === 'upgrade' || args.upgrade === true });
   }).then(result => { console.log(JSON.stringify({...result,entries:result.entries.map(({content,...e})=>e)},null,2)); if (!result.ok) process.exitCode=1; })
     .catch(error => {console.error(JSON.stringify({ok:false,message:error.message}));process.exitCode=1;});
 }

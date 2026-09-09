@@ -12,10 +12,17 @@ The Agent discovers all paths, versions and SHAs and resolves routine tool/envir
 
 Before issuing a version-policy refusal, inspect the current bundled entrypoint and version policy, the actual target instruction and the explicit request. Do not reuse a prior refusal, plan or memory as authority. Report actual target/bundled paths and versions if a genuine higher-priority restriction remains; a quoted old prohibition alone is insufficient.
 
+## Explicit contract upgrade
+
+`agm-release upgrade` is a tenth, local maintenance action alongside the nine release actions. The explicit request authorizes replacing bundled contract files even when customized: AGENTS.md, CLAUDE.md, GEMINI.md, CURSOR.md, release-notes/README.md, and only the marked Deployment block in root README.md. Read and show the scoped replacement diff, back up every overwritten file, apply the active bundle, verify hashes/version/receipt and report updated paths. No extra replacement approval is needed for this explicit action. Never overwrite the whole project README, Jenkinsfiles, application/package versions, changelog, project memory or historical versioned notes. Ambiguous/malformed README block boundaries require scoped resolution, not guessing. No commit/push/tag/deploy unless separately requested.
+
+Use the bundled Node helper: `project-bootstrap.mjs plan --upgrade --target <project> --kind <kind>`, then `project-bootstrap.mjs upgrade --target <project> --kind <kind>`. This action needs Node and the proven target/profile, not .NET/release CLI installation or branch promotion. It does not change the nine release sequences: all nine still check installed contract freshness under release-and-bootstrap.md; ordinary release requests do not implicitly authorize overwriting customized contracts via upgrade mode.
+
 ## Commands and boundaries
 
 | Agent arguments | Ordered work | Terminal boundary |
 | --- | --- | --- |
+| upgrade | Back up and replace scoped bundled contract files; verify version/receipt | Local contract files only; no product version/push/tag |
 | indexing | Audit actual committed/dirty changes; update project index and changelog | Local artifacts only; no version, push or tag |
 | prepare inhouse | Prepare and verify the requested Inhouse version, default PATCH+1 | Local candidate only; no push/tag |
 | prepare production | Prepare and verify the requested Production version, default PATCH+1 | Local candidate only; no push/tag |

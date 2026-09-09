@@ -16,6 +16,6 @@ Use this file only to select one dedicated `agm-*` skill. It is not an execution
 | `agm-qa` | `qa` | Verify an artifact under a product-read-only, execution-restricted QA contract | `verification-only` | default `light`; allowed `light`, `standard`, `regulated` |
 | `agm-prompt` | `prompt` | Analyze and refine requester intent into one immutable versioned Prompt Result with explicit Main and Subagent ownership | `workflow-write-only` | default `light`; allowed `light` |
 | `agm-exec` | `execute` | Implement an authorized objective, approved Prompt Result, or resumable task with proportional verification and scoped delivery | `product-write` | default `light`; allowed `light`, `standard`, `regulated` |
-| `agm-release` | `release` | Index AgriMap projects, prepare requested or default patch versions, publish Inhouse pipelines, and promote Production with explicit confirmation | `product-write` | default `light`; allowed `light`, `standard`, `regulated` |
+| `agm-release` | `release` | Upgrade installed project contracts, index projects, prepare requested or default patch versions, publish Inhouse pipelines, and promote Production with explicit confirmation | `product-write` | default `light`; allowed `light`, `standard`, `regulated` |
 
 After selecting one row, hand off to that skill and stop the router. Never combine multiple operation skills implicitly.
