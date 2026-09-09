@@ -2,6 +2,11 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 3.6.1 — 2026-09-09
+
+- Make release indexing perform Project Backfill, including historical changelog, complete capability/evidence catalog and README capability/API inventory.
+- Require proven reachable-history coverage, reuse complete prior evidence and reconcile durable outputs instead of completing with a scoped or Temp-only index.
+
 ## 3.6.0 — 2026-09-09
 
 - Pin SQLFluff 4.2.2 in the distributed tool lock associated with the skill version.

@@ -104,3 +104,7 @@ AGENTS ที่ส่งมาอธิบาย .NET main-service profile จ�
 ## Installed contract tracking (3.4.0)
 
 AGENTS.md ที่ติดตั้งมี `AGRIMAP BOOTSTRAP VERSION` และ receipt ที่ `.agrimap-agent/runtime/bootstrap.json` ก่อนงานเขียนใน product repo ให้ตรวจเทียบกับ manifest ของ skill รุ่นที่โหลดจริง หากเก่าหรือไม่มี marker ให้รัน bootstrap plan/apply ในคำขอเดิม ระบบอัปเดต template รุ่นเก่าที่ hash ตรงได้ พร้อม backup และรักษา README นอก managed block หากมีกฎเฉพาะโปรเจกต์ ให้รวมการเปลี่ยนแปลงแบบเจาะจงและตรวจใหม่ ไม่เขียนทับทั้งไฟล์หรือเปลี่ยน marker อย่างเดียว ไม่ต้องไล่อัปเดตทุก repo ตอนติดตั้ง plugin; ตรวจและอัปเดต repo ที่กำลังทำงานเมื่อเริ่มงานนั้น
+
+## Indexing and Project Backfill (3.6.1)
+
+`agm-release indexing` รวม Project Backfill ในคำสั่งเดียว: full reachable-history coverage, current capability catalog ใน project.md, historical changelog และ README capability/API inventory ตาม release-workflow.md ใช้หลักฐานที่ครบแล้วต่อและเติมเฉพาะช่องว่าง ไม่สร้างรายการซ้ำ ทั้ง standalone indexing และ I step ของ composite release ใช้กฎนี้; standalone prepare ยังคง scoped prerequisite indexing ผลลัพธ์ต้องอยู่ใน project root ถาวร ไม่จบด้วย memory ที่อยู่เฉพาะ Temp และ audit exit 0 ไม่ใช่หลักฐานว่า backfill ครบ

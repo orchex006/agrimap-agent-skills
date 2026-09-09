@@ -1,5 +1,19 @@
 # agm-release command contract
 
+## Contents
+
+- [Required execution references](#required-execution-references)
+- [Explicit contract upgrade](#explicit-contract-upgrade)
+- [Commands and boundaries](#commands-and-boundaries)
+- [Prerequisite readiness before audit](#prerequisite-readiness-before-audit)
+- [Tool readiness](#tool-readiness)
+- [Dirty checkout recovery before preparation](#dirty-checkout-recovery-before-preparation)
+- [Indexing includes Project Backfill](#indexing-includes-project-backfill)
+- [Indexing and preparation](#indexing-and-preparation)
+- [Owner-requested version policy](#owner-requested-version-policy)
+- [Pipeline, confirmation and promote](#pipeline-confirmation-and-promote)
+- [Completion and recovery](#completion-and-recovery)
+
 These are Agent-chat commands. The .NET CLI only supplies audit, prepare, verify and notes; the Agent performs indexing, Git publication and confirmation. Read the target AGENTS.md completely and [release-and-bootstrap.md](release-and-bootstrap.md) for artifact/verification details. Never apply the bundled project template to the skill-package repository. Apply host/user instruction priority: an explicit owner-requested version overrides repository or bundled default version policy without requiring a governance edit or repeated approval. Other applicable project restrictions remain effective; this command surface additionally requires confirmation before Production publication, even where legacy Version intents pre-authorize it. Do not silently migrate target instructions.
 
 ## Required execution references
@@ -23,7 +37,7 @@ Use the bundled Node helper: `project-bootstrap.mjs plan --upgrade --target <pro
 | Agent arguments | Ordered work | Terminal boundary |
 | --- | --- | --- |
 | upgrade | Back up and replace scoped bundled contract files; verify version/receipt | Local contract files only; no product version/push/tag |
-| indexing | Audit actual committed/dirty changes; update project index and changelog | Local artifacts only; no version, push or tag |
+| indexing | Project Backfill: reconcile full reachable history, project catalog, historical changelog and README capability/API inventory | Local artifacts only; no version, push or tag |
 | prepare inhouse | Prepare and verify the requested Inhouse version, default PATCH+1 | Local candidate only; no push/tag |
 | prepare production | Prepare and verify the requested Production version, default PATCH+1 | Local candidate only; no push/tag |
 | pipeline inhouse | Verify existing candidate; commit reviewed candidate, push/verify develop, fast-forward push/verify jenkins | Inhouse branch checkpoint; no version bump or Production/tag |
@@ -57,9 +71,20 @@ For a release request with explicit versions and no instruction to include local
 
 For pipeline/promote, isolation must retain the exact verified existing candidate; it does not authorize replacing it with remote develop or preparing a new one. Shared branch checkout locks are local topology constraints, not remote divergence. Use the isolated checkout/clone for stage branches and verify actual remote ancestry before publication, leaving the caller checkout untouched. Stop only on a proven remaining access, candidate-provenance, integration or verification problem after these alternatives; list attempted recovery and the exact failure, not merely the dirty-file inventory. Keep the isolated candidate and its path for resume/confirmation.
 
+## Indexing includes Project Backfill
+
+`agm-release indexing` explicitly authorizes Project Backfill, including the I step inside release full/production/inhouse. A successful diff-only audit, fresh project.md, or today's changelog entry is not completion. Read the Project Backfill method in the current bundled AGENTS.md §5 and apply it under host/user authority; older installed scoped-only indexing wording does not remove this requested behavior. No separate backfill approval/invocation is needed.
+
+- Resolve and record the repository, source ref/SHA, original checkout and durable output root. Standalone indexing operates on the requested project checkout and its reachable HEAD/history plus dirty inventory; it needs no develop checkout or branch switch. Composite release indexing uses the verified develop candidate for release content and separately inventories original-checkout changes, without silently including them in publication.
+- Inspect whether history is shallow. Fetch missing reachable history from the verified configured remote when access permits. Review from reachable root commits to the recorded source SHA, including actual diffs, deletions/reverts, current source/tests/docs/CI and staged/unstaged/untracked changes; a latest-tag delta or git log subjects alone is insufficient. Do not include unrelated branches via --all. Report inaccessible coverage as unresolved rather than claim full completion.
+- Read the complete existing changelog and project catalog. Map evidence to capability milestones with proven implementation committer dates; preserve correct entries, reconcile gaps and semantic duplicates, and maintain unique newest-first date headings with English entries. Never manufacture historical dates or replace history with today's summary.
+- Update `.agrimap-agent/memory/project.md` with repository facts, complete current capability catalog, evidence references, known limitations, coverage and checkpoints. Update root README.md with overview, capability tables, actual API/contracts, runtime/dependencies, setup/run/test, configuration and limitations; preserve correct project-specific content. README describes current behavior, changelog its evolution, and project.md their evidence/index. Do not reduce this to module names or a release-only index.
+- Reuse proven complete prior backfill coverage and reconcile the remaining delta; do not regenerate unchanged documentation or duplicate historical entries. Record covered/excluded/unresolved evidence, reviewed history bounds, catalog-to-README parity and git diff --check. Unknown unavailable facts stay UNKNOWN; unresolved required coverage means partial, not completed. Backfill never bumps owners or creates versioned release notes, tags or publication by itself.
+- Deliver standalone indexing artifacts in the requested project root. If a temporary checkout is used for inspection, reconcile the backfill artifacts into that durable project root while preserving existing content; no Temp-only project.md deliverable. For composite releases keep candidate documentation consistent and reconcile reusable memory back to the original project without overwriting concurrent edits; report unresolved reconciliation and retain temporary evidence. This is scoped documentation authoring, not a copy of the dirty tree or publication of unrelated edits.
+
 ## Indexing and preparation
 
-- If `.agrimap-agent/memory/project.md` or its parent directories are absent, perform normal evidence-backed indexing and create them in this invocation under release-and-bootstrap.md. This creation is within indexing/preparation scope; do not stop for Project Backfill or a separate bootstrap request. Populate the index before a CLI gate that requires it, then continue the selected flow. Full-history backfill is required only when explicitly requested.
+- If `.agrimap-agent/memory/project.md` or its parent directories are absent, perform normal evidence-backed indexing and create them in this invocation under release-and-bootstrap.md. This creation is within indexing/preparation scope; do not stop for Project Backfill or a separate bootstrap request. Populate the index before a CLI gate that requires it, then continue the selected flow. `indexing` itself requests Project Backfill under the contract below; do not require that keyword separately. Standalone prepare retains scoped prerequisite indexing and does not silently expand into full backfill.
 - `project.md` means `.agrimap-agent/memory/project.md`, never a new root project.md. Reconcile current capabilities, references and release checkpoints with actual source/history. Update root `changelog.md` in English, newest-first, one heading per date; preserve historical evidence. Inspect staged, unstaged, untracked, deletion and a justified committed range; unresolved coverage blocks completion. CLI `audit --mode diff-only --format json --root <target>` gathers evidence but does not write the index or changelog.
 - Prepare only on develop. Inhouse owner is Jenkinsfile; Production owner is Jenkinsfile_Production. Change only IMAGE_TAG/PROJECT_VERSION to the same resolved candidate in each selected owner. Resolve versions using the owner-requested version policy below. No pipeline behavior edits or automatic reset. For an unfinished candidate, compare memory, notes, owners and Git; resume unchanged intent or reconcile an explicit revised target under that policy, never call prepare again blindly.
 - Only use a CLI prepare/verify mode after the compatibility check in release-tools.md. Inhouse preparation changes its owner pair and index/changelog only; it never creates or modifies versioned release notes or release.md. Production preparation (including full) maintains release.md and exactly release-notes/<productionCandidateVersion>.md with Thai prose and English schema fields. Never derive either filename or tag from the Inhouse owner, the larger version, the last processed owner or an ambiguous VERSION variable. Fill TODO/TBD before verification. If indexing is stale, finish the prerequisite reconciliation inside preparation scope.

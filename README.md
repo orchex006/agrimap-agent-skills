@@ -1,4 +1,4 @@
-# AgriMap Agent Skills 3.6.0
+# AgriMap Agent Skills 3.6.1
 
 ชุดคำสั่งสำหรับให้ Agent ช่วยงาน AgriMap ตั้งแต่วิเคราะห์ ออกแบบ แก้โค้ด ตรวจงาน จนถึงเตรียม release ใช้กับ Codex, Claude Code และ Gemini CLI โดยเลือกคำสั่งตามงาน ไม่ต้องเดินครบทุก workflow
 
@@ -52,7 +52,7 @@ Design ทำงานแบบ passive ในคำสั่งที่เห�
 | คำสั่ง | สิ่งที่ Agent ทำตามลำดับ | เพิ่มเวอร์ชัน | Push ไปที่ใด | ต้องยืนยันก่อน Production/tag |
 | --- | --- | --- | --- | --- |
 | `$agm-release upgrade` | สำรองและทับไฟล์ contract ที่อยู่ใน bundle พร้อมอัปเดต version tracking; README ทับเฉพาะ managed Deployment block | ไม่เพิ่ม | ไม่มี | ไม่เกี่ยวข้อง |
-| `$agm-release indexing` | ตรวจ source/diff/history → อัปเดต project index และ changelog | ไม่เพิ่ม | ไม่มี; แก้ไฟล์ในเครื่อง | ไม่เกี่ยวข้อง |
+| `$agm-release indexing` | Project Backfill: ตรวจ full reachable history/source/diff → เติม project catalog, historical changelog และ README capability/API tables | ไม่เพิ่ม | ไม่มี; แก้ไฟล์ในเครื่อง | ไม่เกี่ยวข้อง |
 | `$agm-release prepare inhouse` | เตรียม Inhouse version → อัปเดต index/changelog → ตรวจความถูกต้อง; ไม่สร้าง release notes | Inhouse +0.0.1 | ไม่มี; เตรียมในเครื่อง | ไม่เกี่ยวข้อง |
 | `$agm-release prepare production` | เตรียม version และ notes → ตรวจความถูกต้อง | Production +0.0.1 | ไม่มี; เตรียมในเครื่อง | ยังไม่ถึงขั้น promote |
 | `$agm-release pipeline inhouse` | ตรวจ candidate ที่เตรียมแล้ว → commit → push/ตรวจ SHA | ไม่เพิ่มซ้ำ | `develop → jenkins` | ไม่เกี่ยวข้อง |
@@ -64,7 +64,7 @@ Design ทำงานแบบ passive ในคำสั่งที่เห�
 
 `project.md` ใน Flow นี้คือ `.agrimap-agent/memory/project.md` ส่วน changelog คือ `changelog.md` ที่ root ของโครงการ ใช้ Version ที่เจ้าของระบุชัด หรือเพิ่ม PATCH เป็นค่าเริ่มต้น เช่น `1.2.9 → 1.2.10` โดยอ่าน Inhouse จาก `Jenkinsfile` และ Production จาก `Jenkinsfile_Production` หากทำต่อจาก candidate เดิมจะไม่เพิ่มเลขซ้ำ
 
-หากยังไม่มี Project Memory คำสั่ง indexing/prepare/release จะทำ indexing จากหลักฐานและสร้าง `.agrimap-agent/memory/project.md` พร้อมโฟลเดอร์ที่จำเป็นให้ใน flow เดิม ไม่ต้องสั่ง Project Backfill หรือ bootstrap แยก และไม่อ้างว่าได้ backfill ประวัติทั้งโครงการแล้ว ส่วน standalone pipeline/promote ต้องพิสูจน์ candidate ที่เตรียมแล้วก่อน reconstruct memory
+หากยังไม่มี Project Memory คำสั่ง indexing/prepare/release จะทำ indexing จากหลักฐานและสร้าง `.agrimap-agent/memory/project.md` พร้อมโฟลเดอร์ที่จำเป็นให้ใน flow เดิม ไม่ต้องสั่ง Project Backfill หรือ bootstrap แยก โดย indexing รวม Project Backfill และต้องพิสูจน์ coverage ก่อนจบ ส่วน standalone prepare ไม่อ้าง full backfill จาก scoped indexing ส่วน standalone pipeline/promote ต้องพิสูจน์ candidate ที่เตรียมแล้วก่อน reconstruct memory
 
 **Release notes และ tag เป็นของ Production เท่านั้น:** ถ้า candidate Inhouse เป็น `1.0.6` และ Production เป็น `1.0.3` ให้สร้าง `release-notes/1.0.3.md` และใช้ tag `v1.0.3` ห้ามนำเลข Inhouse ไปสร้าง `release-notes/1.0.6.md` งาน Inhouse-only ไม่แก้ `release.md` หรือ versioned notes ประวัติเดิมต้องคงอยู่
 

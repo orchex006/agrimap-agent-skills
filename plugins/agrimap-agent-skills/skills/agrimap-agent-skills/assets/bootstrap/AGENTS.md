@@ -1,6 +1,6 @@
 # กติกากลาง Changelog, Release และ Deployment
 
-<!-- AGRIMAP BOOTSTRAP VERSION: 3.6.0 -->
+<!-- AGRIMAP BOOTSTRAP VERSION: 3.6.1 -->
 
 ไฟล์นี้เป็น canonical instruction ของ repository สำหรับ Codex, Claude Code, Gemini CLI, Cursor และผู้พัฒนา โดยไม่ต้องมี AgriMap skills หรือ local Git hook กติกา Markdown ช่วยกำกับพฤติกรรม; Agent ใช้ .NET Global Tool `agm-release` ตรวจ local gate และตรวจหลักฐาน Git ตามไฟล์นี้ ห้ามอนุมานว่า Jenkins บังคับ release gate อยู่ ส่วน GitLab Protected Branch/Tag ต้องตั้งค่าฝั่ง server แยกต่างหาก
 
@@ -92,7 +92,7 @@ Normalize ได้เฉพาะ case/whitespace และ semantic phrase bou
 
 ## 3. Preflight และ safety invariants
 
-- อ่าน `.agrimap-agent/memory/project.md` เป็น canonical project memory/index; หากไม่มี ในงาน indexing/prepare/release ที่ได้รับอนุญาตให้ทำ indexing ตามปกติและสร้าง `.agrimap-agent/memory/` พร้อม `project.md` จาก source, Git history และ dirty coverage ในขอบเขตงานก่อน gate ที่ต้องใช้ memory แล้วทำต่อใน invocation เดิม ไม่หยุดเพื่อขอ `Project Backfill` หรือ bootstrap แยก สร้างโฟลเดอร์บันทึกอื่นใต้ `.agrimap-agent/` ตาม §9 เมื่อจำเป็น รักษาไฟล์และประวัติเดิม ระบุ facts/capabilities, evidence, owner versions, coverage limits และ checkpoints จริง ไม่สร้าง placeholder เปล่าหรืออ้างว่าทำ full-history backfill แล้ว; full-history backfill ใช้เมื่อ owner สั่งเท่านั้น สำหรับ standalone pipeline/promote ให้ reconstruct memory จาก candidate ที่เตรียมแล้วและพิสูจน์ด้วย notes/diffs/Git ได้ ห้ามสร้าง candidate หรือ bump เพิ่มและห้ามแก้ frozen candidate หาก provenance ไม่ชัดให้หยุดเฉพาะขั้นที่พึ่งหลักฐานนั้น ห้ามสร้าง root `project.md`
+- อ่าน `.agrimap-agent/memory/project.md` เป็น canonical project memory/index; หากไม่มี ในงาน indexing/prepare/release ที่ได้รับอนุญาตให้ทำ indexing ตามปกติและสร้าง `.agrimap-agent/memory/` พร้อม `project.md` จาก source, Git history และ dirty coverage ในขอบเขตงานก่อน gate ที่ต้องใช้ memory แล้วทำต่อใน invocation เดิม ไม่หยุดเพื่อขอ `Project Backfill` หรือ bootstrap แยก สร้างโฟลเดอร์บันทึกอื่นใต้ `.agrimap-agent/` ตาม §9 เมื่อจำเป็น รักษาไฟล์และประวัติเดิม ระบุ facts/capabilities, evidence, owner versions, coverage limits และ checkpoints จริง ไม่สร้าง placeholder เปล่าหรืออ้างว่าทำ full-history backfill แล้ว; `agm-release indexing` ถือเป็นคำสั่ง Project Backfill ตาม §5 โดยตรง รวม I step ภายใน composite release; standalone prepare ใช้ scoped indexing เท่าที่จำเป็น สำหรับ standalone pipeline/promote ให้ reconstruct memory จาก candidate ที่เตรียมแล้วและพิสูจน์ด้วย notes/diffs/Git ได้ ห้ามสร้าง candidate หรือ bump เพิ่มและห้ามแก้ frozen candidate หาก provenance ไม่ชัดให้หยุดเฉพาะขั้นที่พึ่งหลักฐานนั้น ห้ามสร้าง root `project.md`
 - ก่อน network mutation รันและบันทึกผลจริง:
 
   ```text
@@ -171,7 +171,7 @@ agm-release -- notes --mode production
 - รายการย้อนหลังใช้ committer date; งาน uncommitted ใช้วันที่ทำงาน ห้ามแต่ง capability จากข้อความคลุมเครือ
 - First adoption สรุป stable capabilities จาก code/docs/tests/reachable history แยก FACT/UNKNOWN; subsequent release บันทึกเฉพาะ exact delta หลัง baseline production tag
 - Release baseline ต้องเป็น Production tag ที่พิสูจน์จาก version owner/notes ที่ tagged SHA และ reachable จาก candidate ไม่ใช่เลือก tag ใดก็ได้หรือเลขสูงสุดอย่างเดียว; การลบ notes ใน working tree ไม่ทำให้ published release กลับเป็น first-adoption หากหลักฐาน baseline ขัดกันให้หยุด release แต่ยังรายงานข้อค้นพบของ audit ได้
-- คำสั่งต่อ Agent สำหรับทำ historical first-adoption/backfill คือ `Project Backfill` (เป็น intent keyword ไม่ใช่ shell command) และทุก Agent ต้องทำตามขั้นตอนนี้:
+- คำสั่งต่อ Agent สำหรับทำ historical first-adoption/backfill คือ `Project Backfill` หรือ `agm-release indexing` (เป็น intent keyword ไม่ใช่ shell command) และทุก Agent ต้องทำตามขั้นตอนนี้:
   1. รัน `agm-release -- audit --mode diff-only --format json` แล้วอ่าน `git log HEAD --reverse --format="%H|%cI|%s" --name-status` ทั้ง history ที่ reachable จาก branch ปัจจุบัน ไม่จำกัดแค่หลัง latest tag; ตรวจ `git rev-parse --is-shallow-repository` หาก history ไม่ครบให้ระบุ missing coverage และอย่าอ้าง full backfill
   2. อ่าน source, public routes/contracts, tests และ docs ทั้ง project; ใช้ commit subject เป็นเบาะแสเท่านั้นและยืนยัน capability ด้วย diff/path ปัจจุบัน
   3. เพิ่ม/ปรับ `## Capability catalog` ใน `.agrimap-agent/memory/project.md` โดยหนึ่งบรรทัดต่อ stable capability พร้อม `first proven date`, commit/path evidence และสถานะ current/deprecated/unknown
