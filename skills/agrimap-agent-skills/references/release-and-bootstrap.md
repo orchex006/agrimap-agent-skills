@@ -4,6 +4,8 @@ Load only for relevant initialization/adoption, backfill, branch/version/release
 
 For existing project work, read the target repository's applicable AGENTS.md completely before its release or portable-recording workflow. The [bundled project AGENTS.md](../assets/bootstrap/AGENTS.md) is the owner-supplied installation source, not an override for a different installed project contract. This reference is only a routing summary: resolve differences against the target's instructions and explicit owner decisions, never silently combine conflicting contracts. Do not import project-only requirements into the skill-package root.
 
+An explicit owner version is already the decision resolving an older PATCH-only/chosen-version prohibition. Apply it during planning and execution without rewriting or adopting the project AGENTS.md. Such a version-policy difference alone is not a bootstrap conflict or release blocker. Bootstrap replacement approval concerns actual file replacement, not using the requested candidate. Check the current bundled release-workflow.md and release-tools.md before repeating a prior refusal.
+
 ## Bootstrap
 
 Use scripts/project-bootstrap.mjs plan --target <project> --kind fe-main|be-main|fe-library|be-library, then apply within authorized initialization or the scoped release prerequisite repair below. agm-workspace init --bootstrap uses the same installer. No installation on identify/session start; never target the skill-package root.

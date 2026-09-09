@@ -4,11 +4,13 @@ These are Agent-chat commands. The .NET CLI only supplies audit, prepare, verify
 
 ## Required execution references
 
-Read [release-steps.md](release-steps.md) before mutation: it defines all nine exact command sequences, environment ownership, checkpoint evidence and completion. Read [release-tools.md](release-tools.md) for detection, installation and CLI compatibility diagnosis. For these nine commands, their Production-only artifact rule replaces the earlier generic environment-notes guidance in this package. The bootstrap template remains historical installation material; it is not silently rewritten or adopted. If an applicable target instruction conflicts, explain the exact conflict and resolve authority before the affected write.
+Read [release-steps.md](release-steps.md) before mutation: it defines all nine exact command sequences, environment ownership, checkpoint evidence and completion. Read [release-tools.md](release-tools.md) for detection, installation and CLI compatibility diagnosis. For these nine commands, their Production-only artifact rule replaces the earlier generic environment-notes guidance in this package. The bootstrap template remains historical installation material; it is not silently rewritten or adopted. If an applicable target instruction conflicts, apply host/user priority first. An explicit owner version already resolves a lower-priority PATCH-only prohibition, including during planning; it needs no additional authority question or file migration. Only an unresolved conflict blocks the affected write.
 
 This procedure is model-independent. The requester's intended audiences are GPT-5.4, GPT-5.5, GPT-5.6 Luna/Terra/Sol, GPT-6 Astra and later; Claude Sonnet 5, Opus 4.8/5; and Gemini 3.6 Flash and later. These are requested compatibility targets, not a claim of model availability or successful cross-model tests. Model names and reasoning settings never select a mode, change ownership, skip evidence or grant publication authority.
 
 The Agent discovers all paths, versions and SHAs and resolves routine tool/environment problems itself. Never ask a human to calculate a SHA, build Git commands or run the release manually. Ask only for an unresolved intent/authority decision, unavailable access, or the required concrete Production confirmation.
+
+Before issuing a version-policy refusal, inspect the current bundled entrypoint and version policy, the actual target instruction and the explicit request. Do not reuse a prior refusal, plan or memory as authority. Report actual target/bundled paths and versions if a genuine higher-priority restriction remains; a quoted old prohibition alone is insufficient.
 
 ## Commands and boundaries
 

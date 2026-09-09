@@ -2,6 +2,11 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 3.2.5 — 2026-09-09
+
+- Surface owner-version precedence directly in the generated release skill, operation entrypoint and Gemini command, including the 1.0.8 / 1.0.5 case.
+- Resolve legacy project PATCH-only restrictions during planning as well as execution without requiring bootstrap adoption or governance migration; re-read current contracts before repeating stale refusals.
+
 ## 3.2.4 — 2026-09-09
 
 - Honor explicit owner Version/Patch targets per environment, including skipped patches and minor/major changes; PATCH+1 applies only when no target is supplied.

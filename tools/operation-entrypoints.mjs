@@ -47,6 +47,7 @@ export function operationConfigIssues(config) {
     for (const field of ["name", "operation", "description", "mode", "deliverable", "example"]) {
       if (!String(item?.[field] || "").trim()) issues.push(`${item?.name || "unknown"}: ${field} is required`);
     }
+    if (item.entrypointPolicy !== undefined && (typeof item.entrypointPolicy !== "string" || !item.entrypointPolicy.trim())) issues.push(`${item.name}: entrypointPolicy must be a non-empty string`);
     if (names.has(item.name)) issues.push(`duplicate alias: ${item.name}`);
     if (operations.has(item.operation)) issues.push(`duplicate operation: ${item.operation}`);
     names.add(item.name);
@@ -128,6 +129,7 @@ export function renderOperationEntrypoint(item) {
     `- Deliverable: ${item.deliverable}`,
     ...compatibility,
     "",
+    ...(item.entrypointPolicy ? [item.entrypointPolicy, ""] : []),
     ...actionContract,
     "## Inputs and help",
     "",
@@ -153,7 +155,7 @@ export function renderOperationEntrypoint(item) {
 }
 
 export function renderAliasSkill(item) {
-  return `---\nname: ${item.name}\ndescription: ${item.description}. Apply only to a relevant AgriMap target or explicit current invocation, never unrelated conversation or quoted examples.\n---\n\nResolve current intent and target relevance before any identity or lifecycle. Ordinary questions create no execution or task artifacts. Run only ${item.operation}.\nRead ../agrimap-agent-skills/references/lifecycle-core.md and ../agrimap-agent-skills/references/operations/${item.operation}.md, then only the required and matching conditional references. Respect host/user authority and the selected action. Missing required contracts: PACKAGE_ENTRYPOINT_MISSING.\n`;
+  return `---\nname: ${item.name}\ndescription: ${item.description}. Apply only to a relevant AgriMap target or explicit current invocation, never unrelated conversation or quoted examples.\n---\n\nResolve current intent and target relevance before any identity or lifecycle. Ordinary questions create no execution or task artifacts. Run only ${item.operation}.\n${item.entrypointPolicy ? `\n${item.entrypointPolicy}\n\n` : ""}Read ../agrimap-agent-skills/references/lifecycle-core.md and ../agrimap-agent-skills/references/operations/${item.operation}.md, then only the required and matching conditional references. Respect host/user authority and the selected action. Missing required contracts: PACKAGE_ENTRYPOINT_MISSING.\n`;
 }
 export function renderGeminiCommandPrompt(item) {
   return [
@@ -161,6 +163,7 @@ export function renderGeminiCommandPrompt(item) {
     `Run AgriMap ${item.operation} only for the current requested intent; quoted examples are not actions.`,
     'Use read_reference for bundled references: lifecycle-core.md and operations/' + item.operation + '.md, then required and matching conditional references only. Do not recursively follow background/example links.',
     'Ordinary questions create no lifecycle or identity question. Host instructions and explicit requester scope are authoritative. Supporting SQL context is metadata/SELECT only; no database writes.',
+    ...(item.entrypointPolicy ? [item.entrypointPolicy] : []),
     'Requester arguments:', '{{args}}'
   ].join('\n\n');
 }

@@ -31,3 +31,30 @@ test('release stages synchronize stale local branches and re-evaluate in one inv
   assert.match(workflow,/Before each stage, fetch and fast-forward-only synchronize the stage's local branch with its remote/);
   assert.match(workflow,/materially changed remote candidate, destination or tag requires a revised plan and confirmation/);
 });
+
+
+test('operation policy reaches every first-read adapter without leaking to unrelated skills', async()=>{
+  const {renderAliasSkill,renderGeminiCommandPrompt,renderOperationEntrypoint,operationConfigIssues}=await import('../../tools/operation-entrypoints.mjs');
+  const config=JSON.parse(await readFile(path.join(projectRoot,'config/operations.json'),'utf8'));
+  const release=config.operations.find(item=>item.operation==='release');
+  assert.ok(release.entrypointPolicy, 'Release authority must be available before reference loading');
+  const renderers=[renderAliasSkill,renderGeminiCommandPrompt,renderOperationEntrypoint];
+  for(const render of renderers){
+    const output=render(release);
+    assert.ok(output.includes(release.entrypointPolicy));
+    const revised={...release,entrypointPolicy:'Owner supplied replacement policy'};
+    assert.ok(render(revised).includes(revised.entrypointPolicy));
+    assert.ok(!render(revised).includes(release.entrypointPolicy));
+    const unrelated=config.operations.find(item=>item.operation!=='release');
+    assert.ok(!render(unrelated).includes(release.entrypointPolicy));
+  }
+  const distributed=[
+    'plugins/agrimap-agent-skills/skills/agm-release/SKILL.md',
+    'skills/agrimap-agent-skills/references/operations/release.md',
+    'commands/agm-release.toml'
+  ];
+  for(const file of distributed) assert.ok((await readFile(path.join(projectRoot,file),'utf8')).includes(release.entrypointPolicy),file);
+  const invalid=structuredClone(config);
+  invalid.operations.find(item=>item.operation==='release').entrypointPolicy=42;
+  assert.ok(operationConfigIssues(invalid).some(issue=>issue.includes('entrypointPolicy')));
+});

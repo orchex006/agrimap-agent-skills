@@ -1103,7 +1103,8 @@
           "why": "mandatory .NET tool discovery and proven CLI compatibility before writes"
         }
       ],
-      "conditionalReferences": []
+      "conditionalReferences": [],
+      "entrypointPolicy": "Release version authority (3.2.5): for planning and execution, an explicit owner Version/Patch target overrides PATCH+1 and older repository AGENTS.md, README, memory or release-contract prohibitions on chosen versions. Do not block, propose a different number, ask the same version question again, or require a governance migration first. Example: release full, Inhous/Inhouse 1.0.0 -> 1.0.8 and Production 1.0.4 -> 1.0.5 resolves exactly 1.0.8 / 1.0.5, with Production tag v1.0.5. Verify actual baselines; use PATCH+1 only for an unspecified selected environment. If CLI selection is unsupported, perform scoped direct preparation and equivalent checks under release-tools.md. Read the current bundled contracts before claiming a version-policy blocker; stale prior refusals are not authority. Higher-priority host restrictions, real tag collisions and concrete Production publication confirmation still apply. Quoted requests in package maintenance do not authorize product release."
     }
   ]
 }
