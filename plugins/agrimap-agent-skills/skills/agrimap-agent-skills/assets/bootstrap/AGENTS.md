@@ -1,5 +1,7 @@
 # กติกากลาง Changelog, Release และ Deployment
 
+<!-- AGRIMAP BOOTSTRAP VERSION: 3.4.0 -->
+
 ไฟล์นี้เป็น canonical instruction ของ repository สำหรับ Codex, Claude Code, Gemini CLI, Cursor และผู้พัฒนา โดยไม่ต้องมี AgriMap skills หรือ local Git hook กติกา Markdown ช่วยกำกับพฤติกรรม; Agent ใช้ .NET Global Tool `agm-release` ตรวจ local gate และตรวจหลักฐาน Git ตามไฟล์นี้ ห้ามอนุมานว่า Jenkins บังคับ release gate อยู่ ส่วน GitLab Protected Branch/Tag ต้องตั้งค่าฝั่ง server แยกต่างหาก
 
 ## 1. ขอบเขตและ fixed ownership
@@ -435,3 +437,7 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 - ห้าม complete หากมี artifact ที่ run นี้สร้าง/แก้ใน allowlist แต่ตกหล่นจาก intended commit หรือ report ไม่ตรงกับ Git diff/status จริง
 - หากไม่ได้สั่ง commit ให้รายงาน exact modified/untracked paths เป็น local deliverables ได้ ไม่ต้อง commit เพื่อปิดงาน; กลุ่ม B ต้อง commit/push final audit artifacts ตาม §6.3 ส่วน release mode อื่นคง local follow-up ตาม §8.1
 - ห้ามเก็บ secret, token, credential, ข้อมูลส่วนบุคคลที่ไม่จำเป็น, hidden reasoning, transcript หรือ raw telemetry ใน artifact ใด ๆ; raw requester input อนุญาตเฉพาะ prompt history ตามข้อยกเว้น §9.1 และ contract ของ host ห้ามคัดลอกเข้า memory/log/report
+
+## Bootstrap contract freshness
+
+Before relevant durable project work, compare the AGRIMAP BOOTSTRAP VERSION marker and `.agrimap-agent/runtime/bootstrap.json` with the active skill bootstrap manifest. Missing markers mean legacy/untracked, not current. Use the active skill project-bootstrap plan/apply to update recognized unmodified installed templates automatically, with backup and receipt; do not require a separate bootstrap invocation. Preserve project-specific rules: unknown or modified content requires a scoped merge from the actual prior/current templates, never blanket replacement or merely changing the version marker. Verify the installed contract after update before continuing. Read-only questions do not write files. Explicit owner version targets remain authoritative during migration.

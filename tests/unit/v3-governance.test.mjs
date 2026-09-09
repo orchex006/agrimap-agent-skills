@@ -151,3 +151,33 @@ test('init only installs project documents on explicit bootstrap',async t=>{
  h.run(h.scripts.workspace,['init','--bootstrap','--kind','fe-main']);
  assert.equal(await present(path.join(h.temp,'AGENTS.md')),true);
 });
+
+
+test('legacy 3.2.2 bootstrap upgrades with backup and preserves surrounding README',async t=>{
+ const h=await fixture(t);
+ const legacy=await readFile(path.join(projectRoot,'tests/fixtures/bootstrap-3.2.2/AGENTS.md'),'utf8');
+ const block=await readFile(path.join(projectRoot,'tests/fixtures/bootstrap-3.2.2/deployment.md'),'utf8');
+ await writeFile(path.join(h.temp,'AGENTS.md'),legacy.replaceAll('\n','\r\n'));
+ await writeFile(path.join(h.temp,'README.md'),'# Custom title\n\n<!-- BEGIN AGRIMAP DEPLOYMENT -->\n'+block.trimEnd()+'\n<!-- END AGRIMAP DEPLOYMENT -->\n\n## Custom instructions\nKeep this.\n');
+ const opts={target:h.temp,kind:'be-main'};
+ const plan=await planBootstrap(opts);
+ assert.equal(plan.installedVersion,null); assert.equal(plan.freshness,'update-required'); assert.equal(plan.ok,true);
+ assert.equal(plan.entries.find(e=>e.target==='AGENTS.md').status,'update');
+ const result=await applyBootstrap(opts);assert.equal(result.applied,true);
+ const old=result.entries.find(e=>e.target==='AGENTS.md');
+ assert.equal(await readFile(path.join(h.temp,'.agrimap-agent/runtime/bootstrap-backups',old.beforeHash,'AGENTS.md'),'utf8'),legacy.replaceAll('\n','\r\n'));
+ const text=await readFile(path.join(h.temp,'AGENTS.md'),'utf8');assert.ok(text.includes('AGRIMAP BOOTSTRAP VERSION: '+result.version));
+ const readme=await readFile(path.join(h.temp,'README.md'),'utf8');assert.ok(readme.startsWith('# Custom title'));assert.ok(readme.endsWith('Keep this.\n'));
+ assert.equal((await planBootstrap(opts)).freshness,'current');
+ const receipt=JSON.parse(await readFile(path.join(h.temp,'.agrimap-agent/runtime/bootstrap.json'),'utf8'));assert.equal(receipt.version,result.version);
+});
+
+test('modified legacy contract is preserved and not falsely marked current',async t=>{
+ const h=await fixture(t);
+ const legacy=await readFile(path.join(projectRoot,'tests/fixtures/bootstrap-3.2.2/AGENTS.md'),'utf8');
+ const custom=legacy+'\nOwner-specific build rule.\n';await writeFile(path.join(h.temp,'AGENTS.md'),custom);
+ const result=await applyBootstrap({target:h.temp,kind:'be-main'});
+ assert.equal(result.applied,false);assert.equal(result.freshness,'update-required');
+ assert.equal(await readFile(path.join(h.temp,'AGENTS.md'),'utf8'),custom);
+ assert.equal(await present(path.join(h.temp,'.agrimap-agent/runtime/bootstrap.json')),false);
+});

@@ -2,6 +2,12 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 3.4.0 — 2026-09-09
+
+- Track installed AGENTS.md contract version and compare it with the active skill before durable project work.
+- Automatically migrate recognized legacy bootstrap templates with exact backups and receipts; preserve custom instructions and README content, and report unknown content for scoped reconciliation.
+- Generate the version marker and bootstrap manifest from the package version to prevent tracking drift.
+
 ## 3.2.5 — 2026-09-09
 
 - Surface owner-version precedence directly in the generated release skill, operation entrypoint and Gemini command, including the 1.0.8 / 1.0.5 case.

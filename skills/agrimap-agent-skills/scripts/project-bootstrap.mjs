@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { parseCliArgs } from './cli-args.mjs';
 
 const bundle = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/bootstrap');
+const normalized = value => Buffer.from(value.toString('utf8').replaceAll('\r\n', '\n'));
 const hash = value => createHash('sha256').update(value).digest('hex');
 const kinds = ['fe-main', 'be-main', 'fe-library', 'be-library'];
 const start = '<!-- BEGIN AGRIMAP DEPLOYMENT -->';
@@ -35,7 +36,10 @@ export async function planBootstrap({ target, kind }) {
     if (hash(source) !== item.sha256) throw new Error('BOOTSTRAP_BUNDLE_HASH_MISMATCH');
     const dest = await safeTarget(root, item.target);
     const before = await readMaybe(dest);
+    const prior = before && (item.previous || []).find(old => old.sha256 === hash(normalized(before)));
     let content = source, status = before ? hash(before) === hash(source) ? 'unchanged' : 'conflict' : 'create';
+    if (prior && status === 'conflict') status = 'update';
+    let previousVersion = prior?.version || null;
     if (item.mode === 'section') {
       const text = before?.toString('utf8') || '';
       const block = source.toString('utf8').trimEnd();
@@ -44,15 +48,25 @@ export async function planBootstrap({ target, kind }) {
         const existing = text.match(/<!-- BEGIN AGRIMAP DEPLOYMENT -->\r?\n([\s\S]*?)\r?\n<!-- END AGRIMAP DEPLOYMENT -->/);
         status = existing && existing[1].replaceAll('\r\n', '\n') === block ? 'unchanged' : 'conflict';
         content = before;
+        const previousBlock = existing && (item.previous || []).find(old => old.sha256 === hash(Buffer.from(existing[1].replaceAll('\r\n', '\n') + '\n')));
+        if (status === 'conflict' && previousBlock) {
+          status = 'update'; previousVersion = previousBlock.version;
+          content = Buffer.from(text.replace(existing[0], managed.trimEnd()));
+        }
       } else {
         const index = text.search(/^## Swagger\s*$/m);
         const next = index >= 0 ? text.slice(0,index) + managed + '\n' + text.slice(index) : text.trimEnd() + (text ? '\n\n' : '') + managed;
         content = Buffer.from(next); status = before ? 'insert-section' : 'create';
       }
     }
-    entries.push({ target: item.target, mode: item.mode, status, beforeHash: before ? hash(before) : null, sha256: hash(content || ''), content: (content || Buffer.alloc(0)).toString('base64') });
+    entries.push({ previousVersion, target: item.target, mode: item.mode, status, beforeHash: before ? hash(before) : null, sha256: hash(content || ''), content: (content || Buffer.alloc(0)).toString('base64') });
   }
-  return { version: manifest.version, root, kind, ok: entries.every(e => e.status !== 'conflict'), entries };
+  const agents = await readMaybe(await safeTarget(root, 'AGENTS.md'));
+  const installedVersion = agents?.toString('utf8').match(/<!-- AGRIMAP BOOTSTRAP VERSION: ([^ ]+) -->/)?.[1] || null;
+  const receiptBytes = await readMaybe(await safeTarget(root, '.agrimap-agent/runtime/bootstrap.json'));
+  let receiptVersion = null;
+  try { receiptVersion = receiptBytes ? JSON.parse(receiptBytes).version : null; } catch { /* Rebuild an invalid receipt only after verified apply. */ }
+  return { version: manifest.version, installedVersion, receiptVersion, freshness: receiptVersion === manifest.version && installedVersion === manifest.version && entries.every(e => e.status === 'unchanged') ? 'current' : 'update-required', root, kind, ok: entries.every(e => e.status !== 'conflict'), entries };
 }
 export async function applyBootstrap(options) {
   const plan = await planBootstrap(options);
@@ -62,6 +76,14 @@ export async function applyBootstrap(options) {
   for (const e of plan.entries) {
     const dest = await safeTarget(plan.root,e.target), before = await readMaybe(dest);
     if ((before ? hash(before) : null) !== e.beforeHash) throw new Error('BOOTSTRAP_TARGET_DRIFT');
+  }
+  // Save exact prior bytes before any replacement, including project README outside the managed block.
+  for (const e of plan.entries.filter(e => e.status === 'update')) {
+    const backup = await safeTarget(plan.root, `.agrimap-agent/runtime/bootstrap-backups/${e.beforeHash}/${e.target}`);
+    await mkdir(path.dirname(backup), {recursive:true});
+    const old = await readFile(await safeTarget(plan.root, e.target));
+    if (hash(old) !== e.beforeHash) throw new Error('BOOTSTRAP_TARGET_DRIFT');
+    await writeFile(backup, old);
   }
   for (const e of plan.entries.filter(e => e.status !== 'unchanged')) {
     const dest = await safeTarget(plan.root,e.target);

@@ -100,3 +100,7 @@ $agm-be
 เปลี่ยน prefix ตาม [Usage](USAGE.md) หากใช้ host อื่น Runtime preview/apply อยู่ใน [Maintaining](MAINTAINING.md#bootstrap-cli)
 
 AGENTS ที่ส่งมาอธิบาย .NET main-service profile จึงต้องตรวจความเข้ากันได้ของ FE/libraries และ server configuration จริง ไม่สมมติว่า stage/tool/trigger เหมือนกัน ค่า scaffold ใหม่ของ main FE/BE ยังคือ 1.0.0, libraries 0.0.x; adoption ไม่เปลี่ยนเลขเดิม
+
+## Installed contract tracking (3.4.0)
+
+AGENTS.md ที่ติดตั้งมี `AGRIMAP BOOTSTRAP VERSION` และ receipt ที่ `.agrimap-agent/runtime/bootstrap.json` ก่อนงานเขียนใน product repo ให้ตรวจเทียบกับ manifest ของ skill รุ่นที่โหลดจริง หากเก่าหรือไม่มี marker ให้รัน bootstrap plan/apply ในคำขอเดิม ระบบอัปเดต template รุ่นเก่าที่ hash ตรงได้ พร้อม backup และรักษา README นอก managed block หากมีกฎเฉพาะโปรเจกต์ ให้รวมการเปลี่ยนแปลงแบบเจาะจงและตรวจใหม่ ไม่เขียนทับทั้งไฟล์หรือเปลี่ยน marker อย่างเดียว ไม่ต้องไล่อัปเดตทุก repo ตอนติดตั้ง plugin; ตรวจและอัปเดต repo ที่กำลังทำงานเมื่อเริ่มงานนั้น

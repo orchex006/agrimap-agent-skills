@@ -2,6 +2,7 @@
 
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import {
   loadTaskArtifactSchema,
   renderTaskArtifactSchemaDocs,
@@ -35,6 +36,24 @@ async function removeGenerated(target) {
 if (typeof packageVersion !== "string" || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/.test(packageVersion)) {
   throw new Error("package.json version must be a valid semantic version.");
 }
+// Keep installed-contract tracking coupled to the package version at generation time.
+const bootstrapRoot = path.join(canonicalSkill, 'assets/bootstrap');
+const bootstrapManifestPath = path.join(bootstrapRoot, 'manifest.json');
+const bootstrapManifest = JSON.parse(await readFile(bootstrapManifestPath, 'utf8'));
+const bootstrapAgentsPath = path.join(bootstrapRoot, 'AGENTS.md');
+const bootstrapAgents = await readFile(bootstrapAgentsPath, 'utf8');
+if (!/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/.test(bootstrapAgents)) throw new Error('BOOTSTRAP_VERSION_MARKER_MISSING');
+await writeFile(bootstrapAgentsPath, bootstrapAgents.replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/, `<!-- AGRIMAP BOOTSTRAP VERSION: ${packageVersion} -->`).replaceAll('\r\n', '\n'), 'utf8');
+for (const item of bootstrapManifest.files) {
+  const nextHash = createHash('sha256').update(await readFile(path.join(bootstrapRoot, item.source))).digest('hex');
+  if (bootstrapManifest.version !== packageVersion && item.sha256 !== nextHash) {
+    item.previous ??= [];
+    if (!item.previous.some(old => old.sha256 === item.sha256)) item.previous.push({version: bootstrapManifest.version, sha256: item.sha256});
+  }
+  item.sha256 = nextHash;
+}
+bootstrapManifest.version = packageVersion;
+await writeFile(bootstrapManifestPath, JSON.stringify(bootstrapManifest, null, 2) + '\n', 'utf8');
 const operations = JSON.parse(await readFile(path.join(root, "config", "operations.json"), "utf8"));
 const operationIssues = operationConfigIssues(operations);
 if (operationIssues.length) throw new Error(`Invalid operation config:\n- ${operationIssues.join("\n- ")}`);

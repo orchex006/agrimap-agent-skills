@@ -3,6 +3,8 @@
 First determine whether the current request concerns AgriMap. Quoted commands, cwd, model name and old task state alone do not activate a workflow. A direct answer, explanation, comparison, help or read-only review has no execution state, depth, requester question or task artifacts unless a durable deliverable/tracking was requested.
 
 ## Durable work
+
+For adopted product repositories before durable work, compare the installed AGENTS.md bootstrap version marker/receipt to the active skill manifest. Missing or different versions require reconciliation within this invocation using release-and-bootstrap.md and project-bootstrap.mjs; automatically update recognized unmodified templates with backups, preserve custom project rules through a scoped merge, then verify freshness. No product bootstrap in the skill-package root or for ordinary questions.
 An adopted repository's explicit recording contract may require additional artifacts. In particular, the owner-supplied bootstrap AGENTS §9 requires portable terminal reports; follow that project contract without duplicating lifecycles. It does not change the skill-package defaults below.
 Recommendations and passive design follow recommendations.md in every operation: give supported advice proactively; make insufficiency, assumptions, missing information and confidence visible. Advice alone never creates write authority, task artifacts or a prompt version.
 

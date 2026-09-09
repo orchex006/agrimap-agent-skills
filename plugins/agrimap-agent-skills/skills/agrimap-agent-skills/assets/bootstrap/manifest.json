@@ -1,42 +1,126 @@
 {
-  "version": "3.2.5",
+  "version": "3.4.0",
   "source": "Owner-supplied canonical contract submitted 2026-09-08; owner-authorized missing-memory indexing revision 2026-09-09; owner-authorized explicit Version/Patch precedence and compatible direct preparation revision 2026-09-09",
   "files": [
     {
       "source": "AGENTS.md",
       "target": "AGENTS.md",
       "mode": "copy",
-      "sha256": "15e54472b4e0e12804a9a3974e6d6e185ac2d6404d27c7c678b0d5fc13595464"
+      "sha256": "145fa90d51b1385d696a546de1b98a04058f72f24bb3454f85b1d3e38e359b53",
+      "previous": [
+        {
+          "version": "3.2.2",
+          "sha256": "50adc6c7769bda91247f0c8a0abc4cab97c7f5a548fa77758852ae5d783c36d7"
+        },
+        {
+          "version": "3.2.3",
+          "sha256": "f36d786b5af3897f548b5aa7fd9380a553e72d6352705b78095e72a54959845d"
+        },
+        {
+          "version": "3.2.5",
+          "sha256": "15e54472b4e0e12804a9a3974e6d6e185ac2d6404d27c7c678b0d5fc13595464"
+        }
+      ]
     },
     {
       "source": "CLAUDE.md",
       "target": "CLAUDE.md",
       "mode": "copy",
-      "sha256": "4d12d27b6367f0f7afeaac6d3b7811de2977ada63e4e3a758d6eded4f355c4df"
+      "sha256": "4d12d27b6367f0f7afeaac6d3b7811de2977ada63e4e3a758d6eded4f355c4df",
+      "previous": [
+        {
+          "version": "3.2.2",
+          "sha256": "4d12d27b6367f0f7afeaac6d3b7811de2977ada63e4e3a758d6eded4f355c4df"
+        },
+        {
+          "version": "3.2.3",
+          "sha256": "4d12d27b6367f0f7afeaac6d3b7811de2977ada63e4e3a758d6eded4f355c4df"
+        },
+        {
+          "version": "3.2.5",
+          "sha256": "4d12d27b6367f0f7afeaac6d3b7811de2977ada63e4e3a758d6eded4f355c4df"
+        }
+      ]
     },
     {
       "source": "CURSOR.md",
       "target": "CURSOR.md",
       "mode": "copy",
-      "sha256": "a82ac49684ec6b323436e50f8dcbb1d01b1856935b3aaa5bd9f6442852de246a"
+      "sha256": "a82ac49684ec6b323436e50f8dcbb1d01b1856935b3aaa5bd9f6442852de246a",
+      "previous": [
+        {
+          "version": "3.2.2",
+          "sha256": "a82ac49684ec6b323436e50f8dcbb1d01b1856935b3aaa5bd9f6442852de246a"
+        },
+        {
+          "version": "3.2.3",
+          "sha256": "a82ac49684ec6b323436e50f8dcbb1d01b1856935b3aaa5bd9f6442852de246a"
+        },
+        {
+          "version": "3.2.5",
+          "sha256": "a82ac49684ec6b323436e50f8dcbb1d01b1856935b3aaa5bd9f6442852de246a"
+        }
+      ]
     },
     {
       "source": "deployment.md",
       "target": "README.md",
       "mode": "section",
-      "sha256": "0cf7995d876e8407b49f0d59c05c825f2ce9a0e784cd98b7a73acabc5a56c0eb"
+      "sha256": "0cf7995d876e8407b49f0d59c05c825f2ce9a0e784cd98b7a73acabc5a56c0eb",
+      "previous": [
+        {
+          "version": "3.2.2",
+          "sha256": "ffea144edff7d676b77b1248c5ff38fa7f34b2cd29f5ded7ca93aca1cd9e4a0d"
+        },
+        {
+          "version": "3.2.3",
+          "sha256": "ffea144edff7d676b77b1248c5ff38fa7f34b2cd29f5ded7ca93aca1cd9e4a0d"
+        },
+        {
+          "version": "3.2.5",
+          "sha256": "0cf7995d876e8407b49f0d59c05c825f2ce9a0e784cd98b7a73acabc5a56c0eb"
+        }
+      ]
     },
     {
       "source": "GEMINI.md",
       "target": "GEMINI.md",
       "mode": "copy",
-      "sha256": "f89dc812bca60877bd6716f0eac151ac6c1fb41009a465bed050cfe8adfe7254"
+      "sha256": "f89dc812bca60877bd6716f0eac151ac6c1fb41009a465bed050cfe8adfe7254",
+      "previous": [
+        {
+          "version": "3.2.2",
+          "sha256": "f89dc812bca60877bd6716f0eac151ac6c1fb41009a465bed050cfe8adfe7254"
+        },
+        {
+          "version": "3.2.3",
+          "sha256": "f89dc812bca60877bd6716f0eac151ac6c1fb41009a465bed050cfe8adfe7254"
+        },
+        {
+          "version": "3.2.5",
+          "sha256": "f89dc812bca60877bd6716f0eac151ac6c1fb41009a465bed050cfe8adfe7254"
+        }
+      ]
     },
     {
       "source": "release-notes/README.md",
       "target": "release-notes/README.md",
       "mode": "copy",
-      "sha256": "5fcb9257d97f0a9f8f8af7b6d3694b79242679ce9064e215cc3de6bf97b4e0a5"
+      "sha256": "5fcb9257d97f0a9f8f8af7b6d3694b79242679ce9064e215cc3de6bf97b4e0a5",
+      "previous": [
+        {
+          "version": "3.2.2",
+          "sha256": "5fcb9257d97f0a9f8f8af7b6d3694b79242679ce9064e215cc3de6bf97b4e0a5"
+        },
+        {
+          "version": "3.2.3",
+          "sha256": "5fcb9257d97f0a9f8f8af7b6d3694b79242679ce9064e215cc3de6bf97b4e0a5"
+        },
+        {
+          "version": "3.2.5",
+          "sha256": "5fcb9257d97f0a9f8f8af7b6d3694b79242679ce9064e215cc3de6bf97b4e0a5"
+        }
+      ]
     }
   ]
 }

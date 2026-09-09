@@ -8,9 +8,9 @@ import {projectRoot} from '../helpers/harness.mjs';
 test('bootstrap preserves the complete owner-submitted canonical contract',async()=>{
   const bundle=path.join(projectRoot,'skills/agrimap-agent-skills/assets/bootstrap');
   const bytes=await readFile(path.join(bundle,'AGENTS.md'));
-  // Approved source: owner submit 2026-09-08, missing-memory and explicit owner-version revisions 2026-09-09. Updating this hash
+  // Approved source: owner submit 2026-09-08, missing-memory, owner-version and tracking revisions 2026-09-09. Updating this hash
   // requires an intentional new canonical contract, not a formatting repair.
-  assert.equal(createHash('sha256').update(bytes).digest('hex'),'15e54472b4e0e12804a9a3974e6d6e185ac2d6404d27c7c678b0d5fc13595464');
+  assert.equal(createHash('sha256').update(bytes).digest('hex'),'145fa90d51b1385d696a546de1b98a04058f72f24bb3454f85b1d3e38e359b53');
   const manifest=JSON.parse(await readFile(path.join(bundle,'manifest.json'),'utf8'));
   assert.equal(manifest.files.find(f=>f.source==='AGENTS.md').sha256,createHash('sha256').update(bytes).digest('hex'));
   for(const file of ['CLAUDE.md','GEMINI.md','CURSOR.md']){
