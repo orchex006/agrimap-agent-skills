@@ -12,7 +12,7 @@
       "name": "agrimap-agent-skills",
       "source": "./plugins/agrimap-agent-skills",
       "description": "Routing skill plus dedicated one-operation AgriMap workflows",
-      "version": "3.4.1",
+      "version": "3.4.5",
       "homepage": "https://github.com/orchex006/agrimap-agent-skills"
     }
   ]

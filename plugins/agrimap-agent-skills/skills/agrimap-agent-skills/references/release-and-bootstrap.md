@@ -22,6 +22,8 @@ Explicit `agm-release upgrade` selects replacement mode: plan --upgrade, then up
 
 An executable agm-release command authorizes checking and installing compatible missing bootstrap prerequisites needed by that command in its named product target. No separate init invocation is required. Help, quoted commands and skill-package maintenance do not authorize product bootstrap.
 
+For a dirty checkout on another branch, establish the isolated preparation root described in release-workflow.md before bootstrap writes; apply freshness checks there and preserve the caller checkout. Do not classify previous upgrade artifacts as unrelated by filename alone.
+
 Before audit, inspect applicable parent/target instructions, actual project kind, worktree and the synchronized branch used by the selected stage (develop for indexing/preparation). If target AGENTS.md is missing, inspect the bundled AGENTS.md completely and prove its profile applies before installing it; absence is a repair condition, not by itself a terminal blocker. Never copy from another branch without proving provenance, or carry unrelated changes across branches.
 
 Run the installer plan with the proven target/kind. Inspect every planned path and the bundle hashes. A compatible plan containing only create, update, insert-section and unchanged entries may be applied immediately with the same arguments; verify applied=true, hashes and actual diff, then read the installed target instructions and rerun the failed audit/check in this invocation. The bootstrap file set and README section above are the installation boundary. Preserve existing memory/history and unrelated README content.
