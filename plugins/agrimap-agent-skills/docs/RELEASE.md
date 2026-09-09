@@ -19,7 +19,7 @@
 | Inhouse | Jenkinsfile | jenkins |
 | Production | Jenkinsfile_Production | jenkins-release |
 
-แก้ IMAGE_TAG/PROJECT_VERSION ที่ develop เท่านั้น คำนวณ PATCH+1 จาก owner จริงแยกกัน ไม่รับเลข release ที่เลือกเอง และไม่เปลี่ยน pipeline behavior จาก version intent
+แก้ IMAGE_TAG/PROJECT_VERSION ที่ develop เท่านั้น ใช้เลข Version/Patch ที่เจ้าของระบุชัดแยกตาม environment; หากไม่ระบุจึงคำนวณ PATCH+1 จาก owner จริง และไม่เปลี่ยน pipeline behavior จาก version intent
 
 Flow: develop → push/verify jenkins → push/verify jenkins-release โดยใช้ exact verified source SHA และ --ff-only ทีละขั้น ห้ามข้าม jenkins
 

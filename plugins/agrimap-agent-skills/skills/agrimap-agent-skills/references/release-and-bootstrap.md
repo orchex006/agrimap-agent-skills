@@ -28,7 +28,7 @@ For indexing/prepare, bootstrap changes remain local. Composite release commands
 
 ## Release distinctions
 
-- Fixed owners: Jenkinsfile/Inhouse/jenkins and Jenkinsfile_Production/Production/jenkins-release. Prepare only at develop; PATCH+1 independently; only IMAGE_TAG/PROJECT_VERSION pair may change in the selected owner. No arbitrary version.
+- Fixed owners: Jenkinsfile/Inhouse/jenkins and Jenkinsfile_Production/Production/jenkins-release. Prepare only at develop; use explicit owner Version/Patch targets independently, otherwise default PATCH+1; only IMAGE_TAG/PROJECT_VERSION pair may change in the selected owner. Apply release-workflow.md version precedence and release-tools.md direct-authoring fallback for a PATCH-only CLI.
 - Promotion is develop -> verified jenkins SHA -> jenkins-release using fast-forward-only checks. The jenkins gate is branch ordering, not waiting for a green pipeline. Proceed through authorized checkpoints without waiting for Jenkins; report pipeline pending/not verified unless actually observed. Never perform server rollout or call Jenkins API under this contract.
 - Prepare-* publishes develop only. Group B is exactly Version Inhouse, Version Both, Version Production and Version + Tags: read §§2.3/6.3 for complete reviewed working-copy publication, separate content/version commits, and final audit commit/push to develop. Other deploy aliases do not inherit that expanded scope.
 - Exact owner group-B intent confirms branch pushes including final audit publication; only Version + Tags confirms annotated tag push. Other outward effects follow §2.1. Quoted intent does not confirm anything.
@@ -42,4 +42,4 @@ Canonical artifact names: changelog.md, release.md, release-notes/<VERSION>.md, 
 
 For repositories adopting this AGENTS, its §9 portable recording contract requires logs, current/recent memory and terminal report for repository-changing runs, even without skills. Follow its allowlist and group-B publication exception; do not silently replace it with the package's optional-report default or create duplicate lifecycles. Other repositories retain their own applicable contract.
 
-Agent executes authorized agm-release/Git steps, checks every exit code immediately, and reports actual results. CLI audit/prepare/verify is not Git publication or proof of deployment. Full details and precedence are owned by project AGENTS, not this summary.
+Agent executes authorized agm-release/Git steps, checks every exit code immediately, and reports actual results. CLI audit/prepare/verify is not Git publication or proof of deployment. Project AGENTS supplies full project details under host/user instruction priority; an explicit owner version request overrides its default version policy.

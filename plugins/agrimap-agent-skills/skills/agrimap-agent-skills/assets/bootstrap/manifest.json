@@ -1,12 +1,12 @@
 {
-  "version": "3.2.3",
-  "source": "Owner-supplied canonical contract submitted 2026-09-08; owner-authorized missing-memory indexing revision 2026-09-09",
+  "version": "3.2.4",
+  "source": "Owner-supplied canonical contract submitted 2026-09-08; owner-authorized missing-memory indexing revision 2026-09-09; owner-authorized explicit Version/Patch precedence and compatible direct preparation revision 2026-09-09",
   "files": [
     {
       "source": "AGENTS.md",
       "target": "AGENTS.md",
       "mode": "copy",
-      "sha256": "f36d786b5af3897f548b5aa7fd9380a553e72d6352705b78095e72a54959845d"
+      "sha256": "15e54472b4e0e12804a9a3974e6d6e185ac2d6404d27c7c678b0d5fc13595464"
     },
     {
       "source": "CLAUDE.md",
@@ -24,7 +24,7 @@
       "source": "deployment.md",
       "target": "README.md",
       "mode": "section",
-      "sha256": "ffea144edff7d676b77b1248c5ff38fa7f34b2cd29f5ded7ca93aca1cd9e4a0d"
+      "sha256": "0cf7995d876e8407b49f0d59c05c825f2ce9a0e784cd98b7a73acabc5a56c0eb"
     },
     {
       "source": "GEMINI.md",

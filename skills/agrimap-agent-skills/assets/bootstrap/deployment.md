@@ -8,4 +8,4 @@ Flow คือ `develop -> jenkins -> jenkins-release` โดย push `jenkins` 
 
 กลุ่ม Prepare-* จบที่ verified develop SHA; กลุ่ม B รวม publication ของงานค้างที่ตรวจครบและ final audit commit/push ตาม AGENTS §6.3 Only Version + Tags สร้าง annotated Production tag Final develop SHA หลัง audit อาจต่างจาก release SHA และ audit commit ไม่ถูก promote/tag
 
-Version owners คือ `Jenkinsfile` สำหรับ Inhouse และ `Jenkinsfile_Production` สำหรับ Production คำนวณ PATCH+1 แยกจากเจ้าของจริง ไม่ reset version เดิมและไม่รับเลข release ที่เลือกเอง Bootstrap ติดตั้งเอกสาร ไม่แก้ pipeline หรือสร้าง release
+Version owners คือ `Jenkinsfile` สำหรับ Inhouse และ `Jenkinsfile_Production` สำหรับ Production ใช้เลข Version/Patch ที่เจ้าของระบุชัดแยกตาม environment; เมื่อไม่ระบุจึงคำนวณ PATCH+1 จาก owner จริง ไม่ reset Git หรือเขียนทับประวัติที่เผยแพร่แล้ว Bootstrap ติดตั้งเอกสาร ไม่แก้ pipeline หรือสร้าง release

@@ -2,6 +2,12 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 3.2.4 — 2026-09-09
+
+- Honor explicit owner Version/Patch targets per environment, including skipped patches and minor/major changes; PATCH+1 applies only when no target is supplied.
+- Reconcile revised unfinished candidates without repeated version approval or a governance rewrite, preserving published history and tag collision checks.
+- Permit scoped direct preparation with equivalent verification when the release CLI only supports PATCH+1; retain Production publication confirmation and report CLI incompatibility truthfully.
+
 ## 3.2.3 — 2026-09-09
 
 - Release indexing/preparation now creates missing `.agrimap-agent/memory/project.md` and required recording directories from scoped evidence, then continues without a separate Project Backfill invocation.

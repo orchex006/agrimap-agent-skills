@@ -6,7 +6,7 @@ Before writes, resolve one exact command from the table below and record a compa
 
 Use distinct names: inhouseBaselineVersion, inhouseCandidateVersion, productionBaselineVersion, productionCandidateVersion, releaseCandidateSha and finalDevelopSha. Before freezing the release commit, evidence can reference an existing source-content SHA; after commit record the actual releaseCandidateSha in the checkpoint. Never amend endlessly to make a commit contain its own SHA. A notes Source candidate field must follow the verified target schema and truthfully identify its source; it must not be fabricated to satisfy a regex.
 
-On resume, compare the recorded command, versions, notes and Git state. A matching candidate resumes the next missing step. A missing checkpoint requires reconstruction from actual diffs/history; uncertain provenance requires clarification, not another PATCH bump. A different unfinished mode is not automatically inherited or converted. Full may internally prepare both owners; no other command may broaden to both.
+On resume, compare the recorded command, versions, notes and Git state. A matching candidate resumes the next missing step. A substantive explicit owner version revision follows release-workflow.md to reconcile and reverify the candidate; do not reject it merely because it differs from PATCH+1 or the recorded target. A missing checkpoint requires reconstruction from actual diffs/history; uncertain provenance requires clarification, not another PATCH bump. A different unfinished mode is not automatically inherited or converted. Full may internally prepare both owners; no other command may broaden to both.
 
 ## Ownership that every step checks
 
@@ -14,7 +14,7 @@ On resume, compare the recorded command, versions, notes and Git state. A matchi
 | --- | --- |
 | Inhouse version pair | Jenkinsfile: IMAGE_TAG and PROJECT_VERSION, equal values |
 | Production version pair | Jenkinsfile_Production: IMAGE_TAG and PROJECT_VERSION, equal values |
-| Version calculation | PATCH+1 of that owner's proven baseline, once per candidate; 1.2.9 becomes 1.2.10 |
+| Version calculation | Explicit owner target per release-workflow.md; otherwise PATCH+1 of that owner's proven baseline, once per candidate |
 | Versioned notes | release-notes/<productionCandidateVersion>.md only |
 | Release index | release.md describes/links the Production release; never keyed by Inhouse version |
 | Annotated tag | v<productionCandidateVersion>, referencing verified Production SHA |

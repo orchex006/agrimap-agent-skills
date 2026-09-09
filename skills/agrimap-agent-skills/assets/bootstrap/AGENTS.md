@@ -14,7 +14,7 @@
 - คำว่า version หรือ release intent อนุญาตเฉพาะ version metadata pair ใน owner file ที่ระบุ: `IMAGE_TAG` และ `PROJECT_VERSION` เท่านั้น ห้ามแก้ Jenkins pipeline `stage`, stage order, shell command, image/registry configuration, credential, trigger หรือ pipeline behavior ใดๆ
 - `Version Production` และ `Version + Tags` มี Jenkins write boundary เฉพาะสองบรรทัดข้างต้นใน `Jenkinsfile_Production`; ห้ามแก้ `Jenkinsfile`, `Jenkinsfile_Staging` หรือส่วนอื่นของ `Jenkinsfile_Production`
 - Version intent ไม่ได้ให้สิทธิ์เขียนการแก้ release-governance implementation เช่น `AGENTS.md`, `README.md`, CLI, routing หรือ workflow rules ขึ้นใหม่; กลุ่ม B ให้สิทธิ์ commit งานเดิมที่ค้างรวม governance/pipeline changes ตาม §6.3 โดยแยกจาก version metadata commit และรวมประวัตินั้นไปกับ promotion/tag
-- ห้ามรับ `--version` หรือเลข release ที่เลือกเอง Candidate = PATCH+1 จาก `PROJECT_VERSION` ใน owner file เท่านั้น `--expected-version` เป็น assertion สำหรับ single-environment prepare และต้องตรงค่าที่คำนวณ
+- ใช้เลข Version/Patch ที่เจ้าของระบุชัดตาม environment ก่อน; PATCH+1 จาก `PROJECT_VERSION` เป็นค่าเริ่มต้นเมื่อไม่ได้ระบุเลขเท่านั้น รองรับการข้าม Patch และเปลี่ยน minor/major โดยไม่ขอรับผิดชอบหรือแก้ governance ซ้ำ คำสั่งตรงของผู้ใช้มีลำดับเหนือ default นี้ ตรวจรูปแบบเลขและ tag collision ตามจริง หาก CLI ไม่รองรับ ให้แก้ owner pair/artifacts ใน scope โดยตรงและตรวจรูปแบบและเลขที่ร้องขอ, pair equality, allowed diff, notes/index provenance, git diff --check และ resume evidence แทนเฉพาะ assertion PATCH+1 ที่ไม่รองรับ; รายงาน CLI incompatibility ตามจริงและไม่ยกเว้น gate อื่น; ห้ามสมมติว่ามี `--version` และ `--expected-version` เป็น assertion ไม่ใช่ตัวกำหนดเลข
 - Both คำนวณ Inhouse/Production แยกจาก owner file ของตน เลขอาจต่างกัน Production tag ใช้ Production version เท่านั้น
 
 ## 2. Intent routing
@@ -134,7 +134,7 @@ agm-release -- notes --mode production
 
 - `audit` read-only และแสดง branch/HEAD/upstream/status/diffs/baseline/commits พร้อม committer date/changed paths
 - `audit` exit 0 หมายถึงรวบรวมหลักฐานสำเร็จเท่านั้น ไม่ได้เติม changelog หรือรับรอง coverage; `verify` ไม่ได้ push branch/tag และ lifecycle validation ไม่ได้พิสูจน์ว่า Project Backfill หรือ release เสร็จ ต้องผ่าน §5 และ §8.1 แยกกัน
-- `prepare` pre-validate owner files, คำนวณ PATCH แยก, เขียนแบบ atomic ต่อไฟล์ และสร้าง/รวม notes/index skeleton; ไม่ commit/push/merge/tag/deploy
+- `prepare` pre-validate owner files, เลือกเลขตามคำขอเจ้าของหรือคำนวณ PATCH แยกเมื่อไม่ระบุ, เขียนแบบ atomic ต่อไฟล์ และสร้าง/รวม notes/index skeleton; ไม่ commit/push/merge/tag/deploy
 - Rerun ก่อน completed checkpoint ต้อง resume candidate เดิมจาก notes+`.agrimap-agent/memory/project.md` ไม่เพิ่ม PATCH ซ้ำ
 - `verify` read-only ตรวจ exact single version pair, fixed mapping, changelog/release/notes consistency เมื่อ release intent active และคืน non-zero เมื่อ gate ไม่ผ่าน
 - `notes --mode production` ใช้ current version จาก `Jenkinsfile_Production` เท่านั้น ไม่มี arbitrary filename/version
@@ -252,7 +252,7 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 
 - Owner file ต้องมี `IMAGE_TAG = 'v<V>'` และ `PROJECT_VERSION = '<V>'` อย่างละหนึ่งบรรทัดและตรงกันพอดี Missing/duplicate/malformed/mismatch ต้อง fail โดยไม่เขียน
 - Inhouse prepare แตะ version เฉพาะ `Jenkinsfile`; Production prepare แตะเฉพาะ `Jenkinsfile_Production`; Both ทำสอง mapping แยกกัน
-- ก่อน `prepare` ต้องอยู่ `develop` ที่ sync ด้วย `--ff-only` แล้วและบันทึก pre-prepare SHA; หาก dirty ให้จำแนกก่อน ห้าม pull/switch ทับงาน ตรวจ resumable candidate จาก notes/index/Git ก่อนคำนวณ PATCH ใหม่
+- ก่อน `prepare` ต้องอยู่ `develop` ที่ sync ด้วย `--ff-only` แล้วและบันทึก pre-prepare SHA; หาก dirty ให้จำแนกก่อน ห้าม pull/switch ทับงาน ตรวจ resumable candidate จาก notes/index/Git ก่อนเลือก candidate ใหม่; หากเจ้าของเปลี่ยนเป้าหมายชัด ให้เก็บหลักฐาน candidate เดิม ปรับเฉพาะ metadata/notes ที่ยังไม่เผยแพร่และพิสูจน์ว่าเป็นของ run นี้ ตรวจ candidate ใหม่และยกเลิก confirmation เดิมที่อ้าง candidate เก่า โดยรักษางานอื่นและประวัติที่เผยแพร่แล้ว
 - ก่อน commit ทุก version mode ต้องตรวจทั้ง `git diff -- <owner-file>`, `git diff --cached -- <owner-file>` และผลรวมเทียบ pre-prepare SHA; อนุญาตเฉพาะ exact `IMAGE_TAG`/`PROJECT_VERSION` pair ของ environment ที่เลือก และตรวจว่า pipeline file อื่นไม่ถูกแก้ในรอบนี้ด้วย ห้ามให้ staged change หลุด gate หรือเอา pipeline/governance change ที่ยังไม่ commit มารวม release commit
 - Pipeline/governance changes ที่ owner commit ไว้ก่อน pre-prepare SHA เป็นประวัติที่ต้อง audit/changelog ตาม §5 และไหลไปกับ promotion ได้; ข้อห้ามแก้ pipeline ใน version intent ไม่ได้สั่งให้ลบ/revert ประวัตินั้น
 - ก่อน commit รัน relevant `verify`, tests/build ของ code change และ `git diff --check`; docs/version-only ห้ามอ้างว่ารันทดสอบ feature ใหม่หากไม่ได้รัน

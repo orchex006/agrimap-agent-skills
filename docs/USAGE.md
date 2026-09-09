@@ -36,7 +36,7 @@
 | `agm-qa` | ตรวจตาม acceptance | หลักฐานผ่าน/ไม่ผ่าน/ติดข้อจำกัด; ไม่แก้ product |
 | `agm-prompt` | กลั่นโจทย์เป็นคำสั่งเก็บและส่งต่อ | Prompt Result เมื่อพร้อม; ไม่ implement |
 | `agm-exec` | ลงมือทำโจทย์ที่อนุมัติแล้ว | แก้ไขใน scope และตรวจผล; ไม่บังคับมี prompt file |
-| `agm-release` | indexing, prepare, pipeline, promote และ release full/production/inhouse | ตรวจ/ติดตั้งเครื่องมือที่ขาด; เพิ่ม PATCH ตาม owner; ขอคำยืนยันก่อน Production/tag ดู [ตารางครบทุกคำสั่ง](../README.md#agm-release) |
+| `agm-release` | indexing, prepare, pipeline, promote และ release full/production/inhouse | ตรวจ/ติดตั้งเครื่องมือที่ขาด; ใช้เลขที่เจ้าของระบุ หรือเพิ่ม PATCH ตาม owner; ขอคำยืนยันก่อน Production/tag ดู [ตารางครบทุกคำสั่ง](../README.md#agm-release) |
 
 `agrimap-agent-skills` เป็น router สำหรับกรณียังเลือกไม่ได้ มันเลือกหนึ่ง operation แล้วหยุด ไม่ใช่ executor อีกตัว และไม่จำเป็นต้องเรียกก่อนคำสั่งตรง
 
