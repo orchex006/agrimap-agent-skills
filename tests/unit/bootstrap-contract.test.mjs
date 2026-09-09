@@ -19,3 +19,15 @@ test('bootstrap preserves the complete owner-submitted canonical contract',async
     assert.ok(pointer.split(/\r?\n/).length<12,'Keep the host file a thin pointer');
   }
 });
+
+test('release stages synchronize stale local branches and re-evaluate in one invocation',async()=>{
+  const references=path.join(projectRoot,'skills/agrimap-agent-skills/references');
+  const steps=await readFile(path.join(references,'release-steps.md'),'utf8');
+  const workflow=await readFile(path.join(references,'release-workflow.md'),'utf8');
+  assert.match(steps,/Synchronize only the branch needed by the current stage with its remote using fast-forward-only semantics/);
+  assert.match(steps,/continue the same invocation instead of reporting the stale pre-sync mismatch/);
+  assert.match(steps,/Do not advance jenkins-release merely to perform this readiness check/);
+  assert.match(steps,/Remote divergence remains a blocker/);
+  assert.match(workflow,/Before each stage, fetch and fast-forward-only synchronize the stage's local branch with its remote/);
+  assert.match(workflow,/materially changed remote candidate, destination or tag requires a revised plan and confirmation/);
+});

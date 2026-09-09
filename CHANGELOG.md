@@ -2,6 +2,12 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 3.2.1 — 2026-09-09
+
+- Synchronize each release-stage branch with its remote using fast-forward-only semantics before evaluating publication gates.
+- Re-evaluate synchronized SHAs and continue within the same invocation when the mismatch was only stale local state, avoiding unnecessary repeated `$agm-release` commands.
+- Preserve safe stops for genuine remote divergence and re-confirm Production when its concrete candidate, destination or tag changes.
+
 ## 3.2.0 — 2026-09-09
 
 - Define nine exact agm-release sequences with explicit prerequisites, owner-specific patching, resume checkpoints, Production confirmation and completion evidence.
