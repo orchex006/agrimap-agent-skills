@@ -4,10 +4,10 @@
   "description": "Routing skill plus dedicated one-operation AgriMap engineering skills",
   "author": {
     "name": "Billy",
-    "url": "https://github.com/gasxhermvc"
+    "url": "https://github.com/orchex006"
   },
-  "homepage": "https://github.com/gasxhermvc/agrimap-agent-skills",
-  "repository": "https://github.com/gasxhermvc/agrimap-agent-skills",
+  "homepage": "https://github.com/orchex006/agrimap-agent-skills",
+  "repository": "https://github.com/orchex006/agrimap-agent-skills",
   "skills": "./skills/",
   "interface": {
     "displayName": "AgriMap Dedicated Skills",

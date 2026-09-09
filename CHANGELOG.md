@@ -168,6 +168,6 @@ Major redesign of governance and runtime behavior.
 - Added a canonical conflict matrix that separates corrected defects, project-dependent choices, and owner-required logical/data decisions without modifying raw examples.
 - Added one-file/one-logical-contract writer ownership, workspace-mode detection, and Frontier-owned sandbox integration.
 - Normalized `agmws` and `agmbo` as the only `backend_profile` values under `target_kind=be-main`; removed them from the target-kind dimension.
-- Bound installation and package metadata to `gasxhermvc/agrimap-agent-skills`; license remains pending golden-example rights confirmation.
+- Bound installation and package metadata to `orchex006/agrimap-agent-skills`; license remains pending golden-example rights confirmation.
 - Added Codex plugin, Claude marketplace/plugin, and Gemini extension packaging.
 - Made `package.json` the single package-version source of truth for all generated provider manifests and marketplace metadata.

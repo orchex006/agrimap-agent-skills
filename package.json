@@ -3,14 +3,14 @@
   "version": "3.2.3",
   "private": true,
   "description": "Official cross-agent AgriMap engineering skill package",
-  "author": "Billy (gasxhermvc)",
-  "homepage": "https://github.com/gasxhermvc/agrimap-agent-skills#readme",
+  "author": "Billy (orchex006)",
+  "homepage": "https://github.com/orchex006/agrimap-agent-skills#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gasxhermvc/agrimap-agent-skills.git"
+    "url": "git+https://github.com/orchex006/agrimap-agent-skills.git"
   },
   "bugs": {
-    "url": "https://github.com/gasxhermvc/agrimap-agent-skills/issues"
+    "url": "https://github.com/orchex006/agrimap-agent-skills/issues"
   },
   "type": "module",
   "scripts": {

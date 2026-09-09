@@ -94,6 +94,6 @@ Legacy v2 five-file validation remains in assets/task-artifact-schema.json for e
 
 ต้นฉบับอยู่ใน `config/operations.json`, `skills/agrimap-agent-skills/`, `docs/` และ `examples/` แก้ต้นฉบับแล้วใช้ `npm run sync`; อย่าแก้ generated mirror แยกเอง อ่าน [วิธีตรวจและแจกจ่าย](docs/MAINTAINING.md) ก่อนรันคำสั่งผู้ดูแล
 
-Repository: [gasxhermvc/agrimap-agent-skills](https://github.com/gasxhermvc/agrimap-agent-skills) · [Changelog](CHANGELOG.md)
+Repository: [orchex006/agrimap-agent-skills](https://github.com/orchex006/agrimap-agent-skills) · [Changelog](CHANGELOG.md)
 
 เลขเวอร์ชันใน source ไม่ได้ยืนยันว่า remote หรือ plugin cache ของผู้ใช้ได้รับเวอร์ชันนั้นแล้ว

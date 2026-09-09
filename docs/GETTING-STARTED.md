@@ -26,7 +26,7 @@ node --version
 **Terminal / PowerShell:**
 
 ```powershell
-codex plugin marketplace add gasxhermvc/agrimap-agent-skills
+codex plugin marketplace add orchex006/agrimap-agent-skills
 codex plugin add agrimap-agent-skills@agrimap-agent-skills
 ```
 
@@ -37,7 +37,7 @@ codex plugin add agrimap-agent-skills@agrimap-agent-skills
 **Terminal / PowerShell:**
 
 ```powershell
-claude plugin marketplace add gasxhermvc/agrimap-agent-skills
+claude plugin marketplace add orchex006/agrimap-agent-skills
 claude plugin install agrimap-agent-skills@agrimap-agent-skills
 ```
 
@@ -48,7 +48,7 @@ Claude ใช้ชื่อ plugin กำกับคำสั่ง เช่�
 **Terminal / PowerShell ไม่ใช่ใน Gemini chat:**
 
 ```powershell
-gemini extensions install https://github.com/gasxhermvc/agrimap-agent-skills
+gemini extensions install https://github.com/orchex006/agrimap-agent-skills
 ```
 
 ตรวจคำขอความยินยอมของ host ตามปกติ ไม่ต้องเพิ่ม flag ข้าม consent ดู [Gemini extension reference](https://geminicli.com/docs/extensions/reference/)
