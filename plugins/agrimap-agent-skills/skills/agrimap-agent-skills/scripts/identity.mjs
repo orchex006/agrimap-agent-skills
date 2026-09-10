@@ -1,4 +1,6 @@
 import os from "node:os";
+import path from 'node:path';
+import {readFile, readdir, stat} from 'node:fs/promises';
 
 export const IDENTITY_SCHEMA_VERSION = 2;
 export const DEFAULT_CONFIRMATION_HOURS = 0;
@@ -71,4 +73,43 @@ export function localAuditMetadata() {
 
 export function isIdentitySource(value) {
   return IDENTITY_SOURCE_SET.has(value);
+}
+
+const identityKey = value => String(value || '').trim().replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120);
+
+// Read local confirmation records only; never infer the requester from Git/OS names.
+// Shared by hooks and runtime so an expired session cannot hide a newer confirmation.
+export async function readConfirmedIdentity(state, sessionId, options = {}) {
+  const local = options.local || localAuditMetadata();
+  const session = identityKey(sessionId);
+  async function read(relative) {
+    const file = path.join(state, relative);
+    try {
+      if ((await stat(file)).size > 65536) return null;
+      const raw = JSON.parse(await readFile(file, 'utf8'));
+      if (!isIdentitySource(raw?.identitySource)) return null;
+      const identity = normalizeIdentity(raw, options);
+      return identity ? {...identity, revoked: Boolean(raw.revoked), confirmationRecord: relative.replaceAll('\\', '/')} : null;
+    } catch { return null; }
+  }
+  const current = session ? await read(`runtime/sessions/${session}.json`) : null;
+  if (current && (!current.expired || current.revoked)) return current;
+  const sameLocal = identity => Boolean(identity && local.machine && local.osUser
+    && identity.machine === local.machine && identity.osUser === local.osUser);
+  const newerThanCurrent = identity => !current || (identity.requestedBy === current.requestedBy
+    && Date.parse(identity.confirmedAt) > Date.parse(current.confirmedAt));
+  const user = await read(`runtime/users/${identityKey(local.machine + '-' + local.osUser)}.json`);
+  if (sameLocal(user) && user.revoked) return user;
+  if (sameLocal(user) && !user.expired && newerThanCurrent(user)) return {...user, sessionId: session};
+  // Older versions recorded session files without a users registry. Recover only
+  // unambiguous, still-valid confirmations from this same workspace and local user.
+  const names = (await readdir(path.join(state, 'runtime/sessions'), {withFileTypes:true}).catch(() => []))
+    .filter(e => e.isFile() && /^[a-zA-Z0-9._-]+\.json$/.test(e.name)).map(e => e.name);
+  if (names.length > 256) return current;
+  const records = (await Promise.all(names.map(name => read(`runtime/sessions/${name}`)))).filter(sameLocal);
+  const candidates = records.filter(identity => !identity.expired && newerThanCurrent(identity)
+    && !records.some(other => other.requestedBy === identity.requestedBy && other.revoked));
+  if (new Set(candidates.map(identity => identity.requestedBy)).size !== 1) return current;
+  candidates.sort((a,b) => Date.parse(b.confirmedAt) - Date.parse(a.confirmedAt));
+  return {...candidates[0], sessionId: session};
 }

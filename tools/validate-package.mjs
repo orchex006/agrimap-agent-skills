@@ -14,6 +14,7 @@ import {
   operationConfigIssues,
   operationEntrypointPath,
   renderAliasSkill,
+  renderAntigravitySkill,
   renderGeminiCommandPrompt,
   renderOperationAliasesModule,
   renderOperationIndex,
@@ -22,6 +23,10 @@ import {
 
 const root = process.cwd();
 const errors = [];
+const agyManifest = JSON.parse(await readFile(path.join(root, 'plugin.json'), 'utf8'));
+if (agyManifest.name !== 'agrimap-agent-skills' || Object.keys(agyManifest).some(key => !['name', 'description'].includes(key))) {
+  errors.push('plugin.json: invalid Antigravity root manifest');
+}
 const { validateDocumentation } = await import('./validate-docs.mjs');
 errors.push(...(await validateDocumentation(root)).errors);
 
@@ -76,6 +81,7 @@ for (const required of [
   ".agents/plugins/marketplace.json",
   ".claude-plugin/marketplace.json",
   "gemini-extension.json",
+  "plugin.json",
   "hooks/hooks.json",
   "skills/agrimap-agent-skills/references/patterns/conflict-resolution.md",
   "skills/agrimap-agent-skills/references/analysis-discipline.md",
@@ -180,6 +186,10 @@ if (operations) {
     errors.push(`${path.relative(root, operationAliasesPath)}: operation alias registry is stale; run npm run sync.`);
   }
   for (const item of operations.operations || []) {
+    const agyPath = path.join(root, 'skills', `${item.name}.md`);
+    if (!await exists(agyPath) || await readFile(agyPath, 'utf8') !== renderAntigravitySkill(item)) {
+      errors.push(`skills/${item.name}.md: missing or stale Antigravity skill; run npm run sync.`);
+    }
     const entrypointPath = operationEntrypointPath(path.join(root, "skills", "agrimap-agent-skills"), item);
     if (!(await exists(entrypointPath))) {
       errors.push(`${path.relative(root, entrypointPath)}: compact operation entrypoint missing; run npm run sync.`);
@@ -218,7 +228,7 @@ if (passiveSkillMap) {
     if (referenceFile && !(await exists(path.join(root, "skills", "agrimap-agent-skills", "references", referenceFile)))) errors.push(`Passive capability ${capability?.id} reference is missing: ${referenceFile}.`);
   }
   const goalRules = capabilities.find((item) => item.id === "goal-rules");
-  const requiredGoalOperations = ["analyze", "architect", "be", "diagnose", "fe", "sql", "execute", "plan", "qa", "prompt", "release"];
+  const requiredGoalOperations = ["analyze", "architect", "be", "diagnose", "fe", "sql", "execute", "plan", "qa", "prompt", "release", "doctor"];
   if (JSON.stringify(goalRules?.operations) !== JSON.stringify(requiredGoalOperations)) errors.push("goal-rules operation mapping is incomplete or reordered unexpectedly.");
   for (const operation of requiredGoalOperations) {
     const item = operations?.operations?.find((candidate) => candidate.operation === operation);

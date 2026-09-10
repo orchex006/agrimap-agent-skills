@@ -2,9 +2,64 @@
 
 [หน้าหลัก](../README.md) · [Workflow](WORKFLOWS.md) · [Cookbook](COMMAND-COOKBOOK.md)
 
-กติกาฉบับเต็มคือ [canonical project AGENTS](../skills/agrimap-agent-skills/assets/bootstrap/AGENTS.md) ที่ owner ส่งมา หน้านี้เป็นคำอธิบายเพื่อเลือก intent ไม่แทนกฎฉบับเต็ม ไม่ใช่คำสั่ง release ตัว skill package และไม่อนุญาตให้ execute จากการอ่านตัวอย่าง
+คำสั่งปัจจุบันใช้ [release-workflow](../skills/agrimap-agent-skills/references/release-workflow.md), [release-steps](../skills/agrimap-agent-skills/references/release-steps.md) และกฎของ target ภายใต้สิทธิ์ที่ผู้ใช้ให้ ส่วน [canonical project AGENTS](../skills/agrimap-agent-skills/assets/bootstrap/AGENTS.md) เป็นต้นทาง bootstrap และ legacy intents หน้านี้ไม่ใช่คำสั่งเผยแพร่ตัว skill package และการอ่านตัวอย่างไม่อนุญาตให้ execute
 
-## ข้อจำกัดการนำไปใช้ใน 3.0.1
+## คำสั่ง agm-release ทั้งหมดใน 4.1.0
+
+ระบุโครงการเป้าหมายแล้วพิมพ์ใน Agent chat: Codex ใช้ `$agm-release`, Claude ใช้ `/agrimap-agent-skills:agm-release`, Antigravity ใช้ `/agm-release` ตามชื่อที่ลงทะเบียน Agent เป็นผู้ตรวจและดำเนินการ คำสั่งเหล่านี้ไม่ใช่ syntax ของ .NET CLI
+
+| Arguments | งานและผลลัพธ์ | Version / publication boundary |
+| --- | --- | --- |
+| `bootstrap upgrade` | ตรวจรุ่น bootstrap → plan → backup/อัปเดต template หรือ merge กฎเฉพาะ → ตรวจ receipt | เฉพาะ bootstrap ในเครื่อง; ไม่ bump/push/tag |
+| `upgrade` | โหมดเดิม: สำรองและแทนที่ contract ใน bundle รวม README เฉพาะ Deployment block | แทนที่ custom contract โดยชัดเจน; ไม่ bump/push/tag |
+| `indexing` | Project Backfill: full reachable history, project catalog, historical changelog และ README capability/API inventory | แก้หลักฐานใน target; ไม่ bump/push/tag |
+| `prepare inhouse` | เตรียมและ verify candidate Inhouse พร้อม scoped index/changelog | เลขที่ระบุ หรือ PATCH+1; ไม่สร้าง versioned notes/push/tag |
+| `prepare production` | เตรียมและ verify candidate Production, release.md และ versioned notes | เลขที่ระบุ หรือ PATCH+1; ยังไม่ push/tag |
+| `pipeline inhouse` | ตรวจ candidate ที่เตรียมแล้ว → commit paths ที่ตรวจ → push/verify develop และ jenkins | ไม่ bump ซ้ำ; ไม่มี Production/tag |
+| `pipeline production` | ตรวจ Production candidate → commit → push/verify develop และ jenkins → เตรียมแผน Production | หยุดก่อน jenkins-release และ tag |
+| `promote` | ตรวจ candidate → แสดง SHA/version/branch/tag → ขอยืนยัน → publish/verify Production และ annotated tag | ต้องมี candidate ที่เตรียมแล้วและการยืนยัน concrete plan |
+| `release full` | indexing → prepare owners แยกกัน → pipeline inhouse/production → ยืนยัน → promote | เลขตามคำขอ หรือ PATCH+1 แยก owner; notes/tag เฉพาะ Production |
+| `release production` | indexing → prepare production → pipeline production → ยืนยัน → promote | Inhouse version คงเดิม แม้ผ่าน branch jenkins |
+| `release inhouse` | indexing → prepare inhouse → pipeline inhouse | เฉพาะ develop/jenkins; ไม่แก้ Production notes/tag |
+
+เลข Version/Patch ที่ผู้ใช้ระบุชัดมีลำดับเหนือค่า PATCH+1 และกฎ default รุ่นเก่า อ่าน baseline จริงก่อนคำนวณ ไม่ถามอนุมัติเลขเดิมซ้ำ เช่น Inhouse `1.0.0 → 1.0.8` และ Production `1.0.4 → 1.0.5` ต้องได้ notes `1.0.5.md` และ tag `v1.0.5` ไม่ใช้เลข Inhouse แทน
+
+## ความสามารถร่วมและการทำต่อเมื่อพบปัญหา
+
+| ความสามารถ | พฤติกรรมและขอบเขต |
+| --- | --- |
+| Tool/prerequisite repair | เก้า release actions ตรวจ Git, .NET และ release CLI; ติดตั้งสิ่งที่ขาดจากแหล่งที่ยืนยันใน scope เดิม ตรวจผลก่อนทำต่อ ส่วน bootstrap actions ใช้ Node และ profile ที่พิสูจน์ได้เท่านั้น |
+| Bootstrap freshness | ตรวจ marker/receipt ของ target เทียบ bundle; อัปเดต template ที่รู้จักและรักษากฎเฉพาะ ไม่ต้องสั่ง bootstrap แยกทุกครั้ง |
+| Branch freshness ในโฟลเดอร์เดิม | ก่อนเขียน release ตรวจ develop/jenkins/jenkins-release เทียบ remote ของแต่ละ branch; pull --ff-only เฉพาะที่ตามหลังและ switch ได้อย่างปลอดภัย ไม่ clone/สร้าง worktree อัตโนมัติ; จำแนก dirty และแก้ปัญหาในที่เดิม |
+| Backfill / missing memory | indexing และ composite I step ต้องพิสูจน์ full-history coverage ใช้หลักฐานเดิมต่อและเก็บผลถาวรใน target; standalone prepare ทำ scoped prerequisite indexing ไม่อ้าง full backfill |
+| CLI compatibility | ตรวจ supported options และผลต่อ owner/artifacts ก่อนใช้; หาก CLI รองรับแค่ PATCH+1 แต่ผู้ใช้ระบุเลข ให้ใช้ scoped direct preparation และ equivalent checks ตาม release-tools โดยรายงาน gate ที่ incompatible จริง |
+| Candidate ownership | pipeline/promote แบบ standalone ไม่สร้าง candidate หรือ bump เพื่อแก้ prerequisite โดยอัตโนมัติ ต้องพิสูจน์แหล่งที่มาและ exact owner diff |
+| Resume / verification | บันทึก baseline, candidate และ checkpoints ใช้ candidate เดิมต่อโดยไม่ bump ซ้ำ ตรวจ remote SHA/fast-forward ทุก stage; divergence และ tag collision ต้องแก้จากหลักฐาน |
+| Production confirmation | เตรียมทุกอย่างก่อนขอยืนยัน SHA, version, remote branch และ tag; candidate/destination เปลี่ยนทำให้ confirmation เดิมใช้ไม่ได้ |
+| Deployment status | branch publication ไม่พิสูจน์ Jenkins build หรือ rollout; ไม่รอ pipeline เขียวและไม่เรียก Jenkins API/remote server ภายใต้ contract นี้ |
+| Recording / history | ใช้กฎ recording ของ target โดยไม่เปิด lifecycle ซ้ำ; รักษา changelog/notes เดิม รายงาน release SHA แยกจาก final develop SHA เมื่อมี audit commit |
+
+รายละเอียดเครื่องมือและ fallback อยู่ใน [release-tools](../skills/agrimap-agent-skills/references/release-tools.md) ผล package tests ไม่ได้พิสูจน์ live Jenkins หรือทุก CLI build
+
+## ขอบเขตการนำไปใช้กับโครงการ
+
+### ตรวจ branch ก่อน release
+
+ใช้โฟลเดอร์เดิมตลอดงาน ก่อนเขียน artifacts ของ release ใหม่ให้ fetch และตรวจ `develop`, `jenkins`, `jenkins-release` เทียบ remote ของแต่ละ branch ให้ครบ หาก local ตามหลังอย่างเดียวให้ pull `--ff-only` เมื่อ switch ได้ปลอดภัย ถ้า local นำอยู่ให้ตรวจ commits ก่อน ไม่ reset; ถ้า diverged ให้ตรวจ diff และวิธีรวมประวัติในที่เดิม การ pull ครบช่วยลดปัญหาจากข้อมูลเก่า แต่ไม่รับประกันว่าจะไม่มี conflict เมื่อมีคน push ใหม่
+
+การตรวจนี้ไม่ clone project ไม่สร้าง worktree ไม่ copy ไปโฟลเดอร์ release ใหม่ และไม่ merge ข้าม branch หรือ push Production ในขั้น preflight ไฟล์ bootstrap/log ที่ Agent เพิ่งแก้เป็นงานใน scope ที่ต้องจำแนก ไม่ใช่เหตุให้เริ่มทำซ้ำในโฟลเดอร์อื่น ถ้ามี candidate ค้างให้ตรวจ resume ก่อน ห้าม pull ทับ candidate
+
+### เริ่มจาก feature/* หรือ hotfix/*
+
+คำสั่ง release ปัจจุบันเตรียม version บน `develop` ยังไม่มี action ที่รับผิดชอบ commit/push source branch และ merge เข้า develop ให้อัตโนมัติ การอยู่บน feature/hotfix แล้วสั่ง release ไม่ได้กำหนดว่าจะนำ commits ใดเข้า develop หรือใช้ merge strategy ใด Agent ต้องแยกให้ชัดว่า release ของ develop ที่รวมงานแล้ว หรือมีงาน source-branch integration ที่ต้องทำก่อน ห้ามสลับไป release develop จนงาน feature ที่ร้องขอตกหล่น
+
+หากผู้ใช้สั่ง integration แยก ต้องระบุ source/target และตรวจ scope, branch protection/MR, วิธี merge และ verification ก่อน เมื่อรวมเข้า develop แล้วจึงใช้ release flow เดิมต่อ กฎ `--ff-only` ของ develop → jenkins → jenkins-release ไม่ใช่กฎ merge feature/hotfix ทุกกรณี
+
+### Requester และ bootstrap CLI
+
+ใช้ชื่อที่ยืนยันแล้วในบทสนทนา/session/local confirmation ก่อนถามซ้ำ `agm-workspace.mjs requester` ตรวจ local evidence แบบอ่านอย่างเดียว ส่วน `start --requested-by <confirmed-name>` รองรับการส่งชื่อที่ยืนยันในบทสนทนาโดยตรง การไม่มี runtime record ไม่ได้ลบ confirmation ในบทสนทนา ไม่ใช้ Git author คนล่าสุดแทนคนสั่งงานหรือสิทธิ์ Production
+
+รุ่น 4.1.0 แก้ bootstrap CLI ที่เคยอ่าน `args._` จาก parser ที่ไม่คืน positional arguments แล้ว: `project-bootstrap.mjs plan|apply|upgrade` ใช้งานผ่าน CLI ได้ตามเอกสาร โดยตรวจ regression จากการเรียก executable จริง
 
 งานใน project เดิมต้องอ่าน AGENTS.md ของ target จริงก่อนเสมอ bundled AGENTS เป็นต้นทางสำหรับติดตั้ง ไม่ใช่คำสั่งให้ทับกฎของ project โดยอัตโนมัติ
 
@@ -76,6 +131,16 @@ AGENTS §9 ใช้ได้โดยไม่มี skills หรือ hooks 
 
 <a id="bootstrap"></a>
 ## Bootstrap ไม่ใช่ release
+
+สำหรับอัปเกรด bootstrap โดยรักษากฎเฉพาะ ใช้คำสั่งนี้ในโครงการเป้าหมาย:
+
+```text
+$agm-release bootstrap upgrade
+```
+
+Agent ตรวจชนิดโครงการและ diff ก่อนใช้ normal plan/apply มี backup สำหรับไฟล์ที่ถูกเปลี่ยน ส่วน custom rules จะ merge อย่างเจาะจงและตรวจ hash/receipt หลัง review หากกฎขัดแย้งจนตัดสินไม่ได้จึงถามเฉพาะประเด็นนั้น ไม่เขียนทับ custom rules เงียบ ๆ คำสั่งเดิม `$agm-release upgrade` ยังเป็นโหมดแทนที่ contract อย่างชัดเจนพร้อม backup
+
+ขอบเขตไฟล์คือ AGENTS.md, GEMINI.md, CLAUDE.md, CURSOR.md, release-notes/README.md และ managed Deployment block ใน README เท่านั้น ไม่เปลี่ยน Jenkinsfiles, product versions, changelog หรือ notes รุ่นเก่า และไม่ commit/push/tag หากต้องการอัปเดตแพ็กเกจ AGM ของ host ให้ใช้ [agm-doctor update](DOCTOR.md) แทน
 
 ติดตั้งเมื่อ explicit init/adopt หรือเป็น prerequisite ที่ตรงขอบเขตคำสั่ง agm-release ของ product target ไม่ทำเมื่อ identify หรือเปิด session:
 
