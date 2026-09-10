@@ -6,7 +6,7 @@
 
 ## 1. เตรียมเครื่อง
 
-ต้องมี Git, Node.js 20 ขึ้นไป และ host อย่างใดอย่างหนึ่งที่ติดตั้ง/ลงชื่อเข้าใช้แล้ว: Codex, Claude Code หรือ Gemini CLI
+ต้องมี Git, Node.js 20 ขึ้นไป และ host อย่างใดอย่างหนึ่งที่ติดตั้ง/ลงชื่อเข้าใช้แล้ว: Codex, Claude Code หรือ Antigravity CLI
 
 **รันใน Terminal / PowerShell:**
 
@@ -19,7 +19,9 @@ node --version
 
 ## 2. ติดตั้งสำหรับ host ของคุณ
 
-เลือกเพียงหนึ่งหัวข้อ คำสั่งในขั้นนี้ติดตั้ง plugin/extension จึงเปลี่ยน configuration ของ host ไม่ใช่คำสั่งถาม Agent และไม่แก้ source ของโครงการ
+ต้องการเลือกรุ่นเก่าหรือ pin รุ่นที่ระบุ ดู [เลือกเวอร์ชัน](VERSIONS.md) ใช้ runtime artifact ของ release นั้นเมื่อมี ไม่ใช้ branch HEAD แทนรุ่นที่ขอ
+
+เลือกเพียงหนึ่งหัวข้อ คำสั่งในขั้นนี้ติดตั้ง plugin จึงเปลี่ยน configuration ของ host ไม่ใช่คำสั่งถาม Agent และไม่แก้ source ของโครงการ
 
 ### Codex
 
@@ -43,25 +45,44 @@ claude plugin install agrimap-agent-skills@agrimap-agent-skills
 
 Claude ใช้ชื่อ plugin กำกับคำสั่ง เช่น `/agrimap-agent-skills:agm-analyze` การเพิ่ม marketplace อย่างเดียวยังไม่ใช่ติดตั้ง plugin ดู [Claude Code installation](https://code.claude.com/docs/en/discover-plugins)
 
-### Gemini CLI
+### Antigravity CLI
 
-**Terminal / PowerShell ไม่ใช่ใน Gemini chat:**
+**Terminal / PowerShell ไม่ใช่ใน Antigravity chat:**
 
 ```powershell
-gemini extensions install https://github.com/orchex006/agrimap-agent-skills
+agy plugin install https://github.com/orchex006/agrimap-agent-skills
 ```
 
-ตรวจคำขอความยินยอมของ host ตามปกติ ไม่ต้องเพิ่ม flag ข้าม consent ดู [Gemini extension reference](https://geminicli.com/docs/extensions/reference/)
+ตรวจคำขอความยินยอมของ host ตามปกติ ไม่ต้องเพิ่ม flag ข้าม consent ดู [Antigravity plugin reference](https://antigravity.google/docs/cli/plugins)
+
+ตรวจรายการด้วย `agy plugin list` แพ็กเกจ 4.1.0 มี root `plugin.json` และ flat Markdown skills สำหรับ Antigravity โดยตรง ส่วน `GEMINI.md` และ `AGENTS.md` ยังใช้เหมือนเดิมตาม [คู่มือ migration](https://antigravity.google/docs/cli/gcli-migration) ไม่ต้องเปลี่ยนชื่อไฟล์ หากย้ายจาก Gemini เดิม ให้ตรวจ onboarding/import ของ host ก่อน ไม่ถอนการติดตั้งเดิมโดยอัตโนมัติ
 
 ### ถ้าต้องการ source ที่เพิ่งแก้ในเครื่อง
 
-คำสั่งจาก GitHub ได้เฉพาะสิ่งที่เผยแพร่ไปแล้ว อาจยังไม่ใช่ 3.0.1 ที่อยู่ใน working copy ใช้ [การติดตั้ง local package](MAINTAINING.md#local-install) แทน อย่าคัดลอกไฟล์เข้า cache ด้วยมือ
+คำสั่งจาก GitHub ได้เฉพาะสิ่งที่เผยแพร่ไปแล้ว อาจยังไม่ใช่ 4.1.0 ที่อยู่ใน working copy ใช้ [การติดตั้ง local package](MAINTAINING.md#local-install) แทน อย่าคัดลอกไฟล์เข้า cache ด้วยมือ
 
 ## 3. เปิด session ใหม่ในโครงการเป้าหมาย
 
 เปิด root ของ AgriMap project ที่ต้องการทำงาน ไม่ใช่ root ของ skill package นี้ หลังติดตั้ง/อัปเดต เปิด session ใหม่เพื่อให้ host โหลดคำสั่งและ instruction ใหม่
 
 ยังไม่ต้อง init หรือ bootstrap เพื่อถามคำถาม การ bootstrap เอกสารลงโครงการเป็นงานแยกที่ต้องร้องขอ ดู [Bootstrap](RELEASE.md#bootstrap)
+
+### ตรวจความพร้อมและอัปเดตด้วย agm-doctor
+
+พิมพ์ใน Agent chat ใช้ `$agm-doctor` สำหรับ Codex, `/agrimap-agent-skills:agm-doctor` สำหรับ Claude หรือ `/agm-doctor` สำหรับ Antigravity (ใช้ชื่อที่ host แสดงหากมี namespace)
+
+| คำสั่ง | หน้าที่ | ผลต่อเครื่อง |
+| --- | --- | --- |
+| `agm-doctor` | สรุปรุ่นและความพร้อมในเครื่อง | อ่านอย่างเดียว |
+| `agm-doctor version` | เทียบรุ่นที่ติดตั้งกับแหล่งเผยแพร่ พร้อมบอกถ้าตรวจไม่ได้ | อ่านอย่างเดียว |
+| `agm-doctor check` | ตรวจ host, configuration และ dependency เช่น SQLFluff พร้อมวิธีแก้ | อ่านอย่างเดียว |
+| `agm-doctor update` | อัปเดต AGM สำหรับ host ปัจจุบัน | เปลี่ยนการติดตั้ง AGM |
+| `agm-doctor update --host antigravity` | เลือก host: codex / claude / antigravity; agy เป็นชื่อย่อ | เปลี่ยนเฉพาะ host ที่เลือก |
+| `agm-doctor update --to 4.1.0` | เลือกรุ่น AGM ที่มีอยู่จริงในแหล่งติดตั้ง | ไม่เปลี่ยนเป็น latest แทนโดยเงียบ ๆ |
+
+เริ่มจาก check แล้วค่อย update เมื่ออยากอัปเดต การตรวจไม่ติดตั้งสิ่งที่ขาดให้เอง และ dependency ที่ขาดของ SQL จะระบุขอบเขต SQL ไม่ตัดสินว่า FE/BE ทั้งหมดล้มเหลว ดู [Doctor ฉบับเต็ม](DOCTOR.md) สำหรับสถานะและการกู้คืน หลัง update เปิด session ใหม่
+
+หากต้องการอัปเกรดไฟล์ bootstrap ในโครงการด้วย ให้สั่ง `agm-release bootstrap upgrade` แยกในโครงการเป้าหมาย จะสำรองไฟล์และรักษากฎเฉพาะโปรเจกต์ ไม่ bump เวอร์ชัน product หรือ push/tag ดู [คำสั่ง release ทั้งหมด](RELEASE.md)
 
 ## 4. ทดลองอ่านอย่างเดียว
 
@@ -79,7 +100,7 @@ Claude Code:
 /agrimap-agent-skills:agm-analyze ช่วยสรุปโครงสร้างโปรเจกต์นี้จากไฟล์จริง ระบุ entry point และโฟลเดอร์หลัก ยังไม่แก้ไฟล์และไม่รัน test
 ```
 
-Gemini CLI:
+Antigravity CLI:
 
 ```text
 /agm-analyze ช่วยสรุปโครงสร้างโปรเจกต์นี้จากไฟล์จริง ระบุ entry point และโฟลเดอร์หลัก ยังไม่แก้ไฟล์และไม่รัน test

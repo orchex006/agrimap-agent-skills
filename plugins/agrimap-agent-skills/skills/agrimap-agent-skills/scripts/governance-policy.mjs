@@ -2,7 +2,8 @@
 export const READ_OPERATIONS = new Set(['analyze', 'diagnose', 'simulate', 'plan', 'design', 'architect', 'review', 'history', 'qa', 'help', 'explain']);
 
 export function selectWorkflow({ operation, action, tracking = false, risk = '', depth, persist = false } = {}) {
-  const readOnly = READ_OPERATIONS.has(action || operation);
+  const readOnly = READ_OPERATIONS.has(action || operation)
+    || (operation === 'doctor' && (!action || ['status', 'version', 'check'].includes(action)));
   if (readOnly && !tracking && !persist) return { depth: null, reason: 'direct-answer', task: false };
   if (depth && !['light', 'standard', 'regulated'].includes(depth)) throw new Error('INVALID_WORKFLOW_DEPTH');
   const regulated = /^(external-publication|persisted-data-change|public-contract-change|independent-assurance|security-boundary)$/.test(risk);

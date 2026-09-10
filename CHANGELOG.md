@@ -2,6 +2,33 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.1.0 — 2026-09-10
+
+- Add maintainer-only source governance and development/release/hotfix branches without changing product runtime release rules.
+- Separate edit, commit/push, PR integration and publication authority; preserve same-directory development and all prior work.
+- Add explicit runtime packaging allowlists, provider-specific archives, version/SHA catalogs and checksums; exclude source-maintainer instructions while retaining product bootstrap templates.
+- Add PR verification and manual, exact-version publication workflows with immutable-version collision checks. Server protection configuration and publication remain separate authorized steps.
+- Document exact-version selection, rollback limitations and evidence-based historical backfill; do not invent historical releases.
+- Bump source and generated version metadata to 4.1.0 at the requester's direction; incorporate the previously prepared 3.7.0 changes below.
+- Show the current package version in documentation and retain 24 evidence-backed historical source tags; exclude the test prerelease and unpublished 3.7.0 draft from historical releases.
+- Restore 62 canonical golden Git blobs to the exact raw bytes already preserved by committed mirrors and manifest hashes; repair inherited LF/CRLF index drift without changing golden content or rehashing evidence.
+
+## 3.7.0 — 2026-09-10 (prepared changes; publication not verified)
+
+- Keep product release work in the requested repository directory. Check all three local/remote release branches before new artifacts, use safe fast-forward pulls, and remove automatic product cloning/worktree recovery from entrypoints, release steps and bootstrap governance.
+- Fix project-bootstrap CLI positional command handling; exercise plan/apply/upgrade through the executable rather than only imported functions.
+- Honor start --requested-by and share confirmed requester lookup between hooks/runtime, including unambiguous valid local session recovery, read-only requester inspection, and protection against expired/revoked/foreign/conflicting identity reuse.
+- Clarify that feature/hotfix integration into develop is a separate scoped action, not an implicit capability or permission of the existing release command surface.
+
+- Add agm-doctor with read-only status, version and compatibility/dependency checks, plus explicit host-scoped AGM updates and requested-version selection.
+- Distinguish loaded versus installed package versions, verified source availability, workflow-specific missing dependencies and unknown checks; preserve local changes and recovery evidence during native host updates.
+- Generate native Antigravity root plugin.json and flat Markdown operation skills. Replace current Gemini extension installation guidance with agy plugin install, retain GEMINI.md and legacy Gemini adapters/records, and state unverified host hook/MCP integration limits.
+- Add agm-release bootstrap upgrade for backed-up bootstrap refresh and reviewed custom-rule preservation; retain legacy upgrade as explicit scoped contract replacement. Keep product versions, publication and host package installation outside bootstrap maintenance.
+- Track reviewed custom bootstrap merges against exact target/source hashes and verified backups; invalidate approvals after content or bundle changes instead of repeatedly treating reviewed custom rules as fresh conflicts.
+- Document every release action, owner-version precedence, Production-only notes/tags, prerequisite repair, dirty-checkout recovery, indexing/backfill, resume and concrete Production confirmation.
+- Add complete doctor command/status tables to the doctor guide and Getting Started, with package-update versus project-bootstrap examples and host syntax.
+- Bump package/manifests, bootstrap version tracking, tool-lock skillVersion and generated adapters to 3.7.0; retain prior changelog history and the SQLFluff dependency pin.
+
 ## 3.6.1 — 2026-09-09
 
 - Make release indexing perform Project Backfill, including historical changelog, complete capability/evidence catalog and README capability/API inventory.

@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseCliArgs } from "./cli-args.mjs";
-import { localAuditMetadata, normalizeIdentity } from "./identity.mjs";
+import { readConfirmedIdentity } from "./identity.mjs";
 import { classifyRequest, unquotedIntent } from './governance-policy.mjs';
 import { AGRIMAP_OPERATION_ALIASES, AGRIMAP_ROUTER_ALIAS } from "./operation-aliases.mjs";
 
@@ -250,11 +250,7 @@ const output = { continue: true, suppressOutput: true };
 if (selection.active) {
   await archiveRawPrompt(stateRoot, config, input);
   const active = sessionId ? await readJson(path.join(stateRoot, 'runtime', 'active', sessionId + '.json')) : null;
-  const local = localAuditMetadata();
-  const userKey = safeSessionId(local.machine + '-' + local.osUser);
-  const rawIdentity = (sessionId && await readJson(path.join(stateRoot, 'runtime', 'sessions', sessionId + '.json')))
-    || await readJson(path.join(stateRoot, 'runtime', 'users', userKey + '.json'));
-  const identity = rawIdentity ? normalizeIdentity(rawIdentity) : null;
+  const identity = await readConfirmedIdentity(stateRoot, sessionId, {defaultProvider: provider});
   const packageWork = await isSkillPackageRepository(cwd);
   const context = [
     'AgriMap 3.0: resolve current intent before choosing one operation. Quoted commands are examples, not authorization.',
@@ -263,7 +259,7 @@ if (selection.active) {
     'SQL context is read-only: managed metadata and SELECT only; no DDL/DML, EXEC, metadata sync or routine deployment.',
     packageWork ? 'Workspace kind: skill-package. Package work never creates root product FE/BE/SQL artifacts.' : 'Use only the applicable project contracts.',
     identity && !identity.expired ? 'Confirmed requester: ' + identity.requestedBy + '. Identity is not approval authority.'
-      : 'For a write that needs attribution, reuse confirmed conversation identity or ask once; do not ask for ordinary questions.',
+      : 'For attributed writes, reuse confirmed conversation identity via --requested-by before asking once. Missing local state is not missing human confirmation. Git author alone is not requester evidence; do not ask for ordinary questions.',
     input.model ? 'Actual host model: ' + input.model + '; configurable labels are separate.' : 'Record actual host model when known; otherwise unknown.',
     sessionId ? 'Session: ' + sessionId : 'Use a stable session for durable work.'
   ];

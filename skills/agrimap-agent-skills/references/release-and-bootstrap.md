@@ -16,13 +16,13 @@ Copy AGENTS.md, GEMINI.md, CLAUDE.md, CURSOR.md and release-notes/README.md byte
 
 New main FE/BE scaffolds start 1.0.0 and libraries 0.0.x; adoption never resets existing owners. The supplied release contract describes a .NET main-service profile. Verify actual FE/library tool and pipeline applicability; do not invent support, stages or server triggers.
 
-Explicit `agm-release upgrade` selects replacement mode: plan --upgrade, then upgrade through project-bootstrap.mjs. It replaces customized bundled copy targets and the marked README block after backup; see release-workflow.md for exact boundaries. Normal plan/apply retains custom-content conflict protection. All nine release actions must still run the normal freshness check; upgrade is not a required separate user invocation.
+`agm-release bootstrap upgrade` selects normal plan/apply with freshness checks, backups and scoped preservation of custom project rules; see release-workflow.md. Explicit legacy `agm-release upgrade` selects replacement mode: plan --upgrade, then upgrade through project-bootstrap.mjs. It replaces customized bundled copy targets and the marked README block after backup; see release-workflow.md for exact boundaries. Normal plan/apply retains custom-content conflict protection. All nine release actions must still run the normal freshness check; upgrade is not a required separate user invocation.
 
 ## Release prerequisite repair
 
 An executable agm-release command authorizes checking and installing compatible missing bootstrap prerequisites needed by that command in its named product target. No separate init invocation is required. Help, quoted commands and skill-package maintenance do not authorize product bootstrap.
 
-For a dirty checkout on another branch, establish the isolated preparation root described in release-workflow.md before bootstrap writes; apply freshness checks there and preserve the caller checkout. Do not classify previous upgrade artifacts as unrelated by filename alone.
+For a new release, perform release-workflow.md branch freshness checks in the requested directory before bootstrap writes. Keep the same directory throughout; do not create a product clone/worktree to handle dirty state. Classify previous upgrade artifacts by actual ownership, not filenames.
 
 Before audit, inspect applicable parent/target instructions, actual project kind, worktree and the synchronized branch used by the selected stage (the requested checkout for standalone indexing; develop for release preparation). If target AGENTS.md is missing, inspect the bundled AGENTS.md completely and prove its profile applies before installing it; absence is a repair condition, not by itself a terminal blocker. Never copy from another branch without proving provenance, or carry unrelated changes across branches.
 

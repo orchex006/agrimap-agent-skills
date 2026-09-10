@@ -14,7 +14,7 @@
 | skills/agrimap-agent-skills/scripts | Runtime, hooks, validators และ bootstrap |
 | skills/agrimap-agent-skills/assets/bootstrap | เอกสารโครงการ canonical พร้อม hashes |
 | docs และ examples | คู่มือผู้ใช้/ผู้ดูแลและโจทย์ตัวอย่าง |
-| commands, plugins/agrimap-agent-skills | Generated adapters และ mirror; ไม่แก้โดยตรง |
+| commands, skills/agm-*.md, plugin.json, plugins/agrimap-agent-skills | Generated adapters และ mirror; ไม่แก้โดยตรง |
 | tests | Regression/fixture tests ไม่ใช่ project service |
 | .agrimap-agent | Local evidence ของการพัฒนา package ไม่ใช่ไฟล์แจกจ่าย |
 
@@ -29,7 +29,7 @@ npm run sync
 npm run validate
 ```
 
-sync สร้าง operation entrypoints, aliases, Gemini commands, manifests และสำเนาเอกสารจากต้นฉบับ จึงเขียนทับ generated files ตรวจ diff ต้นฉบับก่อนสั่ง ไม่ใช้ sync กับโครงการ product
+sync สร้าง operation entrypoints, aliases, Antigravity flat skills/root plugin.json, legacy Gemini commands, manifests และสำเนาเอกสารจากต้นฉบับ จึงเขียนทับ generated files ตรวจ diff ต้นฉบับก่อนสั่ง ไม่ใช้ sync กับโครงการ product
 
 - เอกสารอย่างเดียว: ตรวจลิงก์ ความถูกต้องของคำสั่ง และ generated mirrors
 - `npm run test:docs` ตรวจเอกสารและ negative fixtures โดยไม่ execute ตัวอย่าง install/release
@@ -45,6 +45,8 @@ Token estimates ไม่ใช่ผล benchmark model จริง และ 
 ## ติดตั้งจาก working copy
 
 ใช้เมื่อต้องลอง source ที่ยังไม่ publish สั่ง sync และ validate ก่อน แล้วเลือก host เดียว **คำสั่งนี้เปลี่ยน host installation/configuration** ไม่ใช่ส่วนบังคับของการตรวจ docs
+
+ถ้าใช้ runtime artifact จาก [รุ่นที่ระบุ](VERSIONS.md) ให้แตกไฟล์และตรวจ checksum ก่อน แล้วใช้คำสั่ง host ด้านล่างได้เลย ไม่รัน sync/validate ของ source ใน artifact
 
 Terminal ต้องอยู่ root package ที่มี package.json และ marketplace manifests:
 
@@ -62,10 +64,10 @@ claude plugin marketplace add .
 claude plugin install agrimap-agent-skills@agrimap-agent-skills
 ```
 
-Gemini CLI (development link):
+Antigravity CLI (ติดตั้ง local package):
 
 ```powershell
-gemini extensions link .
+agy plugin install .
 ```
 
 หาก marketplace ชื่อเดียวกันชี้ remote อยู่แล้ว ให้ตรวจรายการและ source ที่ host เลือกก่อน อย่าสมมติว่ารัน add ซ้ำแล้วเปลี่ยน source/cache สำเร็จ ใช้ help ของรุ่นนั้นและขั้นตอนจัดการ marketplace ของ host ไม่ลบ cache เอง
@@ -74,7 +76,7 @@ gemini extensions link .
 
 ## Provider adapters
 
-Codex/Claude เลือก hooks คนละไฟล์ผ่าน manifest ไม่สร้าง default hooks/hooks.json ร่วมใน plugin root ส่วน Gemini ใช้ root extension hooks และ read-only stdio MCP เพื่ออ่าน bundled references
+Codex/Claude เลือก hooks คนละไฟล์ผ่าน manifest ไม่สร้าง default hooks/hooks.json ร่วมใน plugin root ส่วน Antigravity ใช้ root plugin.json และ skills/agm-*.md ที่ชี้ bundled references โดยตรง; ยังไม่ผูก legacy hooks/MCP เข้ากับ AGY โดยไม่ตรวจ payload/path support ของ host จริง ส่วน legacy Gemini adapter ยังคง root extension hooks และ read-only stdio MCP
 
 MCP ของ package นี้ให้ reference text ไม่ใช่ SQL connection ไม่มีการติดตั้ง sql-context-pack แฝงไปด้วย ต้องมี external skill/service และ connected profile ที่ใช้ได้อยู่แล้ว
 
@@ -90,6 +92,8 @@ $agmScripts = Join-Path $agmPackage 'skills/agrimap-agent-skills/scripts'
 
 **ยืนยันผู้สั่งงาน** เมื่อได้รับชื่อจากคนนั้นแล้วเท่านั้น; ตัวอย่างนี้เลือก persistent confirmation อย่างชัดเจน:
 
+ถ้ามีชื่อที่ยืนยันแล้วในบทสนทนาให้ใช้ชื่อนั้นได้เลย หากต้องค้น local evidence ใช้ `node "$agmScripts/agm-workspace.mjs" requester --cwd "$agmProject" --session "[actual-session]"` แบบอ่านอย่างเดียว Hook และ runtime ใช้ resolver เดียวกัน ค้น session ปัจจุบัน, local-user record และ session ที่ยืนยันยังใช้ได้ของเครื่อง/ผู้ใช้เดียวกันใน workspace นี้ก่อนถามชื่อ ไม่ใช้ Git author อย่างเดียวเป็น confirmation
+
 ```powershell
 node "$agmScripts/agm-workspace.mjs" identify --cwd "$agmProject" --session "[actual-session]" --owner "[confirmed-human]" --model "[host-reported-model]" --provider codex --confirmation-hours 0
 ```
@@ -103,6 +107,8 @@ node "$agmScripts/agm-workspace.mjs" start --cwd "$agmProject" --session "[actua
 ```
 
 ต้องการ resume/handoff เพิ่ม `--tracking` ส่วน `--risk` ใช้เฉพาะเหตุผลจริง: external-publication, persisted-data-change, public-contract-change, independent-assurance, security-boundary ไม่ใช่สิทธิ์ execute SQL writes
+
+เพิ่ม `--requested-by "[confirmed-human]"` ได้เมื่อตัวตนยืนยันในบทสนทนาแล้วแต่ยังไม่มี local record ไม่ต้องถามยืนยันชื่อเดิมซ้ำ หาก source ยืนยันหมดอายุ/ถูกเพิกถอนหรือมีหลายคนขัดกัน resolver จะไม่เลือกจาก Git/OS แทน
 
 ไม่ต้องระบุ --depth ตามอำเภอใจ runtime ตรวจว่า depth ตรงกับ tracking/risk ส่วนคำถาม read-only ไม่ start เว้นแต่ร้องขอ persistent deliverable
 
@@ -133,6 +139,10 @@ node "$agmScripts/agm-workspace.mjs" init --cwd "$agmProject" --bootstrap --kind
 ```
 
 Plain init เตรียม local knowledge ไม่ติดตั้ง project documents ส่วน identify ไม่ bootstrap เลย ถ้า plan มี conflict ให้แก้ adoption decision ก่อน ไม่รันซ้ำหวังให้ overwrite
+
+`agm-release bootstrap upgrade` ใช้ normal plan/apply นี้พร้อม merge กฎเฉพาะและ backup ส่วน `agm-release upgrade` เดิมใช้ `project-bootstrap.mjs plan --upgrade` แล้ว `project-bootstrap.mjs upgrade` เพื่อแทนที่ scoped contract โดยชัดเจน ทั้งสองเป็น Agent actions ไม่ใช่ subcommands ของ .NET release CLI และไม่เปลี่ยน version owner หรือเผยแพร่ Git
+
+หาก Agent merge custom rules เอง ต้องสำรอง bytes เดิม ตรวจเนื้อหากับ bundle แล้วส่ง `--reviewed-merges <json-file>` ให้ normal plan/apply รายการมี `target`, `sha256`, `backupHash`, `reason` ตาม [release-workflow](../skills/agrimap-agent-skills/references/release-workflow.md#explicit-contract-upgrade) receipt ผูกการ review กับ hash ของไฟล์และ bundle รุ่นนั้น เมื่อเนื้อหาหรือ bundle เปลี่ยนต้องตรวจใหม่ ไม่ใช้ flag นี้แทน semantic review
 
 ## แหล่งอ้างอิงการติดตั้ง
 

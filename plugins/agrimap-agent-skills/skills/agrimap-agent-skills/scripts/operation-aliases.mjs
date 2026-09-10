@@ -2,6 +2,7 @@
 
 export const AGRIMAP_ROUTER_ALIAS = "agrimap-agent-skills";
 export const AGRIMAP_OPERATION_ALIASES = Object.freeze([
+  "agm-doctor",
   "agm-analyze",
   "agm-diagnose",
   "agm-plan",
@@ -15,6 +16,7 @@ export const AGRIMAP_OPERATION_ALIASES = Object.freeze([
   "agm-release"
 ]);
 export const AGRIMAP_PUBLIC_OPERATION_ALIASES = Object.freeze([
+  "agm-doctor",
   "agm-analyze",
   "agm-diagnose",
   "agm-plan",

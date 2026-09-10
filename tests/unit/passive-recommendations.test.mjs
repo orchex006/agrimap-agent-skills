@@ -8,7 +8,7 @@ import {AGRIMAP_OPERATION_ALIASES} from '../../skills/agrimap-agent-skills/scrip
 const removed=['agm-design','agm-simulate','agm-review','agm-history'];
 test('removed operations have no distributed commands, alias skills or entrypoints',async()=>{
   const config=JSON.parse(await readFile(path.join(projectRoot,'config/operations.json'),'utf8'));
-  assert.equal(config.operations.length,11);
+  assert.deepEqual([...AGRIMAP_OPERATION_ALIASES].sort(),config.operations.map(o=>o.name).sort());
   for(const alias of removed){
     assert.equal(AGRIMAP_OPERATION_ALIASES.includes(alias),false);
     for(const file of [`commands/${alias}.toml`,`plugins/agrimap-agent-skills/skills/${alias}/SKILL.md`,`skills/agrimap-agent-skills/references/operations/${alias.slice(4)}.md`]){

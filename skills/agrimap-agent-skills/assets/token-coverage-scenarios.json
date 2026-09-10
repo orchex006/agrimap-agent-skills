@@ -21,6 +21,22 @@
   },
   "scenarios": [
     {
+      "id": "release-bootstrap-upgrade",
+      "description": "Local preserving/replacement bootstrap actions load no .NET release tooling",
+      "operation": "release",
+      "depth": "light",
+      "activate": ["release-bootstrap-upgrade.md"],
+      "mustLoad": ["release-workflow.md", "release-bootstrap-upgrade.md"]
+    },
+    {
+      "id": "release-publication-sequence",
+      "description": "Product release loads deterministic sequences and tool compatibility before mutation",
+      "operation": "release",
+      "depth": "regulated",
+      "activate": ["release-steps.md", "release-tools.md"],
+      "mustLoad": ["release-workflow.md", "release-steps.md", "release-tools.md"]
+    },
+    {
       "id": "router-only",
       "description": "Umbrella routing without executing a dedicated operation",
       "operation": "router",

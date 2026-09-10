@@ -24,12 +24,21 @@ async function safeTarget(root, relative) {
   }
   return dest;
 }
-export async function planBootstrap({ target, kind, upgrade = false }) {
+export async function planBootstrap({ target, kind, upgrade = false, reviewedMerges = [] }) {
   if (!target || !kinds.includes(kind)) throw new Error('BOOTSTRAP_TARGET_KIND_REQUIRED');
   const root = path.resolve(target);
   const pkg = await readMaybe(path.join(root, 'package.json'));
   if (pkg && JSON.parse(pkg).name === 'agrimap-agent-skills') throw new Error('PACKAGE_PRODUCT_BOOTSTRAP_FORBIDDEN');
   const manifest = JSON.parse(await readFile(path.join(bundle, 'manifest.json'), 'utf8'));
+  const receiptBytes = await readMaybe(await safeTarget(root, '.agrimap-agent/runtime/bootstrap.json'));
+  let priorReceipt = null;
+  try { priorReceipt = receiptBytes ? JSON.parse(receiptBytes) : null; } catch { /* Rebuild only after verified apply. */ }
+  if (!Array.isArray(reviewedMerges) || new Set(reviewedMerges.map(e => e?.target)).size !== reviewedMerges.length
+    || reviewedMerges.some(e => !e || !manifest.files.some(f => f.target === e.target)
+      || !/^[a-f0-9]{64}$/.test(e.sha256 || '') || !/^[a-f0-9]{64}$/.test(e.backupHash || '') || typeof e.reason !== 'string' || !e.reason.trim())) {
+    throw new Error('BOOTSTRAP_MERGE_REVIEW_INVALID');
+  }
+  if (upgrade && reviewedMerges.length) throw new Error('BOOTSTRAP_MERGE_REPLACEMENT_CONFLICT');
   const entries = [];
   for (const item of manifest.files) {
     const source = await readFile(path.join(bundle, item.source));
@@ -59,13 +68,33 @@ export async function planBootstrap({ target, kind, upgrade = false }) {
         content = Buffer.from(next); status = before ? 'insert-section' : 'create';
       }
     }
-    entries.push({ previousVersion, target: item.target, mode: item.mode, status, beforeHash: before ? hash(before) : null, sha256: hash(content || ''), content: (content || Buffer.alloc(0)).toString('base64') });
+    // A reviewed merge is scoped to exact bytes and this exact canonical source.
+    // It is not a force flag: future edits or bundle changes become conflicts again.
+    const review = reviewedMerges.find(e => e.target === item.target);
+    const recorded = priorReceipt?.version === manifest.version && Array.isArray(priorReceipt.files)
+      ? priorReceipt.files.find(e => e?.target === item.target && e.merge?.sourceSha256 === item.sha256
+        && /^[a-f0-9]{64}$/.test(e.merge.backupHash || '') && typeof e.merge.reason === 'string' && e.merge.reason.trim()) : null;
+    let merge = null;
+    if (!upgrade && (review || (recorded?.merge && before && recorded.sha256 === hash(before)))) {
+      const evidence = review || { ...recorded.merge, sha256: recorded.sha256 };
+      if (!before || hash(before) !== evidence.sha256) throw new Error('BOOTSTRAP_MERGE_TARGET_DRIFT');
+      const backup = await readMaybe(await safeTarget(root, `.agrimap-agent/runtime/bootstrap-backups/${evidence.backupHash}/${item.target}`));
+      if (!backup || hash(backup) !== evidence.backupHash) throw new Error('BOOTSTRAP_MERGE_BACKUP_REQUIRED');
+      if (item.target === 'AGENTS.md' && !before.toString('utf8').includes(`<!-- AGRIMAP BOOTSTRAP VERSION: ${manifest.version} -->`)) {
+        throw new Error('BOOTSTRAP_MERGE_VERSION_MISMATCH');
+      }
+      if (item.mode === 'section') {
+        const text = before.toString('utf8');
+        if (text.split(start).length !== 2 || text.split(end).length !== 2 || text.indexOf(start) >= text.indexOf(end)) throw new Error('BOOTSTRAP_MERGE_SECTION_INVALID');
+      }
+      merge = { sourceSha256: item.sha256, backupHash: evidence.backupHash, reason: evidence.reason };
+      content = before; status = 'unchanged';
+    }
+    entries.push({ previousVersion, target: item.target, mode: item.mode, status, beforeHash: before ? hash(before) : null, sha256: hash(content || ''), ...(merge ? {merge} : {}), content: (content || Buffer.alloc(0)).toString('base64') });
   }
   const agents = await readMaybe(await safeTarget(root, 'AGENTS.md'));
   const installedVersion = agents?.toString('utf8').match(/<!-- AGRIMAP BOOTSTRAP VERSION: ([^ ]+) -->/)?.[1] || null;
-  const receiptBytes = await readMaybe(await safeTarget(root, '.agrimap-agent/runtime/bootstrap.json'));
-  let receiptVersion = null;
-  try { receiptVersion = receiptBytes ? JSON.parse(receiptBytes).version : null; } catch { /* Rebuild an invalid receipt only after verified apply. */ }
+  const receiptVersion = priorReceipt?.version || null;
   return { version: manifest.version, installedVersion, receiptVersion, freshness: receiptVersion === manifest.version && installedVersion === manifest.version && entries.every(e => e.status === 'unchanged') ? 'current' : 'update-required', root, kind, upgrade: upgrade === true, ok: entries.every(e => e.status !== 'conflict'), entries };
 }
 export async function applyBootstrap(options) {
@@ -96,11 +125,12 @@ export async function applyBootstrap(options) {
   return { ...plan, applied: true };
 }
 if (path.resolve(process.argv[1] || '') === fileURLToPath(import.meta.url)) {
-  const args = parseCliArgs(process.argv.slice(2));
-  const command = args._[0];
-  Promise.resolve().then(() => {
-    if (!['plan','apply','upgrade'].includes(command)) throw new Error('Use plan [--upgrade]|apply|upgrade --target <project> --kind <kind>');
-    return (command === 'plan' ? planBootstrap : applyBootstrap)({ target: args.target, kind: args.kind, upgrade: command === 'upgrade' || args.upgrade === true });
+  const command = process.argv[2];
+  const args = parseCliArgs(process.argv.slice(3));
+  Promise.resolve().then(async () => {
+    if (!['plan','apply','upgrade'].includes(command)) throw new Error('Use plan [--upgrade]|apply|upgrade --target <project> --kind <kind> [--reviewed-merges <json-file>]');
+    const reviewedMerges = args['reviewed-merges'] ? JSON.parse(await readFile(args['reviewed-merges'], 'utf8')) : [];
+    return (command === 'plan' ? planBootstrap : applyBootstrap)({ target: args.target, kind: args.kind, upgrade: command === 'upgrade' || args.upgrade === true, reviewedMerges });
   }).then(result => { console.log(JSON.stringify({...result,entries:result.entries.map(({content,...e})=>e)},null,2)); if (!result.ok) process.exitCode=1; })
     .catch(error => {console.error(JSON.stringify({ok:false,message:error.message}));process.exitCode=1;});
 }

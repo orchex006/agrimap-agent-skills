@@ -168,6 +168,12 @@ export function renderGeminiCommandPrompt(item) {
   ].join('\n\n');
 }
 
+export function renderAntigravitySkill(item) {
+  // AGY discovers flat Markdown skills; references resolve beside this file.
+  return renderAliasSkill(item).replaceAll('../agrimap-agent-skills/', './agrimap-agent-skills/')
+    + '\nResolve these relative paths from this installed skill file, not the product working directory. Record provider antigravity and the actual runtime model (unknown if unavailable).\n';
+}
+
 export function operationEntrypointPath(skillRoot, item) {
   return path.join(skillRoot, "references", "operations", operationEntrypointFile(item));
 }

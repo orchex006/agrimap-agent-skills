@@ -1,12 +1,14 @@
 # Workflow lifecycle core — v3
 
-First determine whether the current request concerns AgriMap. Quoted commands, cwd, model name and old task state alone do not activate a workflow. A direct answer, explanation, comparison, help or read-only review has no execution state, depth, requester question or task artifacts unless a durable deliverable/tracking was requested.
+Check whether this request concerns AgriMap. Quoted commands, cwd, model name and old task state alone do not activate a workflow. A direct answer, explanation, comparison, help or read-only review has no execution state, depth, requester question or task artifacts unless a durable deliverable/tracking was requested.
 
 ## Durable work
 
-For adopted product repositories before durable work, compare the installed AGENTS.md bootstrap version marker/receipt to the active skill manifest. Missing or different versions require reconciliation within this invocation using release-and-bootstrap.md and project-bootstrap.mjs; automatically update recognized unmodified templates with backups, preserve custom project rules through a scoped merge, then verify freshness. No product bootstrap in the skill-package root or for ordinary questions.
-An adopted repository's explicit recording contract may require additional artifacts. In particular, the owner-supplied bootstrap AGENTS §9 requires portable terminal reports; follow that project contract without duplicating lifecycles. It does not change the skill-package defaults below.
-Recommendations and passive design follow recommendations.md in every operation: give supported advice proactively; make insufficiency, assumptions, missing information and confidence visible. Advice alone never creates write authority, task artifacts or a prompt version.
+Reuse a conversation/host-confirmed requester via `--requested-by` on start/identify; missing runtime state does not invalidate confirmation. Otherwise inspect `agm-workspace.mjs requester --cwd <project> --session <id>` read-only: hooks/runtime share valid session/local-user recovery. Never infer identity from Git/OS authorship or copied audit history. Reject expired/revoked/foreign/ambiguous records; ask once only when confirmation remains missing/conflicting. Persistent confirmation needs no daily renewal. Identity grants no publication authority.
+
+For adopted product repositories before durable work, compare the installed AGENTS.md bootstrap version marker/receipt to the active skill manifest. Missing or different versions require reconciliation within this invocation using release-and-bootstrap.md and project-bootstrap.mjs; automatically update recognized unmodified templates with backups, preserve custom project rules through a scoped merge, then verify freshness. For release, check branch freshness before bootstrap writes. No product bootstrap in the skill-package root or for ordinary questions.
+Follow explicit project recording requirements, including bootstrap AGENTS §9 portable terminal reports, without duplicate lifecycles or changing skill-package defaults.
+Follow recommendations.md in every operation: proactively give supported advice with gaps, assumptions and confidence. Advice grants no write authority, task artifacts or prompt version.
 
 Use existing requester authorization; never require a generated prompt merely to repeat approval.
 - light: bounded authorized work; concise current/recent memory and milestone audit; no tasks.

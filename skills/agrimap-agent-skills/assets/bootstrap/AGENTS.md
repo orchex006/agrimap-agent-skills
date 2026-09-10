@@ -1,6 +1,6 @@
 # กติกากลาง Changelog, Release และ Deployment
 
-<!-- AGRIMAP BOOTSTRAP VERSION: 3.6.1 -->
+<!-- AGRIMAP BOOTSTRAP VERSION: 4.1.0 -->
 
 ไฟล์นี้เป็น canonical instruction ของ repository สำหรับ Codex, Claude Code, Gemini CLI, Cursor และผู้พัฒนา โดยไม่ต้องมี AgriMap skills หรือ local Git hook กติกา Markdown ช่วยกำกับพฤติกรรม; Agent ใช้ .NET Global Tool `agm-release` ตรวจ local gate และตรวจหลักฐาน Git ตามไฟล์นี้ ห้ามอนุมานว่า Jenkins บังคับ release gate อยู่ ส่วน GitLab Protected Branch/Tag ต้องตั้งค่าฝั่ง server แยกต่างหาก
 
@@ -108,6 +108,8 @@ Normalize ได้เฉพาะ case/whitespace และ semantic phrase bou
   ```
 
 - จำแนก staged/unstaged/untracked ทุกไฟล์ ห้ามทิ้ง/เขียนทับ unrelated changes และห้าม deploy จาก unknown dirty state
+- ก่อนเขียน bootstrap/release artifacts ของ release ใหม่ ให้ fetch แล้วตรวจ local `develop`, `jenkins`, `jenkins-release` เทียบ remote branch ชื่อเดียวกันให้ครบ แยก equal/behind-only/ahead-only/diverged/missing; fetch อย่างเดียวไม่แปลว่า local pull แล้ว ใช้โฟลเดอร์ repository ที่ผู้ใช้ระบุ ไม่ clone/copy project หรือสร้าง worktree ใหม่อัตโนมัติ ไม่ใช้การมี develop เปิดอยู่หรือไฟล์ bootstrap/log ที่ Agent เพิ่งเขียนเป็นเหตุให้แยกโฟลเดอร์
+- Branch ที่ behind-only ให้ `git switch <branch>` และ `git pull --ff-only <remote> <same-branch>` ในโฟลเดอร์เดิมเมื่อ switch ได้อย่างปลอดภัย ก่อนเตรียม candidate ให้กลับ develop; equal ไม่ต้อง pull ส่วน ahead-only ต้องตรวจ local commits และ diverged ต้องวิเคราะห์จริง ไม่ reset/force/stash เพื่อผ่าน gate หาก dirty ขวาง switch/pull ให้จำแนก run-owned กับ unrelated ก่อนและรายงานเฉพาะปัญหาที่ต้องตัดสิน ไม่ commit งานนอก scope เพื่อทำให้สะอาด การ sync local jenkins-release กับ remote ของมันไม่ใช่ merge จาก jenkins/develop และไม่ใช่สิทธิ์ push/promote Production
 - Stage เฉพาะ path ที่ยืนยันแล้ว เช่น `git add -- <scoped-files>`; ห้าม `git add .` และ `git add -A`
 - ห้าม force push, destructive reset, shared-history rewrite, tag move/delete/reuse ต่าง SHA หรือแก้ conflict ด้วยการเดา
 - Divergence/conflict/failed verification/missing permission/tag collision/remote mismatch ให้หยุดเฉพาะ mutation ที่ได้รับผลกระทบและขั้นที่ขึ้นกับมัน แต่ต้องตรวจหลักฐานและทางเลือกที่ปลอดภัยต่อก่อนขอ decision; ห้ามจบเพียงข้อความว่าไปต่อไม่ได้ สำหรับ divergence ใช้ขั้นวิเคราะห์ใน §6.2 และรูปแบบข้อเสนอใน §8
@@ -247,7 +249,7 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 - `jenkins-release` ต้อง merge จาก **exact verified SHA ของ `jenkins`** ที่เพิ่ง push และ verify กับ remote แล้ว ไม่ใช่จาก `develop` และไม่ใช่จาก local branch ที่ยังไม่ verify
 - "ผ่าน jenkins gate" ในเอกสารนี้หมายถึง **code ต้องไหลผ่าน branch `jenkins` ก่อน** เป็นข้อบังคับเรื่องลำดับ ไม่ได้แปลว่าต้องรอ pipeline เขียว Agent ทำ `jenkins` แล้วต่อ `jenkins-release` ได้ทันทีในรอบเดียว
 - ทุกขั้นใช้ `--ff-only` ถ้า fast-forward ไม่ได้ให้พัก merge/push ขั้นนั้นและทำ divergence diagnosis ด้านล่าง ห้ามสร้าง merge commit หรือ force push อัตโนมัติ
-- ก่อนเริ่ม promote worktree ที่ใช้ promotion ต้องสะอาด เพราะ `git switch` จะลาก staged/unstaged changes ข้าม branch ไปด้วย; ใช้ isolated worktree ได้โดยรักษางานใน worktree เดิมไว้
+- ก่อนเริ่ม promote ให้ตรวจและจัดการ scoped commit phase ในโฟลเดอร์เดิมให้ครบก่อน switch branch ห้ามลาก unrelated staged/unstaged changes ข้าม branch; ถ้า switch/pull ยังติดจริงให้รายงานไฟล์และ integration decision ไม่สร้าง clone/worktree อัตโนมัติ
 - **เลข version แก้ที่ `develop` เท่านั้น** ทุกกรณี: `prepare` เขียน owner file ตอนอยู่บน `develop`, commit และ push `develop` ให้เสร็จก่อน แล้วเลขจึงเดินทางไปกับ `--ff-only` merge เอง ห้าม checkout ไป `jenkins` หรือ `jenkins-release` แล้วแก้ `Jenkinsfile`/`Jenkinsfile_Production` ที่นั่น เพราะจะทำให้ branch diverge และ fast-forward รอบถัดไปพัง
 - กรณีที่ขึ้นเฉพาะ Production (`Version Production`, `Version + Tags`) `jenkins` ยังต้องถูก promote ให้ทันเสมอ เพียงแต่ `Jenkinsfile` ไม่ถูก bump ในรอบนั้น
 - mode กลุ่ม `prepare-*` (`Prepare Inhouse`, `Prepare Production`, `Prepare Both`) **จบที่ push `develop` สำเร็จ ห้าม promote branch ต่อ** แม้จะเห็นว่า `jenkins` หรือ `jenkins-release` ตามหลังอยู่ ให้รายงาน branch promotion และ pipeline เป็น `not requested` พร้อมแจ้ง exact verified develop SHA เพื่อให้คนนำไป promote เองตามลำดับใน §6.2
@@ -303,7 +305,7 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 
 - หลัง fetch แยกตรวจสองความสัมพันธ์: local target กับ `origin/<target>` และ `origin/<target>` กับ exact verified source SHA; local branch ที่ diverged ไม่ใช่หลักฐานว่า remote promotion ทำไม่ได้
 - ตรวจ ancestry ด้วย `git merge-base --is-ancestor`, commit differences ด้วย `git log --left-right` และ actual file diffs รวม local-only commits; จำนวน commits และ commit subjects เป็นเพียงเบาะแส ไม่พิสูจน์ code conflict หรือว่างานใดควรถูกทิ้ง คำสั่ง ancestry exit 1 หมายถึงไม่เป็น ancestor ส่วน exit อื่นที่เป็น error ต้องตรวจแยก
-- ถ้า remote target เป็น ancestor ของ verified source และติดเฉพาะ local target ให้ใช้ isolated worktree จาก remote target เพื่อทำ `--ff-only` และ normal push ไป target ภายใน promotion ที่ owner อนุญาตแล้วได้ โดยเก็บ local branch/commits เดิมไว้; ห้าม reset/delete local branch หรือรวม local-only commits ที่ยังไม่ได้ตรวจขอบเขต ห้ามถามยืนยัน push ซ้ำเมื่อ authorization เดิมครอบคลุม
+- ถ้า remote target เป็น ancestor ของ verified source แต่ติดเฉพาะ local target ให้ตรวจ local-only commits และเสนอการรวมประวัติในโฟลเดอร์เดิมตาม scope ที่อนุญาต; ห้ามสร้าง clone/worktree, reset/delete local branch หรือรวม local-only commits ที่ยังไม่ได้ตรวจขอบเขตเพื่อข้ามปัญหา การเปลี่ยน checkout ต้องมีคำสั่งผู้ใช้ชัดเจน ห้ามถามยืนยัน push ซ้ำเมื่อ authorization เดิมครอบคลุม
 - ถ้า remote target กับ verified source diverged จริง ให้ตรวจ merge feasibility ด้วยเครื่องมือที่ไม่แก้ branch/worktree เช่น `git merge-tree` เมื่อรองรับ และรายงาน conflict paths หรือผลตรวจที่พิสูจน์ได้; ถ้าเครื่องมือไม่รองรับให้ระบุข้อจำกัด ห้ามอ้างว่า merge ผ่านโดยยังไม่ได้ตรวจ
 - เสนอทางเลือกที่รักษาประวัติ พร้อมวิธีแนะนำและผลกระทบ การใช้ non-fast-forward merge เป็นข้อยกเว้นต่อกติกาปัจจุบัน ต้องมี owner decision ที่ครอบคลุมวิธีรวมประวัติและการตรวจผลก่อนลงมือ; การไม่พบ conflict ไม่ใช่สิทธิ์สร้าง merge commit อัตโนมัติ
 - หาก owner อนุมัติ merge commit ต้องตรวจ source ancestry และ merged content แทนสมมติฐานว่า source/target SHA เท่ากัน บันทึก target SHA ใหม่และ verify remote target ให้ตรง SHA ที่ push; Production ต้องรับ exact verified jenkins SHA และ tag ต้องชี้ exact verified Production SHA ตามเดิม
@@ -394,7 +396,7 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 
 ### 9.2 Run identity และรูปแบบ path
 
-- งานที่แก้ repository หรือสร้างผลลัพธ์ durable ต้องมี human requester ที่ยืนยันจากบทสนทนา ห้ามใช้ชื่อเครื่อง, OS user หรือ Git author แทน หากไม่ทราบให้ถามก่อนเขียน
+- งานที่แก้ repository หรือสร้างผลลัพธ์ durable ให้ใช้ human requester ที่ยืนยันแล้วในบทสนทนา/host context เดิมก่อน หากไม่มี local state ไม่ได้แปลว่าต้องถามชื่อซ้ำ ตรวจ session ปัจจุบัน, confirmed local-user record และ session ที่ยังใช้ได้ของเครื่อง/ผู้ใช้เดียวกันใน repository นี้ก่อนถาม; ถ้ามี runtime ใช้ `agm-workspace.mjs requester --cwd <project> --session <session>` แบบอ่านอย่างเดียว แล้วส่งชื่อที่ยืนยันแล้วผ่าน `--requested-by` ให้ start/identify เมื่อจำเป็น ไม่ยืนยันชื่อใหม่ทุกวันสำหรับ persistent confirmation และไม่เดาจาก Git author/OS user หรือ copied audit history เพียงอย่างเดียว ถ้าหลักฐานที่ยืนยันยังขาดหรือขัดกันจึงถามครั้งเดียว ตัวตนไม่ใช่สิทธิ์อนุมัติ release
 - ใช้เวลา `Asia/Bangkok`; `RUN_ID` รูปแบบ `ddHHmmss` และ slug แบบ lowercase-kebab-case หาก ID/path ชนกับของเดิมให้ใช้วินาทีถัดไป ห้ามรวมสอง run
 - ใช้ path มาตรฐาน:
   - decision: `decisions/YYYY-MM/<RUN_ID>-<slug>.md`
@@ -422,7 +424,7 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 ### 9.4 Portable lifecycle
 
 1. อ่าน `AGENTS.md`, `.agrimap-agent/memory/project.md` ถ้ามี, `git status --short`, staged/unstaged/untracked และ branch/HEAD ก่อนเขียน; หาก memory ไม่มีให้ทำ indexing และสร้าง path ตาม §3 ภายในงานที่ได้รับอนุญาต
-2. ยืนยัน requester, สร้าง `RUN_ID`, current/recent memory และ append `created` log โดยไม่พึ่ง skill หรือ helper script
+2. ใช้ requester ที่ยืนยันไว้ตาม §9.2 ก่อนถามซ้ำ แล้วสร้าง `RUN_ID`, current/recent memory และ append `created` log โดยไม่บังคับให้มี skill หรือ helper script
 3. ก่อน mutation ระบุ objective/non-goals, exact write boundary, logic ที่เปลี่ยน/ต้องคงเดิม, วิธีที่เล็กสุด และ acceptance/verification
 4. ระหว่างทำงาน บันทึกเฉพาะ material decision หรือ milestone ที่ outcome เปลี่ยน; raw command output อยู่ใน terminal ไม่คัดลอกลง memory/log
 5. ก่อนปิดงานรัน verification ที่เหมาะสมและ `git diff --check`; docs-only ใช้ `tests: not applicable` ได้แต่ห้ามอ้างว่าทดสอบ feature แล้ว
