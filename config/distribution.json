@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "userDocuments": [
+    "COMMAND-COOKBOOK.md", "DOCTOR.md", "GETTING-STARTED.md", "MAINTAINING.md",
+    "MIGRATION-3.0.md", "RELEASE.md", "TROUBLESHOOTING.md", "USAGE.md", "WORKFLOWS.md", "VERSIONS.md"
+  ]
+}

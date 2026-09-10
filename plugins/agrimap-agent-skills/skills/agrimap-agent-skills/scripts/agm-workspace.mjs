@@ -21,7 +21,7 @@ import {
   IDENTITY_SCHEMA_VERSION,
   isIdentitySource,
   localAuditMetadata,
-  normalizeIdentity,
+  readConfirmedIdentity,
 } from "./identity.mjs";
 import { isLogEvent, logEventError, MILESTONE_TYPES, QA_FAILED_EVENT } from "./log-events.mjs";
 import { loadTaskArtifactSchema } from "./task-artifact-schema.mjs";
@@ -439,14 +439,7 @@ async function identify(state, args) {
 
 async function sessionIdentity(state, sessionId, defaultProvider = "unknown") {
   if (!sessionId) return null;
-  try {
-    return normalizeIdentity(await readJson(sessionIdentityPath(state, sessionId)), { defaultProvider });
-  } catch {
-    const local = localAuditMetadata();
-    const userKey = safeSessionId(`${local.machine}-${local.osUser}`);
-    const remembered = await readJson(path.join(state, 'runtime', 'users', `${userKey}.json`)).catch(() => null);
-    return remembered ? normalizeIdentity({ ...remembered, sessionId }, { defaultProvider }) : null;
-  }
+  return readConfirmedIdentity(state, sessionId, {defaultProvider});
 }
 
 function gitRequesterSuggestion(root) {
@@ -737,7 +730,7 @@ async function start(root, args) {
     return { ok: false, code: "REQUEST_OBJECTIVE_REQUIRED", needsObjective: true, message: "--title or --objective is required so the durable audit can record what was requested." };
   }
 
-  if (args.owner || args.requestedBy) {
+  if (args.owner || args.requestedBy || args['requested-by']) {
     const identity = await identify(state, args);
     if (!identity.ok) return identity;
   }
@@ -750,8 +743,8 @@ async function start(root, args) {
       lastRequester: confirmedIdentity?.requestedBy || null,
       suggestedRequester: gitRequesterSuggestion(root),
       message: confirmedIdentity?.expired
-        ? "Requester confirmation expired; confirm the human requester again before substantive task work."
-        : "Requester is required before substantive task work.",
+        ? "No usable local confirmation remains. Reuse a confirmed requester from the current conversation via --requested-by; ask once only if that evidence is also missing or conflicting."
+        : "No local requester confirmation found. Reuse confirmed conversation identity via --requested-by before asking the human once.",
     };
   }
   const requestedBy = confirmedIdentity.requestedBy;
@@ -2168,6 +2161,12 @@ const root = workspaceRoot(args.cwd || process.cwd());
 let result;
 
 switch (command) {
+  case "requester": {
+    const identity = await readConfirmedIdentity(path.join(root, '.agrimap-agent'), args.session, {defaultProvider: args.provider});
+    result = {ok:true, identity, needsRequester: !identity || identity.expired,
+      message: 'Read-only local attribution lookup. Reuse confirmed conversation identity when local evidence is missing; identity does not grant release approval.'};
+    break;
+  }
   case "init":
     result = await init(root, args);
     break;
@@ -2198,7 +2197,7 @@ switch (command) {
     result = await prune(root);
     break;
   default:
-    result = { ok: false, message: "Use init, identify, start, checkpoint, validate, complete, close, history, or prune." };
+    result = { ok: false, message: "Use requester, init, identify, start, checkpoint, validate, complete, close, history, or prune." };
 }
 
 process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);

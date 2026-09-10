@@ -2,15 +2,68 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {mkdir,readFile,readdir,writeFile,stat} from 'node:fs/promises';
 import path from 'node:path';
+import {createHash} from 'node:crypto';
 import {createHarness,projectRoot} from '../helpers/harness.mjs';
 import {selectWorkflow,classifyRequest,instructionProfile,verificationDecision,sqlContextToolAllowed,validateReadQuery} from '../../skills/agrimap-agent-skills/scripts/governance-policy.mjs';
-import {normalizeIdentity,confirmationExpiry} from '../../skills/agrimap-agent-skills/scripts/identity.mjs';
+import {normalizeIdentity,confirmationExpiry,localAuditMetadata} from '../../skills/agrimap-agent-skills/scripts/identity.mjs';
 import {createPromptVersion} from '../../skills/agrimap-agent-skills/scripts/agm-prompt-version.mjs';
 import {planBootstrap,applyBootstrap} from '../../skills/agrimap-agent-skills/scripts/project-bootstrap.mjs';
 
 const present = p => stat(p).then(()=>true,()=>false);
 async function fixture(t){const h=await createHarness('agrimap-v3-');t.after(()=>h.cleanup());return h;}
 const body = detail => `# Prompt Result\n\n## Main Assignment\n${detail}\n\n## Subagent Assignments\nNone — Main owns all work\n\n## Acceptance Criteria\nObserved requested outcome.\n\n## Deviation and Handoff Contract\nPreserve scope.\n`;
+
+test('bootstrap executable accepts plan/apply/upgrade and rejects unknown commands without writes',async t=>{
+ const h=await fixture(t),script=path.join(projectRoot,'skills/agrimap-agent-skills/scripts/project-bootstrap.mjs');
+ assert.equal(h.run(script,['plan','--target',h.temp,'--kind','be-main']).ok,true);
+ assert.equal(await present(path.join(h.temp,'AGENTS.md')),false);
+ assert.equal(h.run(script,['apply','--target',h.temp,'--kind','be-main']).applied,true);
+ assert.equal(h.run(script,['upgrade','--target',h.temp,'--kind','be-main']).applied,true);
+ const before=await readFile(path.join(h.temp,'AGENTS.md'));
+ const bad=h.spawn(script,['unknown','--target',h.temp,'--kind','be-main']);
+ assert.equal(bad.status,1);assert.match(bad.stderr,/Use plan/);
+ assert.deepEqual(await readFile(path.join(h.temp,'AGENTS.md')),before);
+});
+
+test('start accepts the documented requested-by flag using existing conversation confirmation',async t=>{
+ const h=await fixture(t);
+ const r=h.run(h.scripts.workspace,['start','--operation','execute','--session','current','--requested-by','006006','--title','Authorized fix']);
+ assert.equal(r.activeTask.requestedBy,'006006');
+});
+
+test('hook and runtime reuse a confirmed local session even without a users registry',async t=>{
+ const h=await fixture(t),dir=path.join(h.temp,'.agrimap-agent/runtime/sessions');
+ await mkdir(dir,{recursive:true});
+ const identity={schemaVersion:2,sessionId:'previous',requestedBy:'006006',identitySource:'manual-confirmed',confirmedAt:new Date().toISOString(),expiresAt:null,...localAuditMetadata()};
+ await writeFile(path.join(dir,'previous.json'),JSON.stringify(identity));
+ // An expired current-session file must not mask a newer confirmation for this requester.
+ await writeFile(path.join(dir,'current.json'),JSON.stringify({...identity,sessionId:'current',confirmedAt:'2020-01-01T00:00:00Z',expiresAt:'2020-01-02T00:00:00Z'}));
+ const hook=h.run(h.scripts.hook,['--provider','codex'],{cwd:h.temp,session_id:'current',hook_event_name:'UserPromptSubmit',prompt:'$agm-release indexing'});
+ assert.match(hook.hookSpecificOutput.additionalContext,/Confirmed requester: 006006/);
+ const started=h.run(h.scripts.workspace,['start','--operation','execute','--session','current','--title','Authorized fix']);
+ assert.equal(started.activeTask.requestedBy,'006006');
+});
+
+test('requester lookup is read-only and rejects revoked, expired, foreign and ambiguous identities',async t=>{
+ const h=await fixture(t),dir=path.join(h.temp,'.agrimap-agent/runtime/sessions');
+ const lookup=()=>h.run(h.scripts.workspace,['requester','--session','current']);
+ assert.equal(lookup().needsRequester,true);
+ assert.equal(await present(path.join(h.temp,'.agrimap-agent')),false);
+ await mkdir(dir,{recursive:true});
+ const valid={schemaVersion:2,requestedBy:'006006',identitySource:'manual-confirmed',confirmedAt:new Date().toISOString(),expiresAt:null,...localAuditMetadata()};
+ for(const override of [{machine:'another-machine'},{osUser:'another-user'},{expiresAt:'2020-01-01T00:00:00Z'},{revoked:true}]) {
+  await writeFile(path.join(dir,'previous.json'),JSON.stringify({...valid,...override}));
+  assert.equal(lookup().needsRequester,true);
+ }
+ await writeFile(path.join(dir,'previous.json'),JSON.stringify(valid));
+ assert.equal(lookup().identity.requestedBy,'006006');
+ await writeFile(path.join(dir,'other.json'),JSON.stringify({...valid,requestedBy:'another-requester'}));
+ assert.equal(lookup().needsRequester,true);
+ await writeFile(path.join(dir,'current.json'),JSON.stringify({...valid,revoked:true}));
+ assert.equal(lookup().needsRequester,true);
+ assert.equal(await present(path.join(h.temp,'.agrimap-agent/runtime/users')),false);
+ assert.equal(await present(path.join(h.temp,'.agrimap-agent/tasks')),false);
+});
 
 test('questions do not initialize a workspace, require identity, or create tasks',async t=>{
  const h=await fixture(t);
@@ -32,6 +85,48 @@ test('risk and real tracking select depth; model scaffolding is independent',()=
  assert.equal(verificationDecision({kind:'discussion'}),'none');
  assert.equal(verificationDecision({kind:'docs'}),'structure-and-links');
  assert.equal(verificationDecision({behaviorChanged:true,evidenceMatches:true}),'reuse-matching-evidence');
+});
+
+test('doctor inspection never starts identity or task state; update is an explicit write action',async t=>{
+ const h=await fixture(t);
+ for(const action of [null,'status','version','check']) {
+  const args=['start','--operation','doctor','--title','Inspect AGM readiness'];
+  if(action)args.push('--action',action);
+  assert.equal(h.run(h.scripts.workspace,args).started,false);
+ }
+ assert.equal(await present(path.join(h.temp,'.agrimap-agent')),false);
+ assert.equal(selectWorkflow({operation:'doctor',action:'update'}).depth,'light');
+ assert.equal(classifyRequest({recognized:true,prompt:'Explain `agm-doctor update`'}).active,false);
+});
+
+test('reviewed bootstrap merges preserve custom rules, require backup, and detect later drift',async t=>{
+ const h=await fixture(t),opts={target:h.temp,kind:'be-main'};
+ await applyBootstrap(opts);
+ const file=path.join(h.temp,'AGENTS.md'),before=await readFile(file);
+ const digest=value=>createHash('sha256').update(value).digest('hex');
+ const backupHash=digest(before),merged=Buffer.concat([before,Buffer.from('\nProject-specific rule: retain the custom API naming convention.\n')]);
+ await writeFile(file,merged);
+ assert.equal((await planBootstrap(opts)).ok,false);
+ const reviewedMerges=[{target:'AGENTS.md',sha256:digest(merged),backupHash,reason:'Reviewed bundle rules and retained project API naming.'}];
+ await assert.rejects(applyBootstrap({...opts,reviewedMerges}),/BACKUP_REQUIRED/);
+ const backup=path.join(h.temp,'.agrimap-agent/runtime/bootstrap-backups',backupHash,'AGENTS.md');
+ await mkdir(path.dirname(backup),{recursive:true});await writeFile(backup,before);
+ await assert.rejects(planBootstrap({...opts,reviewedMerges:[{...reviewedMerges[0],sha256:backupHash}]}),/TARGET_DRIFT/);
+ assert.equal((await applyBootstrap({...opts,reviewedMerges})).applied,true);
+ assert.deepEqual(await readFile(file),merged);
+ assert.equal((await planBootstrap(opts)).freshness,'current');
+ assert.equal((await applyBootstrap(opts)).entries.every(e=>e.status==='unchanged'),true);
+ await writeFile(file,Buffer.concat([merged,Buffer.from('\nUnreviewed edit\n')]));
+ assert.equal((await planBootstrap(opts)).ok,false);
+ const receiptPath=path.join(h.temp,'.agrimap-agent/runtime/bootstrap.json');
+ const receipt=JSON.parse(await readFile(receiptPath,'utf8'));
+ await writeFile(file,merged);receipt.version='0.0.0';await writeFile(receiptPath,JSON.stringify(receipt));
+ assert.equal((await planBootstrap(opts)).ok,false);
+ receipt.version=(await planBootstrap(opts)).version;receipt.files={invalid:'receipt'};await writeFile(receiptPath,JSON.stringify(receipt));
+ assert.equal((await planBootstrap(opts)).ok,false);
+ for(const reviewedMerges of [[null],[{target:'../outside',sha256:backupHash,backupHash,reason:'invalid target'}]]) {
+  await assert.rejects(planBootstrap({...opts,reviewedMerges}),/MERGE_REVIEW_INVALID/);
+ }
 });
 test('identity remains confirmed without daily expiry and is reused only locally',async t=>{
  const h=await fixture(t);

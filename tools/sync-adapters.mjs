@@ -13,6 +13,7 @@ import {
   operationConfigIssues,
   operationEntrypointPath,
   renderAliasSkill,
+  renderAntigravitySkill,
   renderGeminiCommandPrompt,
   renderOperationIndex,
   renderOperationAliasesModule,
@@ -67,7 +68,14 @@ await removeGenerated(operationEntrypointsDirectory);
 await mkdir(operationEntrypointsDirectory, { recursive: true });
 for (const item of operations.operations) {
   await writeFile(operationEntrypointPath(canonicalSkill, item), renderOperationEntrypoint(item), "utf8");
+  await writeFile(path.join(root, 'skills', `${item.name}.md`), renderAntigravitySkill(item), 'utf8');
 }
+// AGY's root manifest deliberately uses only fields in its published schema.
+// The staged package.json remains the version authority for this adapter.
+await writeFile(path.join(root, 'plugin.json'), JSON.stringify({
+  name: packageManifest.name,
+  description: packageManifest.description,
+}, null, 2) + '\n', 'utf8');
 await writeFile(
   path.join(canonicalSkill, "references", "operation-index.md"),
   renderOperationIndex(operations),
@@ -84,15 +92,33 @@ if (schemaIssues.length) throw new Error(`Invalid task artifact schema:\n- ${sch
 const generatedTaskArtifactDocs = renderTaskArtifactSchemaDocs(taskArtifactSchema);
 for (const relativePath of ["README.md", path.join("docs", "USAGE.md")]) {
   const filePath = path.join(root, relativePath);
-  const content = await readFile(filePath, "utf8");
+  let content = await readFile(filePath, "utf8");
+  if (relativePath === 'README.md') content = content.replace(/^# AgriMap Agent Skills \S+/m, `# AgriMap Agent Skills ${packageVersion}`);
   await writeFile(filePath, replaceTaskArtifactSchemaDocs(content, generatedTaskArtifactDocs), "utf8");
 }
 
 await removeGenerated(pluginSkills);
 await mkdir(pluginSkills, { recursive: true });
 await cp(canonicalSkill, path.join(pluginSkills, "agrimap-agent-skills"), { recursive: true });
+const history = JSON.parse(await readFile(path.join(root, 'config/release-history.json'), 'utf8'));
+const historyRows = history.versions.map(item => {
+  if (!/^\d+\.\d+\.\d+$/.test(item.version) || item.tag !== `v${item.version}` || !/^[a-f0-9]{40}$/.test(item.sha)) throw new Error('INVALID_HISTORICAL_TAG_MAPPING');
+  return `| [${item.tag}](https://github.com/orchex006/agrimap-agent-skills/tree/${item.tag}) | [${item.sha.slice(0, 7)}](https://github.com/orchex006/agrimap-agent-skills/commit/${item.sha}) |`;
+});
+const versionGuidePath = path.join(root, 'docs/VERSIONS.md');
+const versionGuide = (await readFile(versionGuidePath, 'utf8'))
+  .replace(/เอกสารชุดนี้สำหรับ \*\*[^*]+\*\*/, `เอกสารชุดนี้สำหรับ **${packageVersion}**`)
+  .replace(/<!-- AGM-HISTORICAL-TAGS:START -->[\s\S]*?<!-- AGM-HISTORICAL-TAGS:END -->/, `<!-- AGM-HISTORICAL-TAGS:START -->\n\n| Version tag | Exact source commit |\n| --- | --- |\n${historyRows.join('\n')}\n\n<!-- AGM-HISTORICAL-TAGS:END -->`);
+await writeFile(versionGuidePath, versionGuide, 'utf8');
 for (const file of ['README.md', 'CHANGELOG.md']) await cp(path.join(root, file), path.join(pluginRoot, file));
-for (const directory of ["docs", "examples"]) {
+const distribution = JSON.parse(await readFile(path.join(root, 'config/distribution.json'), 'utf8'));
+await removeGenerated(path.join(pluginRoot, 'docs'));
+await mkdir(path.join(pluginRoot, 'docs'), {recursive:true});
+for (const name of distribution.userDocuments) {
+  if (!/^[A-Z0-9.-]+\.md$/.test(name) || ['AGENTS.md', 'DEVELOPMENT.md'].includes(name)) throw new Error('UNSAFE_DOCUMENT_ALLOWLIST');
+  await cp(path.join(root, 'docs', name), path.join(pluginRoot, 'docs', name));
+}
+for (const directory of ["examples"]) {
   await removeGenerated(path.join(pluginRoot, directory));
   await cp(path.join(root, directory), path.join(pluginRoot, directory), { recursive: true });
 }

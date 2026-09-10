@@ -1,6 +1,8 @@
-# AgriMap Agent Skills 3.6.1
+# AgriMap Agent Skills 4.1.0
 
-ชุดคำสั่งสำหรับให้ Agent ช่วยงาน AgriMap ตั้งแต่วิเคราะห์ ออกแบบ แก้โค้ด ตรวจงาน จนถึงเตรียม release ใช้กับ Codex, Claude Code และ Gemini CLI โดยเลือกคำสั่งตามงาน ไม่ต้องเดินครบทุก workflow
+[รุ่นล่าสุด](https://github.com/orchex006/agrimap-agent-skills/releases/latest) · [Tags รุ่นก่อน](https://github.com/orchex006/agrimap-agent-skills/tags) · [เลือกเวอร์ชันและ source ย้อนหลัง](docs/VERSIONS.md)
+
+ชุดคำสั่งสำหรับให้ Agent ช่วยงาน AgriMap ตั้งแต่วิเคราะห์ ออกแบบ แก้โค้ด ตรวจงาน จนถึงเตรียม release ใช้กับ Codex, Claude Code และ Antigravity CLI โดยเลือกคำสั่งตามงาน ไม่ต้องเดินครบทุก workflow
 
 **เริ่มที่ [Getting Started](docs/GETTING-STARTED.md)** — ติดตั้งให้ตรง host แล้วทดลองคำสั่งอ่านอย่างเดียวก่อน
 
@@ -25,7 +27,7 @@
 | --- | --- |
 | Codex | `$agm-analyze ช่วยสรุปโครงสร้างโปรเจกต์นี้จากไฟล์จริง ยังไม่แก้ไฟล์` |
 | Claude Code | `/agrimap-agent-skills:agm-analyze ช่วยสรุปโครงสร้างโปรเจกต์นี้จากไฟล์จริง ยังไม่แก้ไฟล์` |
-| Gemini CLI | `/agm-analyze ช่วยสรุปโครงสร้างโปรเจกต์นี้จากไฟล์จริง ยังไม่แก้ไฟล์` |
+| Antigravity CLI | `/agm-analyze ช่วยสรุปโครงสร้างโปรเจกต์นี้จากไฟล์จริง ยังไม่แก้ไฟล์` |
 
 สิ่งที่ควรได้: คำอธิบายพร้อมตำแหน่งไฟล์ ไม่ใช่การแก้โค้ด สร้าง task หรือรัน test ทั้งโครงการ คำถามทั่วไปพิมพ์ได้ตามปกติ ไม่จำเป็นต้องเรียก skill
 
@@ -41,6 +43,12 @@ Design ทำงานแบบ passive ในคำสั่งที่เห�
 - Bootstrap ติดตั้งเอกสารโครงการ ไม่สร้าง pipeline หรือ deploy; flow release คือ `develop → jenkins → jenkins-release`
 - คำสั่งที่ยกตัวอย่างในเอกสารไม่ใช่การอนุมัติให้ Agent รัน
 
+## ตรวจและอัปเดตแพ็กเกจด้วย agm-doctor
+
+ใช้ `$agm-doctor` เพื่อดูความพร้อม, `$agm-doctor version` เพื่อตรวจรุ่น, `$agm-doctor check` เพื่อตรวจ dependency และ `$agm-doctor update` เพื่ออัปเดต AGM ของ host ปัจจุบัน เลือก host ด้วย `--host codex|claude|antigravity` หรือ pin ด้วย `--to 4.1.0` คำสั่งตรวจอ่านอย่างเดียวและไม่ติดตั้งเครื่องมือที่ขาด ดู [ตารางคำสั่งและสถานะ](docs/DOCTOR.md) และ [Getting Started](docs/GETTING-STARTED.md)
+
+อัปเดตแพ็กเกจแล้วเปิด session ใหม่ หากต้องการอัปเกรด bootstrap ในโครงการใช้ `$agm-release bootstrap upgrade` แยก ไม่เปลี่ยนชื่อ `GEMINI.md`
+
 <a id="agm-release"></a>
 
 ## Release ด้วย `$agm-release`
@@ -51,6 +59,7 @@ Design ทำงานแบบ passive ในคำสั่งที่เห�
 
 | คำสั่ง | สิ่งที่ Agent ทำตามลำดับ | เพิ่มเวอร์ชัน | Push ไปที่ใด | ต้องยืนยันก่อน Production/tag |
 | --- | --- | --- | --- | --- |
+| `$agm-release bootstrap upgrade` | อัปเกรด bootstrap พร้อม backup และรักษากฎเฉพาะโปรเจกต์; ตรวจ version/receipt | ไม่เพิ่ม | ไม่มี | ไม่เกี่ยวข้อง |
 | `$agm-release upgrade` | สำรองและทับไฟล์ contract ที่อยู่ใน bundle พร้อมอัปเดต version tracking; README ทับเฉพาะ managed Deployment block | ไม่เพิ่ม | ไม่มี | ไม่เกี่ยวข้อง |
 | `$agm-release indexing` | Project Backfill: ตรวจ full reachable history/source/diff → เติม project catalog, historical changelog และ README capability/API tables | ไม่เพิ่ม | ไม่มี; แก้ไฟล์ในเครื่อง | ไม่เกี่ยวข้อง |
 | `$agm-release prepare inhouse` | เตรียม Inhouse version → อัปเดต index/changelog → ตรวจความถูกต้อง; ไม่สร้าง release notes | Inhouse +0.0.1 | ไม่มี; เตรียมในเครื่อง | ไม่เกี่ยวข้อง |
@@ -99,4 +108,4 @@ Repository: [orchex006/agrimap-agent-skills](https://github.com/orchex006/agrima
 
 เลขเวอร์ชันใน source ไม่ได้ยืนยันว่า remote หรือ plugin cache ของผู้ใช้ได้รับเวอร์ชันนั้นแล้ว
 
-ตัวอย่างการบันทึก host ใหม่ใช้ **Antigravity CLI**: `provider=antigravity`, `model=unknown` เมื่อ runtime ไม่แจ้ง model ดู [ตัวอย่าง recording](docs/USAGE.md#antigravity-cli-recording-example) ส่วน Gemini CLI adapter เดิมยังเก็บเพื่อ compatibility
+ตัวอย่างการบันทึก host ใหม่ใช้ **Antigravity CLI**: `provider=antigravity`, `model=unknown` เมื่อ runtime ไม่แจ้ง model ดู [ตัวอย่าง recording](docs/USAGE.md#antigravity-cli-recording-example) ส่วน Antigravity CLI adapter เดิมยังเก็บเพื่อ compatibility

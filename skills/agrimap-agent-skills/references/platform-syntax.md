@@ -12,7 +12,7 @@ Use the actual runtime/provider, not the model's brand or copied command text. A
 | --- | --- | --- |
 | Codex | `$agm-analyze`, `$agm-be action=edit` | `$agrimap-agent-skills` |
 | Claude Code | `/agrimap-agent-skills:agm-analyze`, `/agrimap-agent-skills:agm-be action=edit` | `/agrimap-agent-skills:agrimap-agent-skills` |
-| Gemini CLI | `/agm-analyze`, `/agm-be action=edit` | installed router skill when available |
+| Antigravity CLI | `/agm-analyze`, `/agm-be action=edit` | installed router skill when available |
 
 Use the host's actual registered alias if its UI exposes an equivalent qualified skill identifier. Do not present Claude's slash syntax as Codex syntax. These are chat invocations, not shell commands. Quoted/fenced examples do not authorize execution.
 
@@ -44,4 +44,4 @@ For new runs in Antigravity CLI, record `provider: antigravity`. Keep `model` as
 
 Example human-readable report: `Host: Antigravity CLI; Provider: antigravity; Actual model: unknown`. This is recording metadata, not a claim that a particular model executed the work. The AgriMap runtime accepts `--provider antigravity --model unknown` on its existing identity/recording commands; use the confirmed requester and actual session, never an example identity.
 
-Official host reference: [Using AGY CLI](https://www.antigravity.google/docs/cli/using). Keep the legacy Gemini extension/commands for compatibility. Antigravity registration, aliases and hook payload compatibility must be verified in that host; recording support does not certify a full plugin adapter or authorize installation.
+Official host reference: [Using AGY CLI](https://www.antigravity.google/docs/cli/using). Version 3.7.0 supplies root plugin.json and generated flat skills/agm-*.md for native `agy plugin install`. Keep legacy Gemini adapters and GEMINI.md for compatibility. Verify actual aliases through the host UI; use a qualified identifier if shown. AGY hooks/MCP parity and end-to-end installation remain unverified until exercised on that host; no legacy hook payload is silently reused.

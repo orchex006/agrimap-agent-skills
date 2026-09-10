@@ -2,7 +2,7 @@
 
 [เริ่มต้น](GETTING-STARTED.md) · [เลือกคำสั่ง](USAGE.md) · [Workflow](WORKFLOWS.md)
 
-ทุกกล่องในหน้านี้คือ **Agent chat สำหรับ Codex** ไม่ใช่ Terminal ใช้ Claude เปลี่ยน `$agm-X` เป็น `/agrimap-agent-skills:agm-X`; ใช้ Gemini เปลี่ยนเป็น `/agm-X` ส่งทีละโจทย์ ไม่ต้องส่งทั้งหมด
+ทุกกล่องในหน้านี้คือ **Agent chat สำหรับ Codex** ไม่ใช่ Terminal ใช้ Claude เปลี่ยน `$agm-X` เป็น `/agrimap-agent-skills:agm-X`; ใช้ Antigravity เปลี่ยนเป็น `/agm-X` ส่งทีละโจทย์ ไม่ต้องส่งทั้งหมด
 
 แทน `[...]` ด้วยข้อมูลจริงก่อนใช้ ไม่ใส่ password, token, connection string หรือข้อมูลส่วนบุคคลในโจทย์/ไฟล์แนบ
 

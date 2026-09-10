@@ -7,12 +7,12 @@
 ## คำสั่งไม่ขึ้นหรือพิมพ์แล้วไม่ทำงาน
 
 1. ตรวจว่าพิมพ์ใน Agent chat ไม่ใช่ Terminal
-2. Codex ใช้ $agm-X; Claude ใช้ /agrimap-agent-skills:agm-X; Gemini ใช้ /agm-X
+2. Codex ใช้ $agm-X; Claude ใช้ /agrimap-agent-skills:agm-X; Antigravity ใช้ /agm-X
 3. ตรวจว่าติดตั้ง plugin แล้ว ไม่ใช่แค่เพิ่ม marketplace
 4. เปิด session ใหม่ ตรวจรายการ skill/command ของ host
 5. ขอ help ของ alias โดยไม่สั่งงาน เช่น Codex: `$agm-be -h`
 
-ถ้า terminal ไม่รู้จัก plugin subcommand ให้ดู `codex plugin --help`, `claude plugin --help` หรือ `gemini extensions --help` สำหรับ host ที่ใช้ ไม่คัดลอก flag จากอีก host
+ถ้า terminal ไม่รู้จัก plugin subcommand ให้ดู `codex plugin --help`, `claude plugin --help` หรือ `agy plugin --help` สำหรับ host ที่ใช้ ไม่คัดลอก flag จากอีก host
 
 ## Source เป็น 3.0 แต่ Agent ยังทำแบบ 2.x
 
@@ -27,6 +27,10 @@ Repository, installed cache และ session ที่โหลดแล้ว�
 บอก Agent ว่า “เป็นคำถามอ่านอย่างเดียว ไม่ขอ durable report/tracking” หากยังเกิด ให้ส่ง prompt ที่ปกปิดข้อมูลแล้ว พร้อม host, installed version/path และชื่อ artifacts ที่ถูกสร้าง อย่าส่ง raw log ทั้งชุดที่มีข้อมูลส่วนบุคคล
 
 ## ยังขอชื่อใหม่ทุกวัน
+
+ใน 4.1.0 ให้ใช้ชื่อที่ยืนยันแล้วในบทสนทนาก่อน แล้วตรวจ `agm-workspace.mjs requester --session <actual-session>` ใน project เดิม ไม่ใช้ init เป็นคำสั่งตรวจเพราะ init เขียน layout รุ่นนี้แก้ `start --requested-by` ที่เคยถูกมองข้าม และรวม resolver ของ hook/runtime ให้ใช้ session/local confirmation แบบเดียวกัน Persistent confirmation ไม่หมดอายุรายวัน ส่วน expired/revoked หรือข้อมูลจากเครื่องอื่นไม่ใช่ confirmation ใหม่
+
+ถ้า `project-bootstrap.mjs` แจ้ง `args._` undefined ให้ตรวจ path/version ของ bundle ที่โหลด รุ่น 4.1.0 แก้ CLI caller แล้ว อัปเดตจาก canonical package ผ่าน host manager; การแก้ source ไม่เปลี่ยน cache 3.6.1 ของ session ที่ยังเปิดอยู่
 
 v3 default ไม่หมดอายุรายวัน แต่ existing .agrimap-agent/config.json อาจมี identity.confirmationHours เป็น 24 หรือค่าอื่น หรือยังโหลด hook เก่า ตรวจค่าก่อน การยกเลิก expiry เป็นนโยบาย workspace ที่ควรเลือกชัดเจน ไม่เปลี่ยนชื่อผู้สั่งแทนเพื่อผ่าน gate ดู [Migration](MIGRATION-3.0.md)
 

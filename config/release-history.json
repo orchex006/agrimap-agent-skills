@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-09-10",
+  "selection": "Last first-parent origin/main snapshot for each stable package version, with matching Codex, Claude and Gemini manifests. Retrospective source tags only; no rebuilt artifacts or new compatibility claims.",
+  "excluded": [
+    {
+      "version": "9.8.7-test.1",
+      "reason": "Test prerelease, not stable"
+    },
+    {
+      "version": "3.7.0",
+      "reason": "Prepared uncommitted work incorporated into 4.1.0, not an independent historical snapshot"
+    }
+  ],
+  "versions": [
+    {
+      "version": "3.6.1",
+      "tag": "v3.6.1",
+      "sha": "616ca08b20319870aadbe08137402402a6ab2499"
+    },
+    {
+      "version": "3.6.0",
+      "tag": "v3.6.0",
+      "sha": "93f38b48a2df88771557651eef9c51a18d340087"
+    },
+    {
+      "version": "3.5.0",
+      "tag": "v3.5.0",
+      "sha": "ecfb9c0ac4838b25e9034e8bc26bfde30e3ce5eb"
+    },
+    {
+      "version": "3.4.5",
+      "tag": "v3.4.5",
+      "sha": "4182b4a410f520351868e0080e6acc1e3a146275"
+    },
+    {
+      "version": "3.4.1",
+      "tag": "v3.4.1",
+      "sha": "4c1825f71abb6c61ebd253bc925af65faf327810"
+    },
+    {
+      "version": "3.4.0",
+      "tag": "v3.4.0",
+      "sha": "d553462f1f4a4bd55586ffd8a2a7921fae8ce54b"
+    },
+    {
+      "version": "3.2.5",
+      "tag": "v3.2.5",
+      "sha": "8452c5358c63600d546124f431e67ad0b0b5d4f2"
+    },
+    {
+      "version": "3.2.4",
+      "tag": "v3.2.4",
+      "sha": "7fa41c28d064f8e9cb7b5d263c56e564c01e73ca"
+    },
+    {
+      "version": "3.2.3",
+      "tag": "v3.2.3",
+      "sha": "abb6958a5841c865a96d5b8a044935ca7f869993"
+    },
+    {
+      "version": "3.2.2",
+      "tag": "v3.2.2",
+      "sha": "fd2f5a303cc0545e35826cf97b230295a2870854"
+    },
+    {
+      "version": "3.2.1",
+      "tag": "v3.2.1",
+      "sha": "63a15d362248f92be255ecb7101417d097e54f22"
+    },
+    {
+      "version": "3.2.0",
+      "tag": "v3.2.0",
+      "sha": "283e009deb131baaadf40ffeb85d11a22e853910"
+    },
+    {
+      "version": "3.0.1",
+      "tag": "v3.0.1",
+      "sha": "bb84cf44018276eb6ff55e4de2cde15e8bf015a8"
+    },
+    {
+      "version": "2.1.0",
+      "tag": "v2.1.0",
+      "sha": "ce929f045eb8c42ca08074365d42fcd4dc6ee81e"
+    },
+    {
+      "version": "2.0.0",
+      "tag": "v2.0.0",
+      "sha": "5d3ad39788eb7a70de75c85642a317c674bfaf4e"
+    },
+    {
+      "version": "0.1.8",
+      "tag": "v0.1.8",
+      "sha": "f0c9085b7e9b4c845d690756d9dd1395e6b94e6f"
+    },
+    {
+      "version": "0.1.7",
+      "tag": "v0.1.7",
+      "sha": "f7c02fb893ca940b118a9d30bd6184efd37a31bb"
+    },
+    {
+      "version": "0.1.6",
+      "tag": "v0.1.6",
+      "sha": "e45b43db0302c967c030935dff4f5ab8dddf88a7"
+    },
+    {
+      "version": "0.1.5",
+      "tag": "v0.1.5",
+      "sha": "550521b4bb5ff86ab11a4ec6c2f30fc413b63726"
+    },
+    {
+      "version": "0.1.4",
+      "tag": "v0.1.4",
+      "sha": "f9672b0a18207c2830a49e8ef7721dfea50ec999"
+    },
+    {
+      "version": "0.1.3",
+      "tag": "v0.1.3",
+      "sha": "29e38957252ad7023a8e35d66a09802bf3ab7811"
+    },
+    {
+      "version": "0.1.2",
+      "tag": "v0.1.2",
+      "sha": "ab2f9ac22de8a705ac55d109c52c8e4ca36f1522"
+    },
+    {
+      "version": "0.1.1",
+      "tag": "v0.1.1",
+      "sha": "8d73d8f7b5c9db886e6b658f0b571ac8b034a5f9"
+    },
+    {
+      "version": "0.1.0",
+      "tag": "v0.1.0",
+      "sha": "05d847b025a2ded008c5b40c32a1787ad77f4713"
+    }
+  ]
+}

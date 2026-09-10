@@ -14,7 +14,7 @@
 
 ตัวอย่าง chat ด้านล่างใช้ **Codex** ถ้าใช้ host อื่น เปลี่ยนเฉพาะ prefix:
 
-| Codex | Claude Code | Gemini CLI |
+| Codex | Claude Code | Antigravity CLI |
 | --- | --- | --- |
 | `$agm-be` | `/agrimap-agent-skills:agm-be` | `/agm-be` |
 | `$agm-prompt` | `/agrimap-agent-skills:agm-prompt` | `/agm-prompt` |
@@ -36,7 +36,8 @@
 | `agm-qa` | ตรวจตาม acceptance | หลักฐานผ่าน/ไม่ผ่าน/ติดข้อจำกัด; ไม่แก้ product |
 | `agm-prompt` | กลั่นโจทย์เป็นคำสั่งเก็บและส่งต่อ | Prompt Result เมื่อพร้อม; ไม่ implement |
 | `agm-exec` | ลงมือทำโจทย์ที่อนุมัติแล้ว | แก้ไขใน scope และตรวจผล; ไม่บังคับมี prompt file |
-| `agm-release` | indexing, prepare, pipeline, promote และ release full/production/inhouse | ตรวจ/ติดตั้งเครื่องมือที่ขาด; ใช้เลขที่เจ้าของระบุ หรือเพิ่ม PATCH ตาม owner; ขอคำยืนยันก่อน Production/tag ดู [ตารางครบทุกคำสั่ง](../README.md#agm-release) |
+| `agm-doctor` | ตรวจรุ่น ความพร้อม และอัปเดต AGM ตาม host | status/version/check อ่านอย่างเดียว; update เปลี่ยนเฉพาะแพ็กเกจ ดู [ตารางคำสั่ง](DOCTOR.md) |
+| `agm-release` | bootstrap upgrade, upgrade, indexing, prepare, pipeline, promote และ release full/production/inhouse | ตรวจ/ติดตั้งเครื่องมือที่ขาด; ใช้เลขที่เจ้าของระบุ หรือเพิ่ม PATCH ตาม owner; ขอคำยืนยันก่อน Production/tag ดู [ตารางครบทุกคำสั่ง](../README.md#agm-release) |
 
 `agrimap-agent-skills` เป็น router สำหรับกรณียังเลือกไม่ได้ มันเลือกหนึ่ง operation แล้วหยุด ไม่ใช่ executor อีกตัว และไม่จำเป็นต้องเรียกก่อนคำสั่งตรง
 
@@ -120,4 +121,4 @@ For new runs in Antigravity CLI, record `provider: antigravity`. Keep `model` as
 
 Example human-readable report: `Host: Antigravity CLI; Provider: antigravity; Actual model: unknown`. This is recording metadata, not a claim that a particular model executed the work. The AgriMap runtime accepts `--provider antigravity --model unknown` on its existing identity/recording commands; use the confirmed requester and actual session, never an example identity.
 
-Official host reference: [Using AGY CLI](https://www.antigravity.google/docs/cli/using). Keep the legacy Gemini extension/commands for compatibility. Antigravity registration, aliases and hook payload compatibility must be verified in that host; recording support does not certify a full plugin adapter or authorize installation.
+Official host reference: [Using AGY CLI](https://www.antigravity.google/docs/cli/using). Version 4.1.0 supplies root plugin.json and generated flat skills/agm-*.md for native `agy plugin install`. Keep legacy Gemini adapters and GEMINI.md for compatibility. Verify actual aliases through the host UI; use a qualified identifier if shown. AGY hooks/MCP parity and end-to-end installation remain unverified until exercised on that host; no legacy hook payload is silently reused.
