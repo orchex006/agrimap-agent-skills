@@ -11,6 +11,7 @@ Release history, not current operating instructions. Start with [Getting Started
 - Document exact-version selection, rollback limitations and evidence-based historical backfill; do not invent historical releases.
 - Bump source and generated version metadata to 4.1.0 at the requester's direction; incorporate the previously prepared 3.7.0 changes below.
 - Show the current package version in documentation and retain 24 evidence-backed historical source tags; exclude the test prerelease and unpublished 3.7.0 draft from historical releases.
+- Restore 62 canonical golden Git blobs to the exact raw bytes already preserved by committed mirrors and manifest hashes; repair inherited LF/CRLF index drift without changing golden content or rehashing evidence.
 
 ## 3.7.0 — 2026-09-10 (prepared changes; publication not verified)
 
