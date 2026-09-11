@@ -4,7 +4,7 @@
 
 คำสั่งปัจจุบันใช้ [release-workflow](../skills/agrimap-agent-skills/references/release-workflow.md), [release-steps](../skills/agrimap-agent-skills/references/release-steps.md) และกฎของ target ภายใต้สิทธิ์ที่ผู้ใช้ให้ ส่วน [canonical project AGENTS](../skills/agrimap-agent-skills/assets/bootstrap/AGENTS.md) เป็นต้นทาง bootstrap และ legacy intents หน้านี้ไม่ใช่คำสั่งเผยแพร่ตัว skill package และการอ่านตัวอย่างไม่อนุญาตให้ execute
 
-## คำสั่ง agm-release ทั้งหมดใน 4.1.0
+## คำสั่ง agm-release ทั้งหมดใน 4.1.1
 
 ระบุโครงการเป้าหมายแล้วพิมพ์ใน Agent chat: Codex ใช้ `$agm-release`, Claude ใช้ `/agrimap-agent-skills:agm-release`, Antigravity ใช้ `/agm-release` ตามชื่อที่ลงทะเบียน Agent เป็นผู้ตรวจและดำเนินการ คำสั่งเหล่านี้ไม่ใช่ syntax ของ .NET CLI
 
@@ -23,6 +23,14 @@
 | `release inhouse` | indexing → prepare inhouse → pipeline inhouse | เฉพาะ develop/jenkins; ไม่แก้ Production notes/tag |
 
 เลข Version/Patch ที่ผู้ใช้ระบุชัดมีลำดับเหนือค่า PATCH+1 และกฎ default รุ่นเก่า อ่าน baseline จริงก่อนคำนวณ ไม่ถามอนุมัติเลขเดิมซ้ำ เช่น Inhouse `1.0.0 → 1.0.8` และ Production `1.0.4 → 1.0.5` ต้องได้ notes `1.0.5.md` และ tag `v1.0.5` ไม่ใช้เลข Inhouse แทน
+
+## การตัดสินใจและขอคำยืนยัน
+
+Agent ประเมิน scope, diff, เจ้าของงาน และการกู้คืนก่อนทำงาน ขั้นตอนที่ปลอดภัยและอยู่ในสิทธิ์ของคำสั่งเดิมให้ทำต่อพร้อม progress สั้น ๆ ไม่ถามยืนยันทุกครั้ง เช่น pull แบบ fast-forward ที่ปลอดภัย, bootstrap ที่มี backup, เตรียม notes และตรวจ candidate ส่วน prepare/indexing ไม่ได้รับสิทธิ์ push เพิ่มจากกฎนี้
+
+สำหรับ Production ให้รวมคำยืนยันก่อนเผยแพร่ branch/tag เป็นครั้งเดียวต่อแผนที่ไม่เปลี่ยน สรุปสั้น ๆ ว่า **ยืนยันอะไร / หลักฐานอะไร / ผลกระทบอะไร / คำสั่งกู้คืนและข้อจำกัด** โดยใช้ SHA/path ที่ตรวจจริง รายละเอียดและ release notes ให้แนบลิงก์แทนการร่ายยาว หาก retry/resume แล้ว approval เดิมยังตรง ให้ทำเฉพาะขั้นที่เหลือ ไม่ถามหรือ push checkpoint ที่สำเร็จซ้ำ
+
+ยังต้องหยุดถามก่อนขั้นที่มีขอบเขตไม่ชัด เสี่ยงสูญเสียงาน สิทธิ์ไม่พอ หรือ candidate/ปลายทางเปลี่ยนอย่างมีนัยสำคัญ การกู้คืนได้ไม่ใช่สิทธิ์เพิ่มและไม่ข้าม server approval: revert Git ไม่ได้ย้อน pipeline/deployment ที่เริ่มแล้ว ห้ามเสนอ force-push หรือย้าย/ลบ published tag เป็นทางลัด และแผน rollback ยังไม่ใช่คำสั่งให้ลงมือ rollback
 
 ## ความสามารถร่วมและการทำต่อเมื่อพบปัญหา
 
