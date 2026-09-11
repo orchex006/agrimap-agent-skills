@@ -54,4 +54,24 @@ update ไม่อัปเกรดตัว Codex/Claude/Antigravity ไม�
 $agm-release bootstrap upgrade
 ```
 
-คำสั่งนี้รักษากฎเฉพาะโปรเจกต์ มี backup และตรวจ version/receipt ส่วน `agm-release upgrade` เดิมเป็นโหมดแทนที่ contract ใน bundle พร้อม backup ดูขอบเขตใน [Release](RELEASE.md#bootstrap)
+Agent ตรวจ diff ก่อน โดยขอบเขต bootstrap ใน bundle 4.1.0 มีไฟล์ต่อไปนี้ (path อ้างอิงจาก root ของโครงการเป้าหมาย ไม่ใช่โฟลเดอร์ cache ของ skill):
+
+| ไฟล์ | สิ่งที่ Agent จะอัปเดต |
+| --- | --- |
+| `AGENTS.md` | อัปเดตกฎ bootstrap และ version marker โดยรักษา/merge กฎเฉพาะโปรเจกต์ |
+| `CLAUDE.md` | อัปเดต pointer ไปยัง `AGENTS.md` สำหรับ Claude โดยรักษาข้อกำหนดเฉพาะที่มีอยู่ |
+| `GEMINI.md` | อัปเดต pointer ไปยัง `AGENTS.md`; ยังคงใช้ชื่อไฟล์นี้สำหรับ Antigravity |
+| `CURSOR.md` | อัปเดต pointer ไปยัง `AGENTS.md` สำหรับ Cursor |
+| `README.md` | เพิ่มหรืออัปเดตเฉพาะ Deployment block ระหว่าง `<!-- BEGIN AGRIMAP DEPLOYMENT -->` และ `<!-- END AGRIMAP DEPLOYMENT -->` โดยรักษาเนื้อหาส่วนอื่น |
+| `release-notes/README.md` | อัปเดตคู่มือ release notes ไม่แก้ไฟล์ notes ของรุ่นที่เคยออกแล้ว |
+
+ไฟล์ที่ขาดจะถูกสร้าง ส่วนไฟล์ที่ตรงกับ bundle หรือ reviewed merge เดิมแล้วจะไม่ถูกเขียนซ้ำ รายการนี้เป็นขอบเขตที่ตรวจ ไม่ได้หมายความว่าทุกไฟล์จะเปลี่ยนทุกครั้ง หากพบ custom rules จะ merge อย่างเจาะจงและถามเฉพาะข้อขัดแย้งที่ตัดสินไม่ได้ ไม่เขียนทับกฎเฉพาะโดยเงียบ ๆ
+
+หลักฐานที่เกี่ยวข้องกับการอัปเดต:
+
+| Path | หน้าที่ |
+| --- | --- |
+| `.agrimap-agent/runtime/bootstrap.json` | สร้าง/อัปเดต receipt หลัง apply สำเร็จ บันทึกรุ่น ชนิดโครงการ รายการไฟล์และ hash |
+| `.agrimap-agent/runtime/bootstrap-backups/<hash>/<path เดิม>` | สำรองเนื้อหาเดิมก่อนแทนที่ไฟล์หรือ merge กฎเฉพาะ; ไม่ใช่การ clone โครงการ |
+
+คำสั่งนี้ไม่แก้ Jenkinsfiles, version ของ product, changelog หรือ release notes รุ่นเก่า และไม่ commit/push/tag ส่วน `agm-release upgrade` เดิมเป็นโหมดแทนที่ contract ใน bundle พร้อม backup ดูขอบเขตใน [Release](RELEASE.md#bootstrap)
