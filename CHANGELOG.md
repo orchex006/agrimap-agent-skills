@@ -2,6 +2,14 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.1.1 — 2026-09-11
+
+- Reduce repetitive release confirmations: proceed with assessed, authorized routine steps and consolidate Production branch/tag approval into one concise action/evidence/impact/recovery summary.
+- Reuse matching human approval across retries and resume; retain successful publication checkpoints without duplicate pushes. Reconfirm only missing or materially changed approval.
+- Preserve scope, work-loss, access and server-review safeguards; document recovery commands as plans, not rollback authority or a promise to undo deployment effects.
+- Document all six project bootstrap targets, receipt and backup paths in the doctor guide, including custom-rule preservation and unchanged-file behavior.
+- Regenerate package metadata, bootstrap version tracking and provider documentation for 4.1.1; preserve published tags and release assets.
+
 ## 4.1.0 — 2026-09-10
 
 - Add maintainer-only source governance and development/release/hotfix branches without changing product runtime release rules.
