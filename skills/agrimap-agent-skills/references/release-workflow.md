@@ -18,9 +18,11 @@ These are Agent-chat commands. The .NET CLI only supplies audit, prepare, verify
 
 ## Required execution references
 
+With --flash, [release-flash.md](release-flash.md) replaces full indexing, including H/P/I prerequisites, not publication safeguards.
+
 Read [release-steps.md](release-steps.md) before mutation: it defines all nine exact command sequences, environment ownership, checkpoint evidence and completion. Read [release-tools.md](release-tools.md) for detection, installation and CLI compatibility diagnosis. For these nine commands, their Production-only artifact rule replaces the earlier generic environment-notes guidance in this package. The bootstrap template remains historical installation material; it is not silently rewritten or adopted. If an applicable target instruction conflicts, apply host/user priority first. An explicit owner version already resolves a lower-priority PATCH-only prohibition, including during planning; it needs no additional authority question or file migration. Only an unresolved conflict blocks the affected write.
 
-This procedure is model-independent. The requester's intended audiences are GPT-5.4, GPT-5.5, GPT-5.6 Luna/Terra/Sol, GPT-6 Astra and later; Claude Sonnet 5, Opus 4.8/5; and Antigravity CLI with its actual runtime-reported model (unknown when unavailable). These are requested compatibility targets, not a claim of model availability or successful cross-model tests. Model names and reasoning settings never select a mode, change ownership, skip evidence or grant publication authority.
+This procedure is model-independent across Codex, Claude and Antigravity. Model labels/settings never select modes, change ownership, skip evidence or grant publication authority. Cross-model compatibility remains unverified unless actually tested.
 
 The Agent discovers all paths, versions and SHAs and resolves routine tool/environment problems itself. Never ask a human to calculate a SHA, build Git commands or run the release manually. Ask only for an unresolved intent/authority decision, unavailable access, or the required concrete Production confirmation.
 
