@@ -2,6 +2,12 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.5.1 — 2026-09-13
+
+- Add explicit delta-only release --flash for full, inhouse and production, including short aliases; skip full-project Backfill while retaining owner, verification, confirmation and publication safeguards.
+- Reuse matching tool/bootstrap/test evidence, batch scoped release recording and resume successful publication checkpoints without duplicate pushes.
+- Publish the owner-requested 4.5.1 version with regenerated host metadata and bootstrap version tracking; preserve prior published versions.
+
 ## 4.1.1 — 2026-09-11
 
 - Reduce repetitive release confirmations: proceed with assessed, authorized routine steps and consolidate Production branch/tag approval into one concise action/evidence/impact/recovery summary.

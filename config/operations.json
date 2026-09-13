@@ -1165,6 +1165,7 @@
       ],
       "example": "$agm-release release production",
       "instructions": [
+        "Explicit --flash: follow release-flash.md for aliases, delta-only scope and supported actions.",
         "Resolve bootstrap upgrade (preserve project customizations), explicit upgrade (local contract replacement with backup), indexing, prepare inhouse|production, pipeline inhouse|production, promote, or release full|production|inhouse using release-workflow.md. These are Agent commands, not CLI subcommands. Quoted examples and help never authorize release. Use an explicit owner Version/Patch target before the PATCH+1 default; follow release-workflow.md and release-tools.md for revised candidates and PATCH-only CLI fallback without repeated version approval.",
         "For bootstrap upgrade or legacy upgrade, use only the selected local bootstrap procedure and verification, then finish. For the nine release actions: Check tools and target bootstrap prerequisites before audit; install missing tools and apply compatible missing bootstrap files within the selected command using release-and-bootstrap.md. Resolve existing-file conflicts through a concrete adoption decision when needed. Continue the same invocation after repair; resume recorded candidates without bumping again.",
         "Complete all preparation before asking for Production confirmation. Never infer that confirmation from promote/release invocation or legacy Version + Tags authorization. Changed candidate or destination invalidates confirmation.",
@@ -1185,6 +1186,11 @@
         }
       ],
       "conditionalReferences": [
+        {
+          "path": "release-flash.md",
+          "why": "delta-only release",
+          "when": "--flash is explicit"
+        },
         {
           "path": "release-bootstrap-upgrade.md",
           "why": "local preserving upgrade and explicit replacement procedures",

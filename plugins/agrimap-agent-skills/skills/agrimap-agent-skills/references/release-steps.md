@@ -26,6 +26,8 @@ Example: candidate Inhouse 1.0.6 and Production 1.0.3 means notes release-notes/
 
 ## Shared steps
 
+With --flash, [release-flash.md](release-flash.md) narrows I/H/P/F to delta review; other gates remain.
+
 R includes the scoped bootstrap check/install/repair in release-and-bootstrap.md before I or any CLI audit that requires those files. Resolve a missing compatible AGENTS.md through that installer and recheck in the same invocation. Retain adoption confirmation for necessary conflicting replacements; do not expand standalone pipeline/promote into preparation or modify a frozen candidate implicitly.
 
 - R — Read target instructions, resolve intent and baseline, detect tools using release-tools.md, and construct the exact required-step list. Before any branch gate, inspect the worktree and fetch the selected remote. Before new release writes, check all three local/remote branch pairs under release-workflow.md and pull behind-only branches with --ff-only when safe in the same requested directory. Synchronize only the branch needed by the current stage with its remote using fast-forward-only semantics on later rechecks. Do not create a product clone/worktree automatically; classify dirty content and resolve a concrete in-place integration problem if switching is blocked. After a successful synchronization, re-read the branch/remote SHAs and continue the same invocation instead of reporting the stale pre-sync mismatch or requiring the requester to repeat the command. Read-only help creates no state. If instructions disagree, use host/user authority and identify any remaining conflict rather than combining contracts silently.

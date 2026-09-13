@@ -54,7 +54,7 @@ update ไม่อัปเกรดตัว Codex/Claude/Antigravity ไม�
 $agm-release bootstrap upgrade
 ```
 
-Agent ตรวจ diff ก่อน โดยขอบเขต bootstrap ใน bundle 4.1.1 มีไฟล์ต่อไปนี้ (path อ้างอิงจาก root ของโครงการเป้าหมาย ไม่ใช่โฟลเดอร์ cache ของ skill):
+Agent ตรวจ diff ก่อน โดยขอบเขต bootstrap ใน bundle 4.5.1 มีไฟล์ต่อไปนี้ (path อ้างอิงจาก root ของโครงการเป้าหมาย ไม่ใช่โฟลเดอร์ cache ของ skill):
 
 | ไฟล์ | สิ่งที่ Agent จะอัปเดต |
 | --- | --- |

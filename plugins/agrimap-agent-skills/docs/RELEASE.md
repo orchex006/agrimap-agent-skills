@@ -4,7 +4,7 @@
 
 คำสั่งปัจจุบันใช้ [release-workflow](../skills/agrimap-agent-skills/references/release-workflow.md), [release-steps](../skills/agrimap-agent-skills/references/release-steps.md) และกฎของ target ภายใต้สิทธิ์ที่ผู้ใช้ให้ ส่วน [canonical project AGENTS](../skills/agrimap-agent-skills/assets/bootstrap/AGENTS.md) เป็นต้นทาง bootstrap และ legacy intents หน้านี้ไม่ใช่คำสั่งเผยแพร่ตัว skill package และการอ่านตัวอย่างไม่อนุญาตให้ execute
 
-## คำสั่ง agm-release ทั้งหมดใน 4.1.1
+## คำสั่ง agm-release ทั้งหมดใน 4.5.1
 
 ระบุโครงการเป้าหมายแล้วพิมพ์ใน Agent chat: Codex ใช้ `$agm-release`, Claude ใช้ `/agrimap-agent-skills:agm-release`, Antigravity ใช้ `/agm-release` ตามชื่อที่ลงทะเบียน Agent เป็นผู้ตรวจและดำเนินการ คำสั่งเหล่านี้ไม่ใช่ syntax ของ .NET CLI
 
@@ -25,6 +25,28 @@
 เลข Version/Patch ที่ผู้ใช้ระบุชัดมีลำดับเหนือค่า PATCH+1 และกฎ default รุ่นเก่า อ่าน baseline จริงก่อนคำนวณ ไม่ถามอนุมัติเลขเดิมซ้ำ เช่น Inhouse `1.0.0 → 1.0.8` และ Production `1.0.4 → 1.0.5` ต้องได้ notes `1.0.5.md` และ tag `v1.0.5` ไม่ใช้เลข Inhouse แทน
 
 ## การตัดสินใจและขอคำยืนยัน
+
+### Release แบบเร็ว: --flash
+
+พิมพ์ใน Agent chat (ไม่ใช่ flag ของ .NET CLI):
+
+```text
+$agm-release release full --flash
+$agm-release release inhouse --flash
+$agm-release production --flash
+```
+
+ชื่อย่อ `full --flash`, `inhouse --flash`, `production --flash` เท่ากับ `release full|inhouse|production --flash` ตามลำดับ โหมดไม่มี flag ยังทำงานเหมือนเดิม ไม่รองรับ flag นี้กับ prepare/pipeline/promote/indexing/bootstrap
+
+| ส่วนงาน | --flash |
+| --- | --- |
+| Index | ตรวจ baseline → candidate และ dirty files ไม่ backfill ทั้งโครงการหรือสร้าง README/catalog ใหม่ |
+| Version/notes | ขึ้นเลขเฉพาะ owner ที่เลือกตามคำขอหรือ PATCH+1; notes/tag เป็นของ Production เท่านั้น |
+| Verification | ตรวจ diff, SHA, secret/ขอบเขต, version, ancestry และ tag; ใช้ผล tests/build เดิมเมื่อยังตรงกับเนื้อหาและ environment ไม่ใช่ skip tests อัตโนมัติ |
+| Publish | candidate เดียว; develop → jenkins → jenkins-release ตาม environment; ไม่ push checkpoint สำเร็จซ้ำ |
+| Audit | สรุป delta สั้น ๆ; ถ้า target บังคับ audit push ให้รวมเป็น develop-only รอบเดียว ไม่ promote ตาม |
+
+ถ้า baseline ไม่ชัด Agent ถามเฉพาะจุดนั้น ไม่แอบกลับไป index ทั้ง project และไม่อ้างว่า full indexing เสร็จแล้ว Production ยังยืนยันครั้งเดียวตามแผนเดิม โหมดนี้ไม่แก้ trigger ของ Jenkins และไม่รับประกันจำนวน pipeline หรือเวลาแน่นอน รายละเอียด: [Flash contract](../skills/agrimap-agent-skills/references/release-flash.md)
 
 Agent ประเมิน scope, diff, เจ้าของงาน และการกู้คืนก่อนทำงาน ขั้นตอนที่ปลอดภัยและอยู่ในสิทธิ์ของคำสั่งเดิมให้ทำต่อพร้อม progress สั้น ๆ ไม่ถามยืนยันทุกครั้ง เช่น pull แบบ fast-forward ที่ปลอดภัย, bootstrap ที่มี backup, เตรียม notes และตรวจ candidate ส่วน prepare/indexing ไม่ได้รับสิทธิ์ push เพิ่มจากกฎนี้
 

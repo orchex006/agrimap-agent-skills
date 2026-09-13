@@ -18,10 +18,11 @@ Select bootstrap upgrade (preserve custom rules), legacy upgrade (replacement wi
 
 ## Execute this contract
 
-1. Resolve bootstrap upgrade (preserve project customizations), explicit upgrade (local contract replacement with backup), indexing, prepare inhouse|production, pipeline inhouse|production, promote, or release full|production|inhouse using release-workflow.md. These are Agent commands, not CLI subcommands. Quoted examples and help never authorize release. Use an explicit owner Version/Patch target before the PATCH+1 default; follow release-workflow.md and release-tools.md for revised candidates and PATCH-only CLI fallback without repeated version approval.
-2. For bootstrap upgrade or legacy upgrade, use only the selected local bootstrap procedure and verification, then finish. For the nine release actions: Check tools and target bootstrap prerequisites before audit; install missing tools and apply compatible missing bootstrap files within the selected command using release-and-bootstrap.md. Resolve existing-file conflicts through a concrete adoption decision when needed. Continue the same invocation after repair; resume recorded candidates without bumping again.
-3. Complete all preparation before asking for Production confirmation. Never infer that confirmation from promote/release invocation or legacy Version + Tags authorization. Changed candidate or destination invalidates confirmation.
-4. For the nine release actions, read release-steps.md and release-tools.md before execution. Production alone owns versioned notes, release.md and tags. Standalone pipeline/promote never invent missing preparation; enforce exact owner diffs and stage-specific completion.
+1. Explicit --flash: follow release-flash.md for aliases, delta-only scope and supported actions.
+2. Resolve bootstrap upgrade (preserve project customizations), explicit upgrade (local contract replacement with backup), indexing, prepare inhouse|production, pipeline inhouse|production, promote, or release full|production|inhouse using release-workflow.md. These are Agent commands, not CLI subcommands. Quoted examples and help never authorize release. Use an explicit owner Version/Patch target before the PATCH+1 default; follow release-workflow.md and release-tools.md for revised candidates and PATCH-only CLI fallback without repeated version approval.
+3. For bootstrap upgrade or legacy upgrade, use only the selected local bootstrap procedure and verification, then finish. For the nine release actions: Check tools and target bootstrap prerequisites before audit; install missing tools and apply compatible missing bootstrap files within the selected command using release-and-bootstrap.md. Resolve existing-file conflicts through a concrete adoption decision when needed. Continue the same invocation after repair; resume recorded candidates without bumping again.
+4. Complete all preparation before asking for Production confirmation. Never infer that confirmation from promote/release invocation or legacy Version + Tags authorization. Changed candidate or destination invalidates confirmation.
+5. For the nine release actions, read release-steps.md and release-tools.md before execution. Production alone owns versioned notes, release.md and tags. Standalone pipeline/promote never invent missing preparation; enforce exact owner diffs and stage-specific completion.
 
 ## Load now
 
@@ -31,6 +32,7 @@ Select bootstrap upgrade (preserve custom rules), legacy upgrade (replacement wi
 
 ## Load only when the condition matches
 
+- When --flash is explicit: [release-flash.md](../release-flash.md) — delta-only release
 - When bootstrap upgrade or legacy upgrade is selected: [release-bootstrap-upgrade.md](../release-bootstrap-upgrade.md) — local preserving upgrade and explicit replacement procedures
 - When the selected action is one of the nine release actions, not bootstrap upgrade or legacy upgrade: [release-steps.md](../release-steps.md) — mandatory exact nine-command sequences and Production artifact ownership
 - When the selected action is one of the nine release actions, not bootstrap upgrade or legacy upgrade: [release-tools.md](../release-tools.md) — mandatory .NET tool discovery and proven CLI compatibility before writes
