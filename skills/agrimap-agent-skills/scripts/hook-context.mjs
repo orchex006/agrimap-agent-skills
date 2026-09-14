@@ -2,7 +2,8 @@
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
+import { appendRecord as appendFile, writeRecord as writeFile, redactText } from './sensitive-recording.mjs';
 import path from "node:path";
 import { parseCliArgs } from "./cli-args.mjs";
 import { readConfirmedIdentity } from "./identity.mjs";
@@ -122,7 +123,7 @@ function zonedParts(timestamp = new Date().toISOString(), timeZone = "Asia/Bangk
 }
 
 async function archiveRawPrompt(stateRoot, config, input) {
-  const prompt = typeof input.prompt === "string" ? input.prompt : "";
+  const prompt = typeof input.prompt === "string" ? redactText(input.prompt) : "";
   const eventName = input.hook_event_name || input.hookEventName || "";
   if (!['UserPromptSubmit', 'BeforeAgent'].includes(eventName) || !prompt) return null;
   // A host submission ID deduplicates retries, not repeated human submissions.

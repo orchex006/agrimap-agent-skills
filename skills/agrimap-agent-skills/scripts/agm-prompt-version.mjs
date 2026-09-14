@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { redactText, redactValue } from './sensitive-recording.mjs';
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
@@ -231,6 +232,7 @@ export async function createPromptVersion({
     }
     return { ok: true, created: false, reason: 'no-content-revision' };
   }
+  if (typeof body === 'string') body = redactText(body);
   validateBody(body);
   if (!new Set(["draft", "owner-approved", "superseded", "executed"]).has(status)) {
     throw new PromptVersionError("INVALID_PROMPT_STATUS", "prompt status must be draft|owner-approved|superseded|executed.");
@@ -253,7 +255,7 @@ export async function createPromptVersion({
     const outputDirectory = path.join(promptRoot, resolved.period, safeConversation);
     const outputPath = path.join(outputDirectory, fileName);
     await mkdir(outputDirectory, { recursive: true });
-    const metadata = {
+    const metadata = redactValue({
       familyId: `${safeConversation}/${safeContext}`,
       version,
       supersedes: resolved.latest ? posixRelative(path.resolve(cwd), resolved.latest.path) : "none",
@@ -266,7 +268,8 @@ export async function createPromptVersion({
       intendedExecutionOperation,
       changeSummary,
       sourceEvidence,
-    };
+    });
+    // Values and body are redacted before YAML quoting and hashing.
     const content = renderPromptPackage(metadata, body);
     await writeFile(outputPath, content, { encoding: "utf8", flag: "wx" });
     return { ok: true, created: true, sha256: createHash('sha256').update(content).digest('hex'), path: posixRelative(path.resolve(cwd), outputPath), period: resolved.period, ...metadata };
