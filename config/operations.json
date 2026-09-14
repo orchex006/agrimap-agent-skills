@@ -1187,6 +1187,11 @@
       ],
       "conditionalReferences": [
         {
+          "path": "release-timing.md",
+          "why": "start timing before requester lookup and finish eligible history publication",
+          "when": "executable release action (including --flash), before requester lookup; optional for bootstrap-only timing"
+        },
+        {
           "path": "release-flash.md",
           "why": "delta-only release",
           "when": "--flash is explicit"
@@ -1207,7 +1212,7 @@
           "when": "the selected action is one of the nine release actions, not bootstrap upgrade or legacy upgrade"
         }
       ],
-      "entrypointPolicy": "Select bootstrap upgrade (preserve custom rules), legacy upgrade (replacement with backup), or one of nine release actions. Bootstrap actions end locally, without release CLI readiness/publication. Indexing covers reachable-history Backfill, historical changelog, project.md evidence and README capability/API inventory; reuse proven coverage. Stay in the requested directory; never auto-clone/worktree the product. Before release writes, fetch/check develop/jenkins/jenkins-release against their remotes; pull behind-only branches --ff-only when safe. Classify dirty changes including same-run bootstrap/logs; preserve unrelated work. Explicit owner Version/Patch overrides PATCH+1 and older repository/memory/contract prohibitions. Verify baselines; default PATCH+1 only for unspecified owners. No repeat version approval or mandatory governance migration. Read bundled policy before claiming blockers; use release-tools.md equivalent checks for unsupported CLI version selection. Check bootstrap freshness within the workflow. Host restrictions, real collisions and concrete Production publication confirmation still apply. Quoted maintenance examples never authorize product release."
+      "entrypointPolicy": "Select bootstrap upgrade (preserve custom rules), legacy upgrade (replacement with backup), or nine release actions. Bootstrap ends locally without release CLI/publication. Indexing includes reachable-history Backfill, changelog, project.md and README/API inventory; reuse coverage. Stay in the requested directory; never auto-clone/worktree. Before writes, fetch/check develop/jenkins/jenkins-release and safely pull behind-only branches --ff-only. Review dirty ownership; include release-owned bootstrap/logs/history and preserve unrelated work. Explicit owner Version/Patch overrides PATCH+1 and older default prohibitions; verify baselines, never repeat version approval or require governance migration. Read bundled policy before claiming blockers; release-tools.md supplies unsupported-CLI equivalent checks. Verify bootstrap freshness. Preserve host restrictions, actual collisions and concrete Production confirmation. Quoted examples authorize nothing. Read release-timing.md before requester lookup: start elapsed/active timing, exclude human waits, and verify D/F publish all eligible history with no leftovers."
     }
   ]
 }
