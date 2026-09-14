@@ -2,7 +2,6 @@
 
 import { execFileSync } from "node:child_process";
 import {
-  appendFile,
   mkdir,
   open,
   readFile,
@@ -10,8 +9,8 @@ import {
   rename,
   rm,
   stat,
-  writeFile,
 } from "node:fs/promises";
+import { appendRecord as appendFile, writeRecord as writeFile, redactValue } from './sensitive-recording.mjs';
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseCliArgs } from "./cli-args.mjs";
@@ -2156,7 +2155,8 @@ async function prune(root) {
 }
 
 const command = process.argv[2];
-const args = parseCliArgs(process.argv.slice(3));
+// Redact before objective slugs and checkpoint truncation can expose fragments.
+const args = redactValue(parseCliArgs(process.argv.slice(3)));
 const root = workspaceRoot(args.cwd || process.cwd());
 let result;
 

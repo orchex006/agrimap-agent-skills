@@ -2,6 +2,14 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.5.4 — 2026-09-14
+
+- Release results, including `--flash`, must display elapsed, active, excluded human wait and per-step timing. The helper renders the final block; missing or incomplete measurement is explicitly disclosed.
+
+- Redact recognizable credentials and personal-data labels before recording prompt history, audit logs, memory and new Prompt Results; retain deterministic markers without raw-value sidecars.
+- Sanitize workspace input before slug generation and checkpoint truncation, and preserve valid JSON, prompt hashes and retry deduplication.
+- Document detection limits and manual-recording requirements; do not rewrite historical records, Git tags or application source files.
+
 ## 4.5.2 — 2026-09-14
 
 - Measure release elapsed time separately from active per-step time, excluding requester/confirmation waits and disclosing unmeasured interruptions; persist timing across turns and retries.
