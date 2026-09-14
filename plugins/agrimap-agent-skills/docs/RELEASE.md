@@ -4,7 +4,7 @@
 
 คำสั่งปัจจุบันใช้ [release-workflow](../skills/agrimap-agent-skills/references/release-workflow.md), [release-steps](../skills/agrimap-agent-skills/references/release-steps.md) และกฎของ target ภายใต้สิทธิ์ที่ผู้ใช้ให้ ส่วน [canonical project AGENTS](../skills/agrimap-agent-skills/assets/bootstrap/AGENTS.md) เป็นต้นทาง bootstrap และ legacy intents หน้านี้ไม่ใช่คำสั่งเผยแพร่ตัว skill package และการอ่านตัวอย่างไม่อนุญาตให้ execute
 
-## คำสั่ง agm-release ทั้งหมดใน 4.5.1
+## คำสั่ง agm-release ทั้งหมดใน 4.5.2
 
 ระบุโครงการเป้าหมายแล้วพิมพ์ใน Agent chat: Codex ใช้ `$agm-release`, Claude ใช้ `/agrimap-agent-skills:agm-release`, Antigravity ใช้ `/agm-release` ตามชื่อที่ลงทะเบียน Agent เป็นผู้ตรวจและดำเนินการ คำสั่งเหล่านี้ไม่ใช่ syntax ของ .NET CLI
 
@@ -23,6 +23,14 @@
 | `release inhouse` | indexing → prepare inhouse → pipeline inhouse | เฉพาะ develop/jenkins; ไม่แก้ Production notes/tag |
 
 เลข Version/Patch ที่ผู้ใช้ระบุชัดมีลำดับเหนือค่า PATCH+1 และกฎ default รุ่นเก่า อ่าน baseline จริงก่อนคำนวณ ไม่ถามอนุมัติเลขเดิมซ้ำ เช่น Inhouse `1.0.0 → 1.0.8` และ Production `1.0.4 → 1.0.5` ต้องได้ notes `1.0.5.md` และ tag `v1.0.5` ไม่ใช้เลข Inhouse แทน
+
+## เวลา Release และไฟล์ประวัติ (4.5.2)
+
+ทุก release action รวม `--flash` รายงานเวลา 2 ค่า: **Elapsed** ตั้งแต่เริ่มรับงานจนตรวจปิดงานเสร็จ รวมเวลารอชื่อ requester/confirmation และ **Active** ผลรวมเวลาทำงานจริงแต่ละ step ซึ่งไม่รวมช่วงรอผู้ใช้ เช่น indexing 3 + hash 5 + changelog 1 + Inhouse 1 + Production 2 + tag 1 = 13 นาที; ถ้ารอยืนยัน 7 นาที Elapsed จะเป็น 20 นาที ตัวเลขนี้เป็นตัวอย่าง ไม่ใช่เวลารับประกัน งาน readiness/verification/final audit ที่ทำจริงต้องนับด้วย
+
+Agent ใช้ตัวจับเวลาใน bundle เก็บสถานะนอกไฟล์ที่จะ commit เปลี่ยน step ก่อนทำงานและหยุดนับ Active ก่อนรอคำตอบ การ retry นับเวลาที่ใช้เพิ่มจริง งานขนานนับเพียงครั้งเดียว ถ้าหยุด session หรือไม่มีหลักฐานเวลาเพียงพอ ต้องรายงานส่วนที่วัดไม่ได้ ไม่เดาตัวเลข ดู [Timing contract](../skills/agrimap-agent-skills/references/release-timing.md)
+
+คำสั่งที่มี publication รวม `history.md` และ audit ที่เกี่ยวกับ release และผ่านการตรวจแล้วใน scope commit/push เดิม ก่อน commit candidate ต้องตรวจประวัติด้วย หลัง confirmation ให้ตรวจซ้ำและรวมส่วนที่เพิ่มใหม่ใน commit audit สุดท้ายบน develop พร้อมตรวจ remote และไฟล์ตกค้าง แยก SHA ของ candidate กับ final develop; ไม่เปลี่ยน tag หรือ promote audit ตามไปด้วย งานอื่น ไฟล์ที่ ignore และข้อห้ามของ target ยังต้องรักษา ส่วน indexing/prepare ยังคงเป็นงาน local
 
 ## การตัดสินใจและขอคำยืนยัน
 
@@ -44,7 +52,7 @@ $agm-release production --flash
 | Version/notes | ขึ้นเลขเฉพาะ owner ที่เลือกตามคำขอหรือ PATCH+1; notes/tag เป็นของ Production เท่านั้น |
 | Verification | ตรวจ diff, SHA, secret/ขอบเขต, version, ancestry และ tag; ใช้ผล tests/build เดิมเมื่อยังตรงกับเนื้อหาและ environment ไม่ใช่ skip tests อัตโนมัติ |
 | Publish | candidate เดียว; develop → jenkins → jenkins-release ตาม environment; ไม่ push checkpoint สำเร็จซ้ำ |
-| Audit | สรุป delta สั้น ๆ; ถ้า target บังคับ audit push ให้รวมเป็น develop-only รอบเดียว ไม่ promote ตาม |
+| Audit | สรุป delta สั้น ๆ; รวม history/audit ของ release ที่ตรวจแล้วเป็น develop-only รอบสุดท้ายเว้นแต่มีข้อห้ามชัดเจน ไม่ promote ตาม |
 
 ถ้า baseline ไม่ชัด Agent ถามเฉพาะจุดนั้น ไม่แอบกลับไป index ทั้ง project และไม่อ้างว่า full indexing เสร็จแล้ว Production ยังยืนยันครั้งเดียวตามแผนเดิม โหมดนี้ไม่แก้ trigger ของ Jenkins และไม่รับประกันจำนวน pipeline หรือเวลาแน่นอน รายละเอียด: [Flash contract](../skills/agrimap-agent-skills/references/release-flash.md)
 

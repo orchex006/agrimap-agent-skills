@@ -2,6 +2,12 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.5.2 — 2026-09-14
+
+- Measure release elapsed time separately from active per-step time, excluding requester/confirmation waits and disclosing unmeasured interruptions; persist timing across turns and retries.
+- Include reviewed release-owned prompt history before the candidate commit and after confirmation in develop-only final audit publication; verify no eligible audit leftovers without changing the frozen release SHA/tag.
+- Make completion checks explicit for every model and normal/flash flow; retain local-only and unrelated/ignored-content boundaries.
+
 ## 4.5.1 — 2026-09-13
 
 - Add explicit delta-only release --flash for full, inhouse and production, including short aliases; skip full-project Backfill while retaining owner, verification, confirmation and publication safeguards.

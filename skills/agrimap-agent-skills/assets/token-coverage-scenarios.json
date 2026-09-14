@@ -25,16 +25,36 @@
       "description": "Local preserving/replacement bootstrap actions load no .NET release tooling",
       "operation": "release",
       "depth": "light",
-      "activate": ["release-bootstrap-upgrade.md"],
-      "mustLoad": ["release-workflow.md", "release-bootstrap-upgrade.md"]
+      "activate": [
+        "release-bootstrap-upgrade.md"
+      ],
+      "mustLoad": [
+        "release-workflow.md",
+        "release-bootstrap-upgrade.md"
+      ]
     },
     {
       "id": "release-publication-sequence",
-      "description": "Product release loads deterministic sequences and tool compatibility before mutation",
+      "description": "Product release loads deterministic sequences and tool compatibility before mutation; 4.5.2 adds measured timing and audit closure (bounded additional reference, unchanged direct/required budgets)",
       "operation": "release",
       "depth": "regulated",
-      "activate": ["release-steps.md", "release-tools.md"],
-      "mustLoad": ["release-workflow.md", "release-steps.md", "release-tools.md"]
+      "activate": [
+        "release-steps.md",
+        "release-tools.md",
+        "release-timing.md"
+      ],
+      "mustLoad": [
+        "release-workflow.md",
+        "release-steps.md",
+        "release-tools.md",
+        "release-timing.md"
+      ],
+      "budgets": {
+        "scenario": {
+          "maxWords": 10000,
+          "maxEstimatedTokensHigh": 25200
+        }
+      }
     },
     {
       "id": "router-only",

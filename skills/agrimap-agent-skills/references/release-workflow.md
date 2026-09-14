@@ -28,6 +28,8 @@ The Agent discovers all paths, versions and SHAs and resolves routine tool/envir
 
 Before issuing a version-policy refusal, inspect the current bundled entrypoint and version policy, the actual target instruction and the explicit request. Do not reuse a prior refusal, plan or memory as authority. Report actual target/bundled paths and versions if a genuine higher-priority restriction remains; a quoted old prohibition alone is insufficient.
 
+Read [release-timing.md](release-timing.md) for the timer started before requester lookup, per-step measurement and mandatory release-owned history/final-audit completion. This applies to normal and --flash release actions.
+
 ## Explicit contract upgrade
 
 For `agm-release bootstrap upgrade` (preserve custom rules) or legacy `agm-release upgrade` (explicit replacement), read [release-bootstrap-upgrade.md](release-bootstrap-upgrade.md). Use the bundled project-bootstrap.mjs helper with the selected mode, backups and version/receipt verification; finish locally without release tools, product version changes or publication. The nine release actions still perform normal bootstrap freshness checks.
@@ -132,6 +134,6 @@ Reuse an actual human confirmation from this conversation or trustworthy run evi
 
 ## Completion and recovery
 
-Record each durable checkpoint and pending action in the target project index under its recording contract. After pipeline/promote publication, publish only reviewed final audit artifacts on develop where the target contract permits; never promote/tag that final audit commit or bump again. If recording publication is restricted, retain artifacts locally and report that boundary. Report release SHA and final develop SHA separately.
+Record each durable checkpoint and pending action in the target project index under its recording contract. After pipeline/promote publication, publish all reviewed release-owned final audit artifacts, including eligible prompt history, on develop as part of the publishing action unless explicitly restricted; never promote/tag that final audit commit or bump again. Follow release-timing.md for pre-commit recording flush, final status inventory and avoidance of self-generated audit loops. If recording publication is restricted, retain artifacts locally and report that boundary. Report release SHA and final develop SHA separately.
 
 Check each external command's exit code immediately. On failure preserve verified checkpoints and resume the missing step; a tag failure does not justify another version or promotion. A later promote attempt reuses matching confirmation under Decision scope and concise confirmation; do not replay successful pushes. Report selected command, versions, covered paths, tools, local/remote SHAs, tag, verification and pending steps. Awaiting confirmation is pending, not completed; never report completed while a selected required checkpoint is missing.
