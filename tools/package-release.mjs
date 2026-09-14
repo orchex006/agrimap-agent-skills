@@ -5,6 +5,7 @@ import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {assertPackageStatePrivate} from './package-state-privacy.mjs';
 
 const hosts = ['codex', 'claude', 'antigravity'];
 const canonical = 'skills/agrimap-agent-skills';
@@ -98,6 +99,7 @@ export async function buildRelease(root, {publication = false, expectedVersion, 
   root = path.resolve(root);
   const pkg = await json(path.join(root, 'package.json'));
   if (pkg.name !== 'agrimap-agent-skills') throw new Error('PACKAGE_SOURCE_REQUIRED');
+  assertPackageStatePrivate(root);
   if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-rc\.(0|[1-9]\d*))?$/.test(pkg.version)) throw new Error('PACKAGE_VERSION_INVALID');
   const sourceSha = git(root, 'rev-parse', 'HEAD');
   const sourceDirty = Boolean(git(root, 'status', '--porcelain', '--untracked-files=all'));

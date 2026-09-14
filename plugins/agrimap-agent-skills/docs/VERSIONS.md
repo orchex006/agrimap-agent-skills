@@ -2,7 +2,7 @@
 
 [เริ่มใช้งาน](GETTING-STARTED.md) · [ตรวจ installation](DOCTOR.md)
 
-เอกสารชุดนี้สำหรับ **4.5.2** — [Latest release](https://github.com/orchex006/agrimap-agent-skills/releases/latest) · [Tags ทั้งหมด](https://github.com/orchex006/agrimap-agent-skills/tags)
+เอกสารชุดนี้สำหรับ **4.5.3** — [Latest release](https://github.com/orchex006/agrimap-agent-skills/releases/latest) · [Tags ทั้งหมด](https://github.com/orchex006/agrimap-agent-skills/tags)
 
 ## Tags ของ source รุ่นเก่า
 
@@ -59,3 +59,9 @@ archive ของ Codex/Claude มี local marketplace และ plugin payload
 Source code zip/tar ที่ GitHub สร้างอัตโนมัติและการ clone repository เป็น source distributions ไม่ใช่ runtime archive ที่แยกกฎผู้พัฒนาไว้ รุ่นเก่าก่อนมี runtime artifacts อาจต้องใช้วิธีติดตั้งที่รองรับของรุ่นนั้นและตรวจแหล่งที่มาเพิ่ม
 
 การเลือกใช้รุ่นก่อนหมายถึงการแทน installation ที่เลือก ไม่รับประกันการติดตั้งหลายรุ่นพร้อมกันทุก host และไม่ย้อน bootstrap/custom rules ในโครงการโดยอัตโนมัติ
+
+## Package state privacy
+
+The public skill package keeps its own `.agrimap-agent/` state local and ignored, including nested plugin state. From 4.5.3, source validation and package construction reject tracked state and missing ignore/export exclusions. Runtime archives already exclude this directory; application repositories retain their own recording policies.
+
+Updating installs the selected package content; it does not erase prior Git history, downloads or retained host caches. A full source clone can contain historical objects absent from the selected tag tree. Use verified runtime archives when only installation content is needed. Do not delete an application `.agrimap-agent/` directory as part of a skill update. Historical privacy cleanup is a separate operation; no history-purge claim follows from a version bump.

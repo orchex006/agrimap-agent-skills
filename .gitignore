@@ -6,4 +6,6 @@ dist/
 .tmp-*/
 
 # This repository develops the globally installed skill. Its own agent state is local-only.
+# Keep this unanchored: package-root and nested plugin state must both stay private.
+# CI/package construction also reject force-added state; application policies are separate.
 .agrimap-agent/

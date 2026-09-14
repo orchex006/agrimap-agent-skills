@@ -44,7 +44,7 @@ test('maintainer instructions are rejected without removing legitimate bootstrap
 test('real archives retain version/bootstrap, separate hosts, exclude source governance and match checksums', async t => {
   const temp = await mkdtemp(path.join(os.tmpdir(), 'agm-release-fixture-'));
   t.after(() => rm(temp,{recursive:true,force:true}));
-  const sources = ['package.json','README.md','CHANGELOG.md','.gitignore','.agents','.claude-plugin','plugin.json','config','docs','examples','skills','plugins'];
+  const sources = ['package.json','README.md','CHANGELOG.md','.gitignore','.gitattributes','.agents','.claude-plugin','plugin.json','config','docs','examples','skills','plugins'];
   for (const source of sources) await cp(path.join(root,source),path.join(temp,source),{recursive:true});
   const git = (...args) => execFileSync('git',['-c',`safe.directory=${temp.replaceAll('\\','/')}`,...args],{cwd:temp,encoding:'utf8',stdio:'pipe'}).trim();
   git('init','--initial-branch=main');

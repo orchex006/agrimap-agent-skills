@@ -2,6 +2,12 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.5.3 — 2026-09-14
+
+- Enforce local-only .agrimap-agent state in this public source package: validation and package builds reject tracked state or missing ignore/export rules, including nested plugin state.
+- Add source archive export exclusions and regression coverage; retain runtime archive exclusion and application-owned recording policies.
+- Clarify that package updates do not erase old Git history, previously downloaded clones or host caches.
+
 ## 4.5.2 — 2026-09-14
 
 - Measure release elapsed time separately from active per-step time, excluding requester/confirmation waits and disclosing unmeasured interruptions; persist timing across turns and retries.

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
+import { assertPackageStatePrivate } from './package-state-privacy.mjs';
 import { LOG_EVENTS, MILESTONE_TYPES, QA_FAILED_EVENT } from "../skills/agrimap-agent-skills/scripts/log-events.mjs";
 import {
   renderTaskArtifactSchemaDocs,
@@ -23,6 +24,7 @@ import {
 
 const root = process.cwd();
 const errors = [];
+try { assertPackageStatePrivate(root); } catch (error) { errors.push(error.message); }
 const agyManifest = JSON.parse(await readFile(path.join(root, 'plugin.json'), 'utf8'));
 if (agyManifest.name !== 'agrimap-agent-skills' || Object.keys(agyManifest).some(key => !['name', 'description'].includes(key))) {
   errors.push('plugin.json: invalid Antigravity root manifest');

@@ -1,0 +1,34 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import os from 'node:os';
+import { assertPackageStatePrivate } from '../../tools/package-state-privacy.mjs';
+
+test('package guard rejects forced tracking and removed ignore rules without deleting local state', async t => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'agm-private-state-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: 'pipe' });
+  git('init');
+  await writeFile(path.join(root, '.gitignore'), '.agrimap-agent/\n');
+  await writeFile(path.join(root, '.gitattributes'), '.agrimap-agent export-ignore\n**/.agrimap-agent export-ignore\n');
+  await mkdir(path.join(root, '.agrimap-agent'));
+  await writeFile(path.join(root, '.agrimap-agent', 'history.md'), 'synthetic private fixture');
+  const nested = 'plugins/agrimap-agent-skills/.agrimap-agent/history.md';
+  await mkdir(path.dirname(path.join(root, nested)), { recursive: true });
+  await writeFile(path.join(root, nested), 'synthetic nested fixture');
+  assert.doesNotThrow(() => assertPackageStatePrivate(root));
+  git('add', '-f', '--', '.agrimap-agent/history.md', nested, '.gitattributes');
+  assert.throws(() => assertPackageStatePrivate(root), /PACKAGE_STATE_TRACKED/);
+  git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'synthetic forced state');
+  const archive = execFileSync('git', ['archive', '--format=tar', 'HEAD'], { cwd: root });
+  const entries = execFileSync('tar', ['-tf', '-'], { input: archive, encoding: 'utf8' });
+  assert.ok(!entries.includes('.agrimap-agent'), 'source archive must omit both private directories');
+  git('rm', '--cached', '-f', '--', '.agrimap-agent/history.md', nested);
+  await writeFile(path.join(root, '.gitignore'), '/.agrimap-agent/\n');
+  assert.throws(() => assertPackageStatePrivate(root), /PACKAGE_STATE_NOT_IGNORED/);
+  await writeFile(path.join(root, '.gitignore'), '.agrimap-agent/\n');
+  await writeFile(path.join(root, '.gitattributes'), '');
+  assert.throws(() => assertPackageStatePrivate(root), /PACKAGE_STATE_NOT_EXPORT_IGNORED/);
+});
