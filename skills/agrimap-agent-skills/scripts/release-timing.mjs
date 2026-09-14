@@ -2,6 +2,47 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { redactText } from './sensitive-recording.mjs';
+
+const display = value => redactText(String(value)).replace(/[\r\n|`<>]/g, ' ');
+const duration = ms => `${Math.floor(ms / 60000)}m ${((ms % 60000) / 1000).toFixed(3)}s`;
+
+export async function timingOutput(file, unavailableReason = '') {
+  unavailableReason = typeof unavailableReason === 'string' ? unavailableReason.trim() : '';
+  let summary;
+  let reason = unavailableReason;
+  if (!reason && file) {
+    try {
+      const state = JSON.parse(await readFile(file, 'utf8'));
+      const intervals = [...(state.intervals || []), ...(state.current ? [{...state.current, start:state.cursor, end:Date.now()}] : [])];
+      if (!Number.isSafeInteger(state.startedAt) || !Number.isSafeInteger(state.cursor)
+          || state.cursor < state.startedAt || !Array.isArray(state.intervals)
+          || intervals.some(i => !['active','human-wait','unmeasured'].includes(i.kind)
+            || !Number.isSafeInteger(i.start) || !Number.isSafeInteger(i.end) || i.end < i.start)) throw new Error('invalid');
+      let cursor = state.startedAt;
+      for (const interval of state.intervals) {
+        if (interval.start !== cursor) throw new Error('invalid');
+        cursor = interval.end;
+      }
+      if (cursor !== state.cursor || (state.endedAt !== null
+          && (state.endedAt !== state.cursor || state.current !== null))
+          || (state.endedAt === null && !state.current)) throw new Error('invalid');
+      summary = summarize(state);
+      if (![summary.elapsedMs, summary.activeMs, summary.humanWaitMs, summary.unmeasuredMs].every(Number.isFinite)
+          || summary.elapsedMs !== summary.activeMs + summary.humanWaitMs + summary.unmeasuredMs) throw new Error('invalid');
+    } catch { reason = 'Timing file is missing or invalid; duration was not established.'; }
+  }
+  if (!summary) {
+    reason ||= 'Timing was not recorded.';
+    return {status:'unavailable', ready:Boolean(unavailableReason.trim()), finalOutput:
+      `Release timing: UNAVAILABLE\nElapsed: UNKNOWN\nActive: UNKNOWN\nWaiting: UNKNOWN\nSteps: UNKNOWN\nReason: ${display(reason)}`};
+  }
+  const status = !summary.endedAt ? 'in-progress' : summary.activeComplete ? 'measured' : 'partial';
+  const qualifier = summary.activeComplete ? '' : ' (measured portion only)';
+  const rows = Object.entries(summary.stepMs).map(([label, ms]) => `| ${display(label)} | ${duration(ms)} |`);
+  return {status, ready:Boolean(summary.endedAt), summary, finalOutput:
+    `Release timing: ${status.toUpperCase()}\nElapsed: ${duration(summary.elapsedMs)}\nActive: ${duration(summary.activeMs)}${qualifier}\nWaiting: ${duration(summary.humanWaitMs)}\nUnmeasured: ${duration(summary.unmeasuredMs)}\n\n| Step | Active time |\n| --- | --- |\n${rows.join('\n') || '| No measured steps | UNKNOWN |'}`};
+}
 
 // One serialized timeline per release. Waiting and unattended gaps are explicit,
 // so resuming a process cannot silently count human time as execution time.
@@ -51,8 +92,10 @@ export function summarize(state, now = Date.now()) {
 
 export async function main(argv) {
   const [action, file, ...labels] = argv;
+  if (action === 'output') return timingOutput(file);
+  if (action === 'unavailable') return timingOutput(null, [file, ...labels].filter(Boolean).join(' '));
   if (!['start', 'step', 'wait', 'pause', 'finish', 'report'].includes(action) || !file) {
-    throw new Error('Usage: release-timing.mjs start|step|wait|pause|finish|report <local-state.json> [label]');
+    throw new Error('Usage: release-timing.mjs start|step|wait|pause|finish|report|output <local-state.json> [label]; unavailable <reason>');
   }
   let state = null;
   try { state = JSON.parse(await readFile(file, 'utf8')); }
@@ -66,6 +109,14 @@ export async function main(argv) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  main(process.argv.slice(2)).then(result => process.stdout.write(JSON.stringify(result, null, 2) + '\n'))
+  main(process.argv.slice(2)).then(async result => {
+    if (['output','unavailable'].includes(process.argv[2])) {
+      process.stdout.write(result.finalOutput + '\n');
+      if (!result.ready) process.exitCode = 1;
+      return;
+    }
+    if (['finish','report'].includes(process.argv[2])) result = {...result, ...(await timingOutput(process.argv[3]))};
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+  })
     .catch(error => { process.stderr.write(error.message + '\n'); process.exitCode = 1; });
 }

@@ -1,4 +1,4 @@
-# AgriMap Agent Skills 4.5.2
+# AgriMap Agent Skills 4.5.4
 
 [รุ่นล่าสุด](https://github.com/orchex006/agrimap-agent-skills/releases/latest) · [Tags รุ่นก่อน](https://github.com/orchex006/agrimap-agent-skills/tags) · [เลือกเวอร์ชันและ source ย้อนหลัง](docs/VERSIONS.md)
 

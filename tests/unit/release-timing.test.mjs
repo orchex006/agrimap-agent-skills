@@ -1,9 +1,40 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { main, transition, summarize } from '../../skills/agrimap-agent-skills/scripts/release-timing.mjs';
+import { main, transition, summarize, timingOutput } from '../../skills/agrimap-agent-skills/scripts/release-timing.mjs';
+
+test('visible output prints measured totals and steps; pending/missing timing cannot silently succeed', async t => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'agm-output-'));
+  t.after(() => rm(dir, {recursive:true, force:true}));
+  const file = path.join(dir, 'run.json');
+  const cli = (...args) => spawnSync(process.execPath, ['skills/agrimap-agent-skills/scripts/release-timing.mjs', ...args], {encoding:'utf8'});
+  assert.equal(cli('output', file).status, 1);
+  assert.match(cli('output', file).stdout, /Elapsed: UNKNOWN/);
+  assert.equal(cli('unavailable').status, 1);
+  const unavailable = cli('unavailable', 'Timer never started');
+  assert.equal(unavailable.status, 0);
+  assert.match(unavailable.stdout, /Reason: Timer never started/);
+  let state = transition(null, 'start', 'indexing', 0);
+  state = transition(state, 'wait', 'requester', 180000);
+  state = transition(state, 'step', 'hash', 600000);
+  await writeFile(file, JSON.stringify(state));
+  assert.equal(cli('output', file).status, 1);
+  state = transition(state, 'finish', '', 900000);
+  await writeFile(file, JSON.stringify(state));
+  const result = cli('output', file);
+  assert.equal(result.status, 0);
+  for (const text of ['MEASURED', 'Elapsed: 15m 0.000s', 'Active: 8m 0.000s', 'Waiting: 7m 0.000s', '| indexing | 3m 0.000s |', '| hash | 5m 0.000s |']) assert.ok(result.stdout.includes(text), text);
+  assert.equal(JSON.parse(cli('report', file).stdout).finalOutput, result.stdout.trim());
+  state.intervals[1].kind = 'unmeasured';
+  await writeFile(file, JSON.stringify(state));
+  assert.match((await timingOutput(file)).finalOutput, /PARTIAL[\s\S]*measured portion only[\s\S]*Unmeasured: 7m/);
+  state.intervals[1].start++;
+  await writeFile(file, JSON.stringify(state));
+  assert.equal((await timingOutput(file)).ready, false);
+});
 
 test('elapsed includes requester/confirmation waits; actual sums steps and retries once', () => {
   let state = transition(null, 'start', 'readiness', 0);
