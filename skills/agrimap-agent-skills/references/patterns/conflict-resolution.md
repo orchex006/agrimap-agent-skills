@@ -11,6 +11,10 @@
 - [Copy-readiness gate](#copy-readiness-gate)
 - [Owner tour backlog](#owner-tour-backlog)
 
+The [checklists/](checklists/README.md) carry each collection's `MUST` rows for the routine path. Use
+this file when a checklist row conflicts with project code, owner intent, or another entry; a
+checklist never overrides the precedence below.
+
 Use this file before using any golden material. First read `golden/manifest.json` and the selected collection manifest:
 
 - `evidenceMode=curated-reference`: maintained AgriMap guidance. Correct it together with its manifest hash when the owner updates the standard.

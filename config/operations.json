@@ -551,6 +551,21 @@
           "why": "exact refactor behavior and logic-change boundary"
         },
         {
+          "when": "target_kind=fe-main",
+          "path": "patterns/checklists/frontend-main.md",
+          "why": "MUST-tier golden structure, typing, and naming checks for the application workspace"
+        },
+        {
+          "when": "target_kind=fe-library",
+          "path": "patterns/checklists/frontend-libraries.md",
+          "why": "MUST-tier public-API, naming, and service-first checks for the @agrimap/* workspace"
+        },
+        {
+          "when": "a generated API endpoint is added, changed, or consumed",
+          "path": "patterns/gencode-api.md",
+          "why": "single shared source for the generator, config schema, and no-hand-written-client rules"
+        },
+        {
           "when": "URL, domain, redirect, or callback logic is in scope",
           "path": "application-url-matrix.md",
           "why": "authoritative environment-specific URL values"
@@ -691,6 +706,16 @@
           "when": "action=refactor",
           "path": "refactor-modes.md",
           "why": "exact refactor behavior and logic-change boundary"
+        },
+        {
+          "when": "target_kind=be-main",
+          "path": "patterns/checklists/backend-main.md",
+          "why": "MUST-tier namespace allowlist, layer placement, and preserved-contract checks"
+        },
+        {
+          "when": "target_kind=be-library",
+          "path": "patterns/checklists/backend-libraries.md",
+          "why": "MUST-tier platform-reuse and published-surface checks"
         },
         {
           "when": "the backend target contains C#",
@@ -855,6 +880,11 @@
           "when": "action=refactor",
           "path": "refactor-modes.md",
           "why": "exact refactor behavior and logic-change boundary"
+        },
+        {
+          "when": "any golden/sql entry is used as evidence",
+          "path": "patterns/checklists/sql.md",
+          "why": "per-entry authority map for the mixed SQL collection"
         },
         {
           "when": "any table, view, or procedure outside the edited file is read, joined, or written",
@@ -1102,19 +1132,69 @@
       ],
       "conditionalReferences": [
         {
-          "when": "the authorized work targets C# backend work",
-          "path": "backend-engineer.md",
-          "why": "backend discipline carried into execution"
+          "when": "the authorized work targets frontend code",
+          "path": "frontend-engineer.md",
+          "why": "frontend detection, reuse, and phase discipline carried into execution"
         },
         {
-          "when": "the authorized work targets C# backend work",
+          "when": "the authorized work targets frontend code",
+          "path": "patterns/frontend.md",
+          "why": "current frontend contract carried into execution"
+        },
+        {
+          "when": "the authorized frontend work targets fe-main",
+          "path": "patterns/checklists/frontend-main.md",
+          "why": "MUST-tier golden checks before a frontend application write"
+        },
+        {
+          "when": "the authorized frontend work targets fe-library",
+          "path": "patterns/checklists/frontend-libraries.md",
+          "why": "MUST-tier golden checks before a frontend library write"
+        },
+        {
+          "when": "the authorized work targets backend code",
+          "path": "backend-engineer.md",
+          "why": "backend profile detection and phase discipline carried into execution"
+        },
+        {
+          "when": "the authorized work targets backend code",
+          "path": "patterns/backend.md",
+          "why": "current backend contract carried into execution"
+        },
+        {
+          "when": "the authorized backend work contains C#",
           "path": "patterns/csharp.md",
           "why": "project-wide C# execution baseline"
+        },
+        {
+          "when": "the authorized backend work targets be-main",
+          "path": "patterns/checklists/backend-main.md",
+          "why": "MUST-tier golden checks before a backend service write"
+        },
+        {
+          "when": "the authorized backend work targets be-library",
+          "path": "patterns/checklists/backend-libraries.md",
+          "why": "MUST-tier golden checks before a backend library write"
         },
         {
           "when": "the authorized backend work touches cookie, header, query, form, JSON body, or device-ID resolution",
           "path": "patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md",
           "why": "request-value execution contract"
+        },
+        {
+          "when": "the authorized work creates or edits SQL",
+          "path": "patterns/sql.md",
+          "why": "current SQL contract, formatting, and validation carried into execution"
+        },
+        {
+          "when": "any golden/sql entry is used as evidence",
+          "path": "patterns/checklists/sql.md",
+          "why": "per-entry authority map for the mixed SQL collection"
+        },
+        {
+          "when": "a generated API endpoint is added, changed, or consumed",
+          "path": "patterns/gencode-api.md",
+          "why": "single shared source for the generator, config schema, and no-hand-written-client rules"
         },
         {
           "when": "the authorized work touches a stored procedure, table, or persisted data",
@@ -1125,6 +1205,11 @@
           "when": "the authorized work touches FE/BE URL, domain, redirect, or callback logic",
           "path": "application-url-matrix.md",
           "why": "authoritative environment-specific execution values"
+        },
+        {
+          "when": "Subagent assignments are dispatched",
+          "path": "subagents-and-branches.md",
+          "why": "delegation packet, workspace mode, visibility, and integration boundaries"
         },
         {
           "when": "material intent remains unresolved",

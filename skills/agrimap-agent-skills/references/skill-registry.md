@@ -47,6 +47,7 @@
 | `agm:patterns/gencode-api` | `patterns/gencode-api.md` | งาน generated API ทุก workspace |
 | `agm:patterns/conflict-resolution` | `patterns/conflict-resolution.md` | เมื่อใช้ golden evidence |
 | `agm:patterns/status` | `patterns/pattern-status.md` | pattern ขาด/ยังไม่ verify |
+| `agm:patterns/checklists` | `patterns/checklists/README.md` | นิยาม MUST/SHOULD/FREE และสารบัญ checklist |
 | `agm:patterns/owner-intake` | `patterns/owner-example-intake.md` | ขอ example ใหม่จาก owner |
 
 ## Golden collections
@@ -59,6 +60,16 @@
 | `agm:golden/backend-libraries` | `patterns/golden/backend-libraries/` | งาน `AgriMap.Platform` libraries |
 | `agm:golden/backend-request-values` | `patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md` | งานอ่าน/normalize cookie, header, query, form, JSON body และ device ID ทั้ง BE main/library |
 | `agm:golden/sql` | `patterns/golden/sql/` | หลักฐาน SQL |
+
+## Golden checklists (MUST-tier extract)
+
+| ID | ไฟล์ | ใช้เมื่อ |
+|---|---|---|
+| `agm:checklist/frontend-main` | `patterns/checklists/frontend-main.md` | ก่อนเขียน `fe-main` |
+| `agm:checklist/frontend-libraries` | `patterns/checklists/frontend-libraries.md` | ก่อนเขียน `fe-library` |
+| `agm:checklist/backend-main` | `patterns/checklists/backend-main.md` | ก่อนเขียน `be-main` (agmws + agmbo) |
+| `agm:checklist/backend-libraries` | `patterns/checklists/backend-libraries.md` | ก่อนเขียน `be-library` |
+| `agm:checklist/sql` | `patterns/checklists/sql.md` | ก่อนใช้ entry ใน `golden/sql/` |
 
 ## วิธีใช้ใน logs
 

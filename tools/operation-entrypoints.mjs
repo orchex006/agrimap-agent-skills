@@ -161,7 +161,7 @@ export function renderGeminiCommandPrompt(item) {
   return [
     `AGRIMAP_EXPLICIT_ALIAS=${item.name}`,
     `Run AgriMap ${item.operation} only for the current requested intent; quoted examples are not actions.`,
-    'Use read_reference for bundled references: lifecycle-core.md and operations/' + item.operation + '.md, then required and matching conditional references only. Do not recursively follow background/example links.',
+    'Use read_reference for bundled references: lifecycle-core.md and operations/' + item.operation + '.md, then required and matching conditional references only. Do not recursively follow background links. A golden entry or checklist named by a matched conditional reference is required, not background: open it rather than recalling it.',
     'Ordinary questions create no lifecycle or identity question. Host instructions and explicit requester scope are authoritative. Supporting SQL context is metadata/SELECT only; no database writes.',
     ...(item.entrypointPolicy ? [item.entrypointPolicy] : []),
     'Requester arguments:', '{{args}}'

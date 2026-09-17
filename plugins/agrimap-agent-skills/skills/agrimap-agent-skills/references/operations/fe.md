@@ -45,6 +45,9 @@ Resolve exactly one action before target inspection or product writes. Safe defa
 ## Load only when the condition matches
 
 - When action=refactor: [refactor-modes.md](../refactor-modes.md) — exact refactor behavior and logic-change boundary
+- When target_kind=fe-main: [patterns/checklists/frontend-main.md](../patterns/checklists/frontend-main.md) — MUST-tier golden structure, typing, and naming checks for the application workspace
+- When target_kind=fe-library: [patterns/checklists/frontend-libraries.md](../patterns/checklists/frontend-libraries.md) — MUST-tier public-API, naming, and service-first checks for the @agrimap/* workspace
+- When a generated API endpoint is added, changed, or consumed: [patterns/gencode-api.md](../patterns/gencode-api.md) — single shared source for the generator, config schema, and no-hand-written-client rules
 - When URL, domain, redirect, or callback logic is in scope: [application-url-matrix.md](../application-url-matrix.md) — authoritative environment-specific URL values
 - When material intent remains unresolved: [elicitation.md](../elicitation.md) — resolve only consequential ambiguity
 - When project bootstrap, versioning, branches or release are requested: [release-and-bootstrap.md](../release-and-bootstrap.md) — project-specific adoption and release knowledge

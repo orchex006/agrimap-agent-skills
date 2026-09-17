@@ -48,6 +48,7 @@ Resolve exactly one action before target inspection or product writes. Safe defa
 ## Load only when the condition matches
 
 - When action=refactor: [refactor-modes.md](../refactor-modes.md) — exact refactor behavior and logic-change boundary
+- When any golden/sql entry is used as evidence: [patterns/checklists/sql.md](../patterns/checklists/sql.md) — per-entry authority map for the mixed SQL collection
 - When any table, view, or procedure outside the edited file is read, joined, or written: [db-schema-context.md](../db-schema-context.md) — owner DDL evidence for every referenced object
 - When material intent remains unresolved: [elicitation.md](../elicitation.md) — resolve only consequential ambiguity
 - When database context is needed: [sql-context-readonly.md](../sql-context-readonly.md) — managed read-only metadata and SELECT; never database writes
