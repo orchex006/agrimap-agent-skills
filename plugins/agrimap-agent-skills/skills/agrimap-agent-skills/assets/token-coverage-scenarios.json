@@ -35,7 +35,7 @@
     },
     {
       "id": "release-publication-sequence",
-      "description": "Product release loads deterministic sequences and tool compatibility before mutation; 4.5.2 adds measured timing and audit closure (bounded additional reference, unchanged direct/required budgets)",
+      "description": "Product release loads deterministic sequences and tool compatibility before mutation; 4.5.2 adds measured timing and audit closure, 4.5.5 adds the pre-write gate item 6 golden-evidence line (bounded prose, unchanged direct/required budgets)",
       "operation": "release",
       "depth": "regulated",
       "activate": [
@@ -51,8 +51,8 @@
       ],
       "budgets": {
         "scenario": {
-          "maxWords": 10000,
-          "maxEstimatedTokensHigh": 25200
+          "maxWords": 10120,
+          "maxEstimatedTokensHigh": 25450
         }
       }
     },
@@ -289,7 +289,7 @@
     },
     {
       "id": "qa-fe-main-golden-regulated",
-      "description": "Independent frontend QA with one selected current golden architecture entry",
+      "description": "Independent frontend QA with one selected current golden architecture entry; 4.5.5 adds checklist routing pointers in the pattern, status, and conflict references",
       "operation": "qa",
       "depth": "regulated",
       "activate": [
@@ -313,8 +313,8 @@
       ],
       "budgets": {
         "scenario": {
-          "maxWords": 8100,
-          "maxEstimatedTokensHigh": 21200
+          "maxWords": 8200,
+          "maxEstimatedTokensHigh": 21800
         }
       }
     },
@@ -537,6 +537,103 @@
       "depth": "light",
       "mustLoad": [
         "recommendations.md"
+      ]
+    },
+    {
+      "id": "fe-main-checklist-light",
+      "description": "4.5.5: fe-main routes the golden MUST checklist instead of leaving the collection unreferenced",
+      "operation": "fe",
+      "depth": "light",
+      "activate": [
+        "patterns/checklists/frontend-main.md"
+      ],
+      "mustLoad": [
+        "goal-rules.md",
+        "frontend-engineer.md",
+        "patterns/frontend.md",
+        "patterns/checklists/frontend-main.md"
+      ]
+    },
+    {
+      "id": "fe-library-checklist-light",
+      "description": "4.5.5: fe-library routes its own checklist so app naming is not carried into the library lane",
+      "operation": "fe",
+      "depth": "light",
+      "activate": [
+        "patterns/checklists/frontend-libraries.md",
+        "patterns/gencode-api.md"
+      ],
+      "mustLoad": [
+        "frontend-engineer.md",
+        "patterns/frontend.md",
+        "patterns/checklists/frontend-libraries.md",
+        "patterns/gencode-api.md"
+      ]
+    },
+    {
+      "id": "be-main-checklist-light",
+      "description": "4.5.5: be-main routes the namespace allowlist and layer placement checklist with the C# baseline",
+      "operation": "be",
+      "depth": "light",
+      "activate": [
+        "patterns/checklists/backend-main.md",
+        "patterns/csharp.md"
+      ],
+      "mustLoad": [
+        "goal-rules.md",
+        "backend-engineer.md",
+        "patterns/backend.md",
+        "patterns/checklists/backend-main.md",
+        "patterns/csharp.md"
+      ]
+    },
+    {
+      "id": "execute-fe-main-checklist-light",
+      "description": "4.5.5: execute carries the frontend contract and checklist into the write instead of loading no pattern at all",
+      "operation": "execute",
+      "depth": "light",
+      "activate": [
+        "frontend-engineer.md",
+        "patterns/frontend.md",
+        "patterns/checklists/frontend-main.md"
+      ],
+      "mustLoad": [
+        "goal-rules.md",
+        "frontend-engineer.md",
+        "patterns/frontend.md",
+        "patterns/checklists/frontend-main.md"
+      ]
+    },
+    {
+      "id": "execute-be-main-checklist-light",
+      "description": "4.5.5: execute carries the backend contract, C# baseline, and checklist into the write",
+      "operation": "execute",
+      "depth": "light",
+      "activate": [
+        "backend-engineer.md",
+        "patterns/backend.md",
+        "patterns/checklists/backend-main.md",
+        "patterns/csharp.md"
+      ],
+      "mustLoad": [
+        "goal-rules.md",
+        "backend-engineer.md",
+        "patterns/backend.md",
+        "patterns/checklists/backend-main.md",
+        "patterns/csharp.md"
+      ]
+    },
+    {
+      "id": "sql-golden-status-map-light",
+      "description": "4.5.5: sql routes the per-entry authority map before citing a mixed-collection golden entry",
+      "operation": "sql",
+      "depth": "light",
+      "activate": [
+        "patterns/checklists/sql.md"
+      ],
+      "mustLoad": [
+        "patterns/sql.md",
+        "patterns/checklists/sql.md"
       ]
     }
   ]

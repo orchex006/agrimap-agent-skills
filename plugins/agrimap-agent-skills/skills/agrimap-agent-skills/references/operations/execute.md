@@ -27,11 +27,22 @@
 
 ## Load only when the condition matches
 
-- When the authorized work targets C# backend work: [backend-engineer.md](../backend-engineer.md) — backend discipline carried into execution
-- When the authorized work targets C# backend work: [patterns/csharp.md](../patterns/csharp.md) — project-wide C# execution baseline
+- When the authorized work targets frontend code: [frontend-engineer.md](../frontend-engineer.md) — frontend detection, reuse, and phase discipline carried into execution
+- When the authorized work targets frontend code: [patterns/frontend.md](../patterns/frontend.md) — current frontend contract carried into execution
+- When the authorized frontend work targets fe-main: [patterns/checklists/frontend-main.md](../patterns/checklists/frontend-main.md) — MUST-tier golden checks before a frontend application write
+- When the authorized frontend work targets fe-library: [patterns/checklists/frontend-libraries.md](../patterns/checklists/frontend-libraries.md) — MUST-tier golden checks before a frontend library write
+- When the authorized work targets backend code: [backend-engineer.md](../backend-engineer.md) — backend profile detection and phase discipline carried into execution
+- When the authorized work targets backend code: [patterns/backend.md](../patterns/backend.md) — current backend contract carried into execution
+- When the authorized backend work contains C#: [patterns/csharp.md](../patterns/csharp.md) — project-wide C# execution baseline
+- When the authorized backend work targets be-main: [patterns/checklists/backend-main.md](../patterns/checklists/backend-main.md) — MUST-tier golden checks before a backend service write
+- When the authorized backend work targets be-library: [patterns/checklists/backend-libraries.md](../patterns/checklists/backend-libraries.md) — MUST-tier golden checks before a backend library write
 - When the authorized backend work touches cookie, header, query, form, JSON body, or device-ID resolution: [patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md](../patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md) — request-value execution contract
+- When the authorized work creates or edits SQL: [patterns/sql.md](../patterns/sql.md) — current SQL contract, formatting, and validation carried into execution
+- When any golden/sql entry is used as evidence: [patterns/checklists/sql.md](../patterns/checklists/sql.md) — per-entry authority map for the mixed SQL collection
+- When a generated API endpoint is added, changed, or consumed: [patterns/gencode-api.md](../patterns/gencode-api.md) — single shared source for the generator, config schema, and no-hand-written-client rules
 - When the authorized work touches a stored procedure, table, or persisted data: [db-schema-context.md](../db-schema-context.md) — schema evidence required before data changes
 - When the authorized work touches FE/BE URL, domain, redirect, or callback logic: [application-url-matrix.md](../application-url-matrix.md) — authoritative environment-specific execution values
+- When Subagent assignments are dispatched: [subagents-and-branches.md](../subagents-and-branches.md) — delegation packet, workspace mode, visibility, and integration boundaries
 - When material intent remains unresolved: [elicitation.md](../elicitation.md) — resolve only consequential ambiguity
 - When database context is needed: [sql-context-readonly.md](../sql-context-readonly.md) — managed read-only metadata and SELECT; never database writes
 - When project bootstrap, versioning, branches or release are requested: [release-and-bootstrap.md](../release-and-bootstrap.md) — project-specific adoption and release knowledge

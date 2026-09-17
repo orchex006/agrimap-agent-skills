@@ -2,6 +2,16 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.5.5 — 2026-09-17
+
+- Route golden patterns by detected target kind. `fe`, `be`, `sql` and `execute` now declare conditional references to a per-collection checklist; previously only one golden entry was reachable from any operation and `fe`/`sql` declared none.
+- Add `references/patterns/checklists/` — the `MUST`-tier extract of each golden collection with the entry owning each rule and its detection command, so a collection is entered by rule instead of browsed through five hops.
+- Define `MUST` verify / `SHOULD` justify / `FREE` decide tiers, making the existing structure-over-logic stance checkable without turning internal implementation choices into blocking questions.
+- Load the frontend, backend and SQL pattern contracts in `execute`, which previously carried none for frontend or SQL work, plus the generated-API source and the delegation contract when Subagent assignments are dispatched.
+- Stop the generated command prompts from classing golden material as background: a golden entry or checklist named by a matched conditional reference is required, not an optional example.
+- Add pre-write gate item 6: name the checklist loaded, the entries actually opened, and every `MUST` row conflicting with project code. Evidence, not a remembered convention.
+- Add six token-coverage scenarios for the new routing; adjust two regulated scenario budgets for the added governance prose. Direct and required budgets are unchanged.
+
 ## 4.5.4 — 2026-09-14
 
 - Release results, including `--flash`, must display elapsed, active, excluded human wait and per-step timing. The helper renders the final block; missing or incomplete measurement is explicitly disclosed.

@@ -63,6 +63,11 @@ Current curated BE-library references live under `golden/backend-libraries/` and
 
 ## Golden examples
 
+Enter the collection through the checklist for the detected target kind —
+[checklists/backend-main.md](checklists/backend-main.md) or
+[checklists/backend-libraries.md](checklists/backend-libraries.md) — which carries the `MUST` rows,
+the entry owning each, and the namespace allowlist.
+
 Raw legacy-compatible blocks live under `golden/backend-main/`; current curated library references live under `golden/backend-libraries/`. Their manifests record status, evidence mode, hashes, and source provenance.
 
 Read [conflict-resolution.md](conflict-resolution.md) before using them. Known legacy issues include duplicate imports, duplicate placeholder methods, inconsistent async naming, pseudo-JSON files, and ambiguous Domain versus persistence placement.

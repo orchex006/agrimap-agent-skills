@@ -61,6 +61,35 @@ Design ไม่ใช่คำสั่งแยกอีกต่อไป Age
 
 สำหรับ SQL คำว่า create/edit หมายถึง authoring ไฟล์เท่านั้น ไม่ใช่สิทธิ์ CREATE/ALTER/INSERT/UPDATE/DELETE บน DB ดู [SQL context](WORKFLOWS.md#sql-context)
 
+## Golden checklist และระดับความเข้ม MUST / SHOULD / FREE (4.5.5)
+
+ก่อนหน้านี้ golden pattern เข้าถึงได้ยาก: operation อ้างถึง golden ตรง ๆ แค่ไฟล์เดียว ส่วน `fe` กับ `sql`
+ไม่อ้างเลย และ `agm-exec` ไม่โหลด pattern contract ของ FE/SQL ทำให้ agent เขียนงานตามวิจารณญาณตัวเองได้
+โดยไม่ขัดกับ contract ที่เขียนไว้
+
+4.5.5 เพิ่ม `references/patterns/checklists/` หนึ่งไฟล์ต่อหนึ่ง golden collection แต่ละไฟล์คือ **สาระ
+ระดับ `MUST`** ของ collection นั้น พร้อมบอกว่า rule ไหนมาจาก entry ไหน และตรวจด้วยคำสั่งอะไร operation
+จะโหลด checklist ที่ตรงกับ `target_kind` ที่ตรวจพบโดยอัตโนมัติ — เปิด golden entry เต็ม ๆ เมื่อ checklist
+ชี้ไป หรือเมื่อมีข้อขัดแย้งเท่านั้น
+
+| ระดับ | ความหมาย | เบี่ยงได้ไหม |
+| --- | --- | --- |
+| `MUST` | โครงสร้าง การวางไฟล์ naming และ public contract | ไม่ใช่เรื่องรสนิยม — ไม่ตรงคือ defect ต้องแก้หรือหยุดแล้วรายงาน |
+| `SHOULD` | สำนวนและรูปทรงภายในโครงสร้างที่ถูกแล้ว | เบี่ยงได้เมื่อ active contract หรือไฟล์ข้างเคียงบังคับ แล้วบันทึกเหตุผลใน receipt |
+| `FREE` | ตรรกะภายใน layer ที่วางถูกแล้ว: อัลกอริทึม validation body การแตกฟังก์ชัน | ใช้วิจารณญาณวิศวกรรมได้เต็มที่ ห้ามบล็อกหรือถาม owner เพราะเรื่องนี้ |
+
+สิ่งที่เปลี่ยนในทางปฏิบัติ:
+
+- `agm-fe` / `agm-be` / `agm-sql` โหลด checklist ตาม target kind แล้ว และ `agm-exec` โหลด pattern
+  contract ของ FE/BE/SQL เข้าไปด้วย จากเดิมที่ไม่โหลดอะไรเลยสำหรับงาน FE และ SQL
+- Pre-write gate ใน `goal-rules.md` เพิ่มข้อ 6: ต้องระบุ checklist ที่โหลด entry ที่**เปิดจริง** และ `MUST`
+  ข้อที่ขัดกับโค้ดปัจจุบันพร้อมเหตุผล — อ้างจากความจำไม่นับ
+- คำสั่งที่ generate ออกมาไม่จัด golden เป็น "background link" อีกต่อไป
+
+checklist ไม่ได้อยู่เหนือ [conflict-resolution.md](../skills/agrimap-agent-skills/references/patterns/conflict-resolution.md):
+เมื่อ `MUST` ขัดกับพฤติกรรมที่ deploy อยู่หรือกับการตัดสินใจของ owner ลำดับความสำคัญในไฟล์นั้นยังเป็นตัวตัดสิน
+และความขัดแย้งต้องถูกรายงาน
+
 ## เขียนโจทย์ให้ชัดโดยไม่ต้องกรอกทุก field
 
 เริ่มจากสี่อย่าง: **ทำอะไร — ที่ไหน — ต้องคงอะไร — ผลที่ถือว่าเสร็จ** ระบุ path จริงหรือแนบไฟล์ ไม่จำเป็นต้องกรอก requester, model, depth ทุกคำถาม

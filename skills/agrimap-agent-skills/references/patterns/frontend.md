@@ -51,6 +51,11 @@ the golden entries `frontend-main/018` and `frontend-libraries/007` are thin poi
 
 ## Golden examples
 
+Enter the collection through the checklist for the detected target kind —
+[checklists/frontend-main.md](checklists/frontend-main.md) or
+[checklists/frontend-libraries.md](checklists/frontend-libraries.md) — which carries the `MUST` rows,
+the entry owning each, and the detection command.
+
 Current curated application references live under `golden/frontend-main/`; current library references live under `golden/frontend-libraries/`. Read each `manifest.json` for source, status, evidence mode, and hashes.
 
 Before using an entry, read [conflict-resolution.md](conflict-resolution.md). Defects from the retired frontend-main extraction were removed on 2026-07-16. Apply only the remaining collection known issues and conflict rows, including library public-API compatibility and project-dependent syntax.

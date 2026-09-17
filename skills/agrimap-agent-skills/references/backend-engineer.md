@@ -70,6 +70,8 @@ Keep `Infrastructure/Jobs/JobScheduler.cs` in namespace `AgriMap.Worker.Infrastr
 
 The strict contract is **structure**: layer placement, entry-point shape, model classification, naming, DI registration, and public/route/data contracts. Internal logic *within* a correctly placed layer is where the model applies its own intelligence — implement it with best engineering judgment, and do not demand a golden example, block, or escalate for every internal implementation decision. Escalate only when the choice changes a contract, data behavior, or ownership boundary. A structurally correct slice with model-authored internal logic is the expected outcome, not a compromise.
 
+The stance is checkable: [patterns/checklists/README.md](patterns/checklists/README.md) defines `MUST`, `SHOULD`, and `FREE`, and the target kind's checklist assigns each row. Structure is `MUST`, verified against the opened entry; internal logic is `FREE` and never a reason to block or ask.
+
 ## C# baseline
 
 For every C# target, apply [`patterns/csharp.md`](patterns/csharp.md). Owner-approved and curated golden rules outrank incidental project inconsistency; preserve a proven public/runtime compatibility constraint and report it rather than copying unrelated legacy style.

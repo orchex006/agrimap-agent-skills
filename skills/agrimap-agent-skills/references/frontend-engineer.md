@@ -43,6 +43,8 @@ The two collections carry different conventions (naming, facade usage, test styl
 
 The strict contract is **structure**: the Facade + Signal architecture and CODING-STANDARD rules for `fe-main` (R1–R5, layer boundaries, naming, signal primitives, generated-API boundary), and the public-API/naming/entry conventions for `fe-library`. Internal logic *within* a correctly structured layer is where the model applies its own intelligence — implement it with best engineering judgment, and do not demand a golden example, block, or escalate for every internal implementation decision. Escalate only when a choice changes a public contract, data behavior, or ownership boundary. A structurally correct feature with model-authored internal logic is the expected outcome, not a compromise.
 
+The stance is checkable: [patterns/checklists/README.md](patterns/checklists/README.md) defines `MUST`, `SHOULD`, and `FREE`, and the target kind's checklist assigns each row. Structure is `MUST`, verified against the opened entry; internal logic is `FREE` and never a reason to block or ask.
+
 ## Design source of trust
 
 For any visual or design-affecting work, resolve design truth in this order and record which level was used:
