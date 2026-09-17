@@ -33,12 +33,18 @@
 
 ## Pre-write gate
 
-Before a product write, be able to state all five items:
+Before a product write, be able to state all six items:
 
 1. authorized objective and non-goals;
 2. exact write boundary;
 3. behavior/logic allowed to change and required to remain stable;
 4. simplest complete approach and why a smaller one is insufficient;
-5. observable acceptance and verification method.
+5. observable acceptance and verification method;
+6. the golden checklist loaded for the detected target kind, the entries actually opened, and every `MUST` row that conflicts with current project code, with the reason.
 
 If a material item is unresolved, stop before writing.
+
+Item 6 is evidence, not testimony: name files opened in this invocation, never a remembered
+convention. Tiers `MUST` verify, `SHOULD` justify, `FREE` decide are defined in
+[patterns/checklists/README.md](patterns/checklists/README.md); a `FREE` choice never justifies
+blocking or an owner question.

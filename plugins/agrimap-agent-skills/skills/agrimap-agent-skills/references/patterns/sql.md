@@ -404,6 +404,10 @@ For `readability-organization` and `strict-preserve-logic`, collection is contra
 
 ## Golden examples and conflicts
 
+The collection is `mixed`: authority differs per entry. [checklists/sql.md](checklists/sql.md) is the
+status map — read which entries are `current` and which are `legacy-compatible` before citing one.
+
+
 The SQL manifest covers every `golden/sql/` file: current references, one curated message example, and immutable legacy evidence. Read it before selection; after conflict resolution, normalized/applicable golden structure outranks neighboring project structure.
 
 Read [conflict-resolution.md](conflict-resolution.md). Legacy entries contain competing styles, defects, and project-specific semantics. Apply only resolved structure to new artifacts; preserve active schema/callers/deployed behavior and require project evidence plus owner approval for logical/data change.

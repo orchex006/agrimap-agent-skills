@@ -15,6 +15,9 @@ Evidence mode is separate from authority:
 - `raw-immutable`: byte-for-byte source evidence; annotate defects outside the evidence.
 - `mixed`: collection-only mode; inspect every entry.
 
+Per-collection `MUST` rows live in [checklists/](checklists/README.md); this table remains the
+authority source they route to.
+
 ## Current catalog
 
 | Pattern | Status | Notes |
