@@ -1,0 +1,974 @@
+// Work branch, delivery and integration mechanics (ACG C4-C6).
+// Every function takes { run } so tests can stub gh/glab; git is always an argv
+// array through run(). Plans are pure reads; apply() recomputes the plan and
+// refuses a different planHash. No force push, stash, reset, worktree or clone.
+import { createHash } from "node:crypto";
+import { mkdir, open, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { defaultRun, trimStderr } from "./run-command.mjs";
+import { detectSensitive } from "./sensitive-recording.mjs";
+import { isProtected, workTypeOf } from "./workflow-policy.mjs";
+
+const AUDIT_DIRECTORIES = new Set(["decisions", "instructions", "knowledge", "logs", "memory", "reports", "policy"]);
+const SECRET_KINDS = new Set(["CREDENTIAL", "TOKEN", "AUTH", "PRIVATE_KEY"]);
+const TYPE_BY_WORK = { feature: "feat", fix: "fix", hotfix: "fix", refactor: "refactor", docs: "docs", chore: "chore" };
+const HEADER = /^(feat|fix|refactor|docs|chore|test|perf|build|ci)(\([a-z0-9._/-]+\))?: \S.*$/;
+const SLUG = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
+const toSlash = value => String(value || "").replaceAll("\\", "/");
+const exists = file => stat(file).then(() => true, () => false);
+
+export function planHashOf(value) {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function git(run, root, args, options = {}) {
+  return run("git", args, { ...options, cwd: root });
+}
+
+function out(result) {
+  return result.ok ? result.stdout.trim() : "";
+}
+
+function stop(code, message, extra = {}) {
+  return { ok: false, code, message, warnings: [], next: extra.next || { action: "report" }, card: null, ...extra };
+}
+
+function warning(code, subject, fix) {
+  return { code, subject, fix };
+}
+
+// ---------------------------------------------------------------- git facts
+
+export function parsePorcelainZ(stdout) {
+  const parts = String(stdout || "").split("\0");
+  const entries = [];
+  for (let index = 0; index < parts.length; index += 1) {
+    const record = parts[index];
+    if (record.length < 4) continue;
+    const xy = record.slice(0, 2);
+    const entry = { path: toSlash(record.slice(3)), status: xy.trim() || xy };
+    if (/[RC]/.test(xy)) { entry.origPath = toSlash(parts[index + 1] || ""); index += 1; }
+    entries.push(entry);
+  }
+  return entries;
+}
+
+export function dirtyInventory(root, { run = defaultRun } = {}) {
+  return parsePorcelainZ(git(run, root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]).stdout);
+}
+
+async function hashPath(root, relative, run) {
+  const file = path.join(root, relative);
+  const info = await stat(file).catch(() => null);
+  if (!info) return "deleted";
+  if (info.isDirectory()) return "directory";
+  const result = git(run, root, ["hash-object", "--", relative]);
+  return result.ok ? result.stdout.trim() : "unreadable";
+}
+
+// Snapshot taken by `start` before any write so delivery never stages
+// files that were already dirty when the execution began.
+export async function snapshotDirty(root, { run = defaultRun } = {}) {
+  // The state ignore file is created by the runtime itself (context --ack), not pre-existing work.
+  const entries = dirtyInventory(root, { run }).filter(entry => entry.path !== ".agrimap-agent/.gitignore");
+  const snapshot = [];
+  for (const entry of entries.slice(0, 5000)) snapshot.push({ path: entry.path, status: entry.status, hash: await hashPath(root, entry.path, run) });
+  return snapshot;
+}
+
+function refExists(run, root, ref) {
+  return git(run, root, ["show-ref", "--verify", "--quiet", ref]).ok;
+}
+
+function isAncestor(run, root, ancestor, descendant) {
+  return git(run, root, ["merge-base", "--is-ancestor", ancestor, descendant]).ok;
+}
+
+export async function gitFacts(root, { run = defaultRun, fetch = true } = {}) {
+  const warnings = [];
+  const branch = out(git(run, root, ["branch", "--show-current"]));
+  const head = out(git(run, root, ["rev-parse", "HEAD"])) || null;
+  const gitDir = out(git(run, root, ["rev-parse", "--path-format=absolute", "--git-dir"]));
+  let operationInProgress = null;
+  for (const marker of ["MERGE_HEAD", "rebase-merge", "rebase-apply", "CHERRY_PICK_HEAD"]) {
+    if (gitDir && await exists(path.join(gitDir, marker))) { operationInProgress = marker; break; }
+  }
+  const upstreamResult = git(run, root, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"]);
+  const remoteUrl = git(run, root, ["remote", "get-url", "origin"]);
+  const hasRemote = remoteUrl.ok;
+  let fetched = false;
+  if (hasRemote && fetch) {
+    fetched = git(run, root, ["fetch", "--prune", "origin"]).ok;
+    if (!fetched) warnings.push(warning("OFFLINE_FETCH_FAILED", "origin", "continue with local refs; retry when online"));
+  } else if (!hasRemote) warnings.push(warning("NO_REMOTE", "origin", "commit only; add an origin remote to push"));
+  return {
+    branch, head, gitDir, operationInProgress,
+    upstream: upstreamResult.ok ? upstreamResult.stdout.trim() : null,
+    hasRemote, remoteUrl: hasRemote ? remoteUrl.stdout.trim() : null, fetched,
+    dirty: dirtyInventory(root, { run }), warnings,
+  };
+}
+
+// ------------------------------------------------------------- work branch
+
+function candidateName(prefix, ticket, slug, suffix) {
+  return `${prefix}${ticket ? `${String(ticket).toLowerCase()}-` : ""}${slug}${suffix > 1 ? `-${suffix}` : ""}`;
+}
+
+function branchCard({ question, impact, checked, options, reason, risk = "R2" }) {
+  return { kind: "workflow", topic: "git/work-branch", risk, confidence: "medium", question, impact, checked, options, recommended: "1", recommendedReason: reason, blocking: true, default: null, recordAs: "none", paths: [], expiresHours: 24 };
+}
+
+export async function planBranch({ root, policy, active = null, type, slug, ticket = null, mode = null, run = defaultRun, fetch = true }) {
+  if (!policy) return stop("POLICY_REQUIRED", "No workflow policy; run policy infer and ask its card first.", { next: { action: "run", command: "policy infer" } });
+  if (policy.branching?.disabled) return { ok: true, action: "skip", reason: "branching disabled by policy", commands: [], warnings: [], card: null };
+  const workType = policy.branching?.workTypes?.[type];
+  if (!workType) return stop("WORK_TYPE_INVALID", `--type must be one of ${Object.keys(policy.branching?.workTypes || {}).join("|")}.`);
+  if (!SLUG.test(String(slug || ""))) return stop("BRANCH_NAME_INVALID", "--slug must be English kebab-case.", { next: { action: "run", command: "branch plan with a kebab-case --slug" } });
+  const maxLength = Number(policy.branching.slug?.maxLength || 40);
+  const facts = await gitFacts(root, { run, fetch });
+  if (!facts.branch) return stop("DETACHED_HEAD", "HEAD is detached; ask the requester which branch to use.");
+  if (facts.operationInProgress) return stop("OPERATION_IN_PROGRESS", `A ${facts.operationInProgress} is in progress; the requester must finish or abort it.`);
+  const base = workType.base;
+  const baseRef = facts.hasRemote && refExists(run, root, `refs/remotes/origin/${base}`) ? `origin/${base}` : refExists(run, root, `refs/heads/${base}`) ? base : null;
+  if (!baseRef) return stop("BASE_NOT_FOUND", `Base branch ${base} exists neither locally nor on origin.`);
+  const baseSha = out(git(run, root, ["rev-parse", baseRef]));
+  const first = candidateName(workType.prefix, ticket, slug, 1);
+  if (first.length > workType.prefix.length + maxLength || !git(run, root, ["check-ref-format", "--branch", first]).ok) return stop("BRANCH_NAME_INVALID", `Branch name ${first} is too long or invalid.`);
+  let name = first;
+  const taken = candidate => refExists(run, root, `refs/heads/${candidate}`) || refExists(run, root, `refs/remotes/origin/${candidate}`);
+  if (facts.branch !== first && taken(first) && active?.branch !== first) {
+    name = null;
+    for (let suffix = 2; suffix <= 9 && !name; suffix += 1) if (!taken(candidateName(workType.prefix, ticket, slug, suffix))) name = candidateName(workType.prefix, ticket, slug, suffix);
+    if (!name) return stop("BRANCH_NAME_EXHAUSTED", "Suffixes -2..-9 are taken; choose another slug.");
+  }
+  const dirty = facts.dirty.filter(entry => !entry.path.startsWith(".agrimap-agent/"));
+  const hostPatterns = (policy.branching.hostBranchPatterns || []).map(pattern => new RegExp(pattern));
+  const currentType = workTypeOf(policy, facts.branch);
+  const warnings = [...facts.warnings];
+  let action;
+  let commands = [];
+  let remoteBranch = name;
+  let card = null;
+  const createFrom = start => (start ? ["git", "switch", "--no-track", "-c", name, start] : ["git", "switch", "-c", name]);
+  if (mode === "current") action = "reuse";
+  else if (facts.branch === name || (active?.branch && facts.branch === active.branch && currentType)) action = "reuse";
+  else if (hostPatterns.some(pattern => pattern.test(facts.branch))) {
+    const style = policy.branching.hostWorktreeBranch || "push-as-team-name";
+    if (style === "rename" && !facts.upstream) { action = "rename"; commands = [["git", "branch", "-m", name]]; }
+    else {
+      action = style === "keep" ? "keep" : "host-keep";
+      remoteBranch = style === "keep" ? facts.branch : name;
+      if (style === "rename") warnings.push(warning("HOST_BRANCH_HAS_UPSTREAM", facts.branch, "kept the host branch name because it already tracks a remote"));
+    }
+  } else if (mode === "head") { action = "create-carry"; commands = [createFrom(null)]; }
+  else if (mode === "local-base") { action = "create"; commands = [createFrom(base)]; }
+  else if (mode === "new") {
+    action = dirty.length ? "create-carry" : "create";
+    commands = [createFrom(dirty.length ? null : baseRef)];
+    if (dirty.length) warnings.push(warning("BASE_NOT_REFRESHED_DIRTY", name, "the branch starts at the current HEAD because the tree was dirty"));
+  } else if (currentType) {
+    action = "ask";
+    card = branchCard({
+      risk: "R1", question: `อยู่บน ${facts.branch} ซึ่งเป็น branch ของงานอื่น จะทำงานนี้ที่ไหน`,
+      impact: "แยกงานคนละ branch ทำให้ review และ merge แยกกันได้",
+      checked: [`current branch ${facts.branch}`, `policy prefix ${workType.prefix}`],
+      options: [
+        { id: "1", label: `แตก ${name} ใหม่จาก ${base}`, effect: "งานนี้อยู่ branch ของตัวเอง", value: "new" },
+        { id: "2", label: `ทำต่อบน ${facts.branch}`, effect: "งานนี้รวมอยู่กับงานเดิมใน branch เดียวกัน", value: "current" },
+      ],
+      reason: "หนึ่งงานต่อหนึ่ง work branch",
+    });
+  } else if (isProtected(policy, facts.branch) || facts.branch === base) {
+    if (facts.branch !== base && dirty.length) {
+      action = "ask";
+      card = branchCard({
+        question: `อยู่บน ${facts.branch} (ไม่ใช่ base ${base}) และมีไฟล์ค้าง`,
+        impact: "branch ใหม่จะเริ่มจาก HEAD นี้ ไม่ใช่ base ตาม policy",
+        checked: [`current ${facts.branch}`, `${dirty.length} dirty paths`],
+        options: [
+          { id: "1", label: "สร้างจาก HEAD ปัจจุบัน พางานไปด้วย", effect: `${name} เริ่มจาก ${facts.branch} (base ไม่ตรง policy)`, value: "head" },
+          { id: "2", label: "หยุดให้ผู้ใช้จัดการก่อน", effect: "ไม่สร้าง branch จนกว่าผู้ใช้จัดการไฟล์ค้าง", value: "stop" },
+        ],
+        reason: "ไม่ต้อง stash หรือ reset งานของผู้ใช้",
+      });
+    } else if (dirty.length) {
+      action = "create-carry";
+      commands = [createFrom(null)];
+      warnings.push(warning("BASE_NOT_REFRESHED_DIRTY", name, "the branch starts at the current HEAD because the tree was dirty"));
+    } else {
+      const counts = facts.branch === base && baseRef !== base ? out(git(run, root, ["rev-list", "--left-right", "--count", `${base}...${baseRef}`])).split(/\s+/).map(Number) : [0, 0];
+      if (counts[0] > 0) {
+        action = "ask";
+        card = branchCard({
+          question: `local ${base} มี ${counts[0]} commit ที่ยังไม่อยู่บน ${baseRef}`,
+          impact: "เลือกว่างานใหม่จะรวม commit ค้างของ local base หรือไม่",
+          checked: [`${base} ahead ${counts[0]}, behind ${counts[1]}`],
+          options: [
+            { id: "1", label: `แตกจาก ${baseRef}`, effect: `ไม่รวม ${counts[0]} local commits`, value: "new" },
+            { id: "2", label: `แตกจาก local ${base}`, effect: `รวม ${counts[0]} local commits เข้างานนี้`, value: "local-base" },
+          ],
+          reason: "base ของทีมคือ remote",
+        });
+      } else { action = "create"; commands = [createFrom(baseRef)]; }
+    }
+  } else {
+    action = "ask";
+    card = branchCard({
+      question: `อยู่บน ${facts.branch} ซึ่งไม่ใช่ work branch หรือ base`,
+      impact: "กำหนดว่างานนี้เป็นส่วนของ branch ปัจจุบันหรือแยกออกมา",
+      checked: [`current ${facts.branch}`, `policy base ${base}`],
+      options: [
+        { id: "1", label: `แตก ${name} จาก ${base}`, effect: "งานนี้แยกเป็น work branch ตาม policy", value: "new" },
+        { id: "2", label: `ทำบน ${facts.branch} ต่อ`, effect: "งานนี้เป็นส่วนของ branch ปัจจุบัน", value: "current" },
+      ],
+      reason: "policy กำหนด work branch ต่อหนึ่งงาน",
+    });
+  }
+  if (action === "reuse") { remoteBranch = active?.remoteBranch || facts.branch; name = facts.branch; }
+  const hashFacts = { branch: facts.branch, head: facts.head, baseRef, baseSha, dirty: facts.dirty.map(entry => [entry.path, entry.status]) };
+  const plan = {
+    ok: true, action, branch: action === "keep" ? facts.branch : name, remoteBranch, base, baseRef, baseSha, workType: type,
+    facts: { current: facts.branch, dirty: dirty.length, remote: facts.hasRemote, upstream: facts.upstream },
+    commands, warnings, card,
+  };
+  plan.planHash = card ? null : planHashOf({ facts: hashFacts, action, commands });
+  plan.next = card ? { action: "ask" } : { action: "run", command: `branch apply --plan-hash ${plan.planHash}` };
+  return plan;
+}
+
+function runCommands(run, root, commands) {
+  for (const [index, command] of commands.entries()) {
+    const [program, ...args] = command;
+    const result = run(program, args, { cwd: root });
+    if (!result.ok) return { ok: false, failedStep: index, command: command.join(" "), stderr: trimStderr(result.stderr) };
+  }
+  return { ok: true };
+}
+
+export async function applyBranch(options) {
+  const plan = await planBranch({ ...options, fetch: false });
+  if (!plan.ok) return plan;
+  if (plan.card) return { ...plan, ok: false, code: "CARD_PENDING", message: "Answer the card, then plan again with --mode." };
+  if (plan.planHash !== options.planHash) return stop("PLAN_STALE", "Repository state changed since the plan; run branch plan again.", { next: { action: "run", command: "branch plan" } });
+  const result = runCommands(options.run || defaultRun, options.root, plan.commands);
+  if (!result.ok) return stop("BRANCH_APPLY_FAILED", `Command failed: ${result.command}`, result);
+  return { ok: true, action: plan.action, branch: plan.branch, record: { branch: plan.branch, remoteBranch: plan.remoteBranch, base: plan.base, baseSha: plan.baseSha, workType: plan.workType, branchAction: plan.action }, warnings: plan.warnings, next: { action: "none" }, card: null };
+}
+
+// ---------------------------------------------------------------- delivery
+
+async function isText(file) {
+  let handle;
+  try {
+    handle = await open(file, "r");
+    const buffer = Buffer.alloc(8192);
+    const { bytesRead } = await handle.read(buffer, 0, 8192, 0);
+    return !buffer.subarray(0, bytesRead).includes(0);
+  } catch { return false; } finally { await handle?.close(); }
+}
+
+// Added lines with their new-file line numbers (whole file when untracked).
+async function addedLines(root, entry, run) {
+  const file = path.join(root, entry.path);
+  const info = await stat(file).catch(() => null);
+  if (!info?.isFile() || info.size > 1024 * 1024 || !(await isText(file))) return [];
+  if (entry.status === "??" || entry.status === "A") {
+    return (await readFile(file, "utf8")).split(/\r?\n/).map((text, index) => ({ line: index + 1, text }));
+  }
+  const diff = git(run, root, ["diff", "HEAD", "--no-color", "-U0", "--", entry.path]);
+  const result = [];
+  let line = 0;
+  for (const text of diff.stdout.split(/\r?\n/)) {
+    const hunk = text.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+    if (hunk) { line = Number(hunk[1]); continue; }
+    if (text.startsWith("+") && !text.startsWith("+++")) { result.push({ line, text: text.slice(1) }); line += 1; }
+  }
+  return result;
+}
+
+function auditPathAllowed(relative) {
+  const inside = relative.slice(".agrimap-agent/".length);
+  if (inside === ".gitignore") return true;
+  if (inside.startsWith("memory/current/")) return false;
+  return AUDIT_DIRECTORIES.has(inside.split("/")[0]);
+}
+
+export async function classifyPaths(root, { preexisting = [], includeAudit = true, run = defaultRun } = {}) {
+  const pre = new Map(preexisting.map(entry => [entry.path, entry]));
+  const groups = { own: [], foreign: [], mixed: [], excluded: [] };
+  const warnings = [];
+  const inventory = dirtyInventory(root, { run });
+  for (const entry of inventory) {
+    const relative = entry.path;
+    if (relative.startsWith(".agrimap-agent/local/")) { groups.excluded.push({ ...entry, reason: "local-memory" }); continue; }
+    if (pre.has(relative)) {
+      const hash = await hashPath(root, relative, run);
+      (hash === pre.get(relative).hash ? groups.foreign : groups.mixed).push(entry);
+      continue;
+    }
+    if (relative.startsWith(".agrimap-agent/")) {
+      if (includeAudit && auditPathAllowed(relative)) groups.own.push(entry);
+      else groups.excluded.push({ ...entry, reason: "runtime-or-private-state" });
+      continue;
+    }
+    groups.own.push(entry);
+  }
+  if (groups.own.length) {
+    const ignored = git(run, root, ["check-ignore", "--no-index", "--stdin"], { input: `${groups.own.map(entry => entry.path).join("\n")}\n` });
+    const ignoredSet = new Set(lines(ignored.stdout).map(toSlash));
+    groups.excluded.push(...groups.own.filter(entry => ignoredSet.has(entry.path)).map(entry => ({ ...entry, reason: "ignored" })));
+    groups.own = groups.own.filter(entry => !ignoredSet.has(entry.path));
+  }
+  if (lines(git(run, root, ["ls-files", "--", ".agrimap-agent/local"]).stdout).length) {
+    warnings.push(warning("LOCAL_MEMORY_TRACKED", ".agrimap-agent/local", "ask the requester before `git rm --cached -r .agrimap-agent/local`"));
+  }
+  return { groups, warnings, inventory };
+}
+
+function lines(value) {
+  return String(value || "").split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+}
+
+function commitMessage({ input, workType, objective, own, executionId, verificationTrailer, bodyFallback = [] }) {
+  const type = input?.type || TYPE_BY_WORK[workType] || "chore";
+  let scope = input?.scope;
+  if (scope === undefined) {
+    const counts = {};
+    for (const entry of own) {
+      const top = entry.path.includes("/") ? entry.path.split("/")[0] : null;
+      if (top && top !== ".agrimap-agent") counts[top] = (counts[top] || 0) + 1;
+    }
+    scope = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]?.toLowerCase().replace(/[^a-z0-9._/-]+/g, "-") || null;
+  }
+  const subject = String(input?.subject || objective || "").trim();
+  const header = `${type}${scope ? `(${scope})` : ""}: ${subject}`;
+  const body = (Array.isArray(input?.body) && input.body.length ? input.body : bodyFallback).slice(0, 5).map(item => `- ${String(item).replace(/^-\s*/, "")}`);
+  const trailers = [`AGM-Execution: ${executionId}`, ...(verificationTrailer ? [`AGM-Verification: ${verificationTrailer}`] : [])];
+  return { header, subject, text: [header, "", ...(body.length ? [...body, ""] : []), ...trailers, ""].join("\n"), trailers };
+}
+
+function findChangelog(entries, target) {
+  return entries.find(name => name.toLowerCase() === String(target || "changelog.md").toLowerCase()) || null;
+}
+
+export async function planDelivery({
+  root, policy, active, ackRequired = [], explicit = null, input = null, changelogNa = null, mixed = null,
+  allowSecretPaths = [], excludePaths = [], localPaths = [], bodyFallback = [], governance = {}, run = defaultRun, pushOnly = false,
+}) {
+  if (!active) return stop("NO_ACTIVE_EXECUTION", "Start the execution first (start --objective <same objective>).", { next: { action: "run", command: "start" } });
+  if (ackRequired.length) return stop("INSTRUCTIONS_NOT_ACKNOWLEDGED", "Read and ack the AGENTS chain first.", { next: { action: "read-and-ack", files: ackRequired, command: "context --ack <sha12,...>" } });
+  const facts = await gitFacts(root, { run, fetch: false });
+  const warnings = [...facts.warnings.filter(item => item.code !== "OFFLINE_FETCH_FAILED")];
+  const branch = facts.branch;
+  if (active.branch && branch !== active.branch) return stop("BRANCH_MISMATCH", `Current branch ${branch || "(detached)"} differs from the execution branch ${active.branch}; switch back or plan again.`, { next: { action: "run", command: `git switch ${active.branch}` } });
+  if (!branch) return stop("DETACHED_HEAD", "HEAD is detached.");
+  if (isProtected(policy, branch)) return stop("PROTECTED_BRANCH", `${branch} is protected; deliver only on a work branch.`, { next: { action: "run", command: "branch plan --mode head" } });
+  if (facts.operationInProgress) return stop("OPERATION_IN_PROGRESS", `A ${facts.operationInProgress} is in progress.`);
+  const explicitSet = new Set(String(explicit || "").split(",").map(item => item.trim()).filter(Boolean));
+  const autoAuthorized = policy?.status === "confirmed" && policy.delivery?.commitOnComplete === true && governance.delivery !== false;
+  const commitAuthorized = autoAuthorized || explicitSet.has("commit") || explicitSet.has("push");
+  const pushAuthorized = (autoAuthorized && policy.delivery?.pushOnComplete === true) || explicitSet.has("push");
+  const { groups, warnings: classifyWarnings } = await classifyPaths(root, { preexisting: active.preexistingDirty || [], includeAudit: policy?.delivery?.includeAuditArtifacts !== false, run });
+  warnings.push(...classifyWarnings);
+  const excluded = new Set(excludePaths.map(toSlash));
+  groups.excluded.push(...groups.own.filter(entry => excluded.has(entry.path)).map(entry => ({ ...entry, reason: "excluded-by-request" })));
+  groups.own = groups.own.filter(entry => !excluded.has(entry.path));
+  if (groups.mixed.length && mixed === "include") groups.own.push(...groups.mixed.splice(0));
+  else if (groups.mixed.length && mixed === "exclude") groups.foreign.push(...groups.mixed.splice(0));
+  const paths = Object.fromEntries(Object.entries(groups).map(([key, value]) => [key, value.map(entry => entry.path)]));
+  const counts = Object.fromEntries(Object.entries(groups).map(([key, value]) => [key, value.length]));
+  if (!commitAuthorized) {
+    return { ok: true, authorized: false, reason: policy ? "the workflow policy does not enable delivery" : "no confirmed workflow policy", paths, counts, warnings, next: { action: "report", command: "report exact own paths as local deliverables" }, card: null, planHash: null };
+  }
+  if (groups.mixed.length) {
+    return {
+      ok: true, authorized: true, paths, counts, warnings, planHash: null, next: { action: "ask" },
+      card: {
+        kind: "scope", topic: "git/delivery-mixed", risk: "R2", confidence: "medium",
+        question: `${groups.mixed.length} ไฟล์ค้างก่อนเริ่มงานและงานนี้แก้ต่อ จะรวมใน commit ไหม`,
+        impact: "ไฟล์เหล่านี้มีทั้งงานนี้และงานที่ค้างก่อนเริ่มปนกัน",
+        checked: paths.mixed.slice(0, 5),
+        options: [
+          { id: "1", label: "รวม", effect: "commit ไฟล์ทั้งไฟล์รวมส่วนที่ค้างก่อนเริ่ม", value: "include" },
+          { id: "2", label: "ไม่รวม", effect: "ไฟล์เหล่านี้อยู่ใน working tree ต่อ ไม่ถูก commit", value: "exclude" },
+        ],
+        recommended: "1", recommendedReason: "งานนี้แก้ไฟล์นี้จริง", blocking: true, default: null, recordAs: "none", paths: paths.mixed, expiresHours: 24,
+      },
+    };
+  }
+  const findings = [];
+  const leaks = [];
+  const allowed = new Set(allowSecretPaths.map(toSlash));
+  for (const entry of groups.own) {
+    const added = await addedLines(root, entry, run);
+    if (!added.length) continue;
+    if (!allowed.has(entry.path)) {
+      const text = added.map(item => item.text).join("\n");
+      for (const finding of detectSensitive(text).filter(item => SECRET_KINDS.has(item.kind))) findings.push({ path: entry.path, line: added[finding.line - 1]?.line ?? finding.line, kind: finding.kind });
+    }
+    for (const item of added) {
+      const lower = item.text.toLowerCase();
+      if (localPaths.some(value => lower.includes(value))) leaks.push({ path: entry.path, line: item.line });
+    }
+  }
+  if (findings.length) {
+    const suspect = [...new Set(findings.map(item => item.path))];
+    return stop("SECRET_SUSPECTED", "Possible secrets in files to commit; values are not shown.", {
+      findings: findings.map(item => ({ path: item.path, line: item.line, kind: item.kind })), paths, counts, next: { action: "ask" },
+      card: {
+        kind: "scope", topic: "git/delivery-secret", risk: "R3", confidence: "medium",
+        question: `พบสิ่งที่อาจเป็นข้อมูลลับใน ${suspect.length} ไฟล์ จะทำอย่างไร`,
+        impact: "push แล้วข้อมูลลับจะอยู่ใน history ของ remote และย้อนไม่ได้",
+        checked: findings.slice(0, 5).map(item => `${item.path}:${item.line} (${item.kind})`),
+        options: [
+          { id: "1", label: "ไม่รวมไฟล์นี้", effect: `deliver plan --exclude-paths ${suspect.join(",")}`, value: "exclude" },
+          { id: "2", label: "เป็น false positive รวมได้", effect: `deliver plan --allow-secret-paths ${suspect.join(",")}`, value: "allow" },
+        ],
+        recommended: "1", recommendedReason: "ปลอดภัยกว่าจนกว่าผู้ใช้ยืนยัน", blocking: true, default: null, recordAs: "none", paths: suspect, expiresHours: 24,
+      },
+    });
+  }
+  if (leaks.length) return stop("LOCAL_PATH_LEAK", "Committed files would contain a machine-local path from local memory; refer to the spec source id instead.", { leaks, next: { action: "run", command: "replace the absolute path with the spec source id, then deliver plan" } });
+  const changelogMode = policy?.delivery?.changelog?.mode || "required-if-exists";
+  if (changelogMode !== "none" && !changelogNa) {
+    const entries = await readdir(root).catch(() => []);
+    const file = findChangelog(entries, policy?.delivery?.changelog?.path);
+    const touched = file && groups.own.some(entry => entry.path.toLowerCase() === file.toLowerCase());
+    if ((changelogMode === "required" && !touched) || (changelogMode === "required-if-exists" && file && !touched)) {
+      return stop("CHANGELOG_REQUIRED", `${file || policy.delivery.changelog.path} needs an entry for this change.`, { next: { action: "run", command: "add the changelog entry per project AGENTS §5, then deliver plan (or --changelog-na \"<reason>\")" } });
+    }
+  }
+  const verification = active.verificationStatus;
+  const verified = ["passed", "not-applicable"].includes(verification);
+  if (!verified) warnings.push(warning("DELIVERED_UNVERIFIED", active.executionId, "run the tests, fix them, deliver again; merge is not offered until verification passes"));
+  const message = commitMessage({ input, workType: active.workType || workTypeOf(policy, branch), objective: active.objective, own: groups.own, executionId: active.executionId, verificationTrailer: verified ? null : verification === "failed" ? "failed" : "not-run", bodyFallback });
+  const commitLanguage = policy?.delivery?.commitLanguage || "en";
+  if (!pushOnly && groups.own.length) {
+    if (commitLanguage === "en" && /[^\x20-\x7e]/.test(message.header)) return stop("MESSAGE_REQUIRED", "Write an English Conventional Commit message and pass --input message.json.", { next: { action: "run", command: "deliver plan --input message.json" } });
+    if (!HEADER.test(message.header) || message.header.length > 72) return stop("MESSAGE_INVALID", `Header must match Conventional Commits and be at most 72 characters: ${message.header}`, { next: { action: "run", command: "deliver plan --input message.json" } });
+  }
+  const head = facts.head;
+  const headMessage = head ? out(git(run, root, ["log", "-1", "--format=%B", head])) : "";
+  const alreadyCommitted = headMessage.includes(`AGM-Execution: ${active.executionId}`);
+  if (!groups.own.length && !alreadyCommitted && !pushOnly) return stop("NOTHING_TO_DELIVER", "No own changes to commit for this execution.", { paths, counts, warnings });
+  const remoteBranch = active.remoteBranch || branch;
+  const push = pushAuthorized && facts.hasRemote ? { enabled: true, refspec: `HEAD:refs/heads/${remoteBranch}` } : { enabled: false, reason: facts.hasRemote ? "push not enabled" : "no origin remote" };
+  const staged = lines(git(run, root, ["diff", "--cached", "--name-only"]).stdout).map(toSlash);
+  const ownSet = new Set(groups.own.map(entry => entry.path));
+  const onlyOwn = staged.some(item => !ownSet.has(item));
+  // After delivery only its own audit log changed: that rides with the next commit.
+  const auditOnly = groups.own.every(entry => entry.path.startsWith(".agrimap-agent/"));
+  const commit = groups.own.length && !pushOnly && !(alreadyCommitted && auditOnly);
+  const addCommands = [];
+  for (let index = 0; commit && index < groups.own.length; index += 100) addCommands.push(["git", "add", "--", ...groups.own.slice(index, index + 100).map(entry => entry.path)]);
+  const messageFile = toSlash(path.join(".agrimap-agent", "runtime", "tmp", `commit-${active.executionId}.txt`));
+  const commands = [
+    ...addCommands,
+    ...(commit ? [["git", "diff", "--cached", "--check"], ["git", "commit", "-F", messageFile, ...(onlyOwn ? ["--only", "--", ...groups.own.map(entry => entry.path)] : [])]] : []),
+    ...(push.enabled ? [["git", "push", "-u", "origin", push.refspec], ["git", "ls-remote", "--heads", "origin", remoteBranch]] : []),
+  ];
+  const ownHashes = [];
+  for (const entry of groups.own) ownHashes.push([entry.path, await hashPath(root, entry.path, run)]);
+  const plan = {
+    ok: true, authorized: true, branch, remoteBranch, counts, paths,
+    message: { header: message.header, trailers: message.trailers, text: message.text },
+    commit: Boolean(commit), alreadyCommitted, push, commands, warnings, card: null,
+    verification: verified ? verification : verification || "not-run",
+  };
+  plan.planHash = planHashOf({ branch, head, own: ownHashes, message: message.text, push, commands });
+  plan.next = { action: "run", command: `deliver apply --plan-hash ${plan.planHash}` };
+  return plan;
+}
+
+function classifyPushFailure(stderr) {
+  if (/\[rejected\]|non-fast-forward|fetch first/i.test(stderr)) return { code: "REMOTE_AHEAD", next: { action: "run", command: "integrate plan --intent update-branch, then deliver apply --push-only" } };
+  if (/Authentication failed|Permission denied|403|could not read Username/i.test(stderr)) return { code: "PUSH_AUTH", next: { action: "report", command: "the requester fixes Git credentials; the agent never touches them" } };
+  if (/Could not resolve host|timed out|Connection|unable to access/i.test(stderr)) return { code: "PUSH_NETWORK", next: { action: "run", command: "deliver apply --push-only when the network is back" } };
+  return { code: "PUSH_FAILED", next: { action: "report" } };
+}
+
+export async function applyDelivery(options) {
+  const run = options.run || defaultRun;
+  const { root, active } = options;
+  const plan = await planDelivery({ ...options, pushOnly: Boolean(options.pushOnly) });
+  if (!plan.ok) return plan;
+  if (!plan.authorized) return stop("DELIVERY_NOT_AUTHORIZED", "Delivery is not enabled by a confirmed policy or an explicit instruction; report local paths.", { paths: plan.paths });
+  if (plan.card) return { ...plan, ok: false, code: "CARD_PENDING", message: "Answer the card, then plan again." };
+  if (!options.pushOnly && plan.planHash !== options.planHash) return stop("PLAN_STALE", "Files changed since the plan; run deliver plan again.", { next: { action: "run", command: "deliver plan" } });
+  if (plan.commit) {
+    const messageFile = path.join(root, ".agrimap-agent", "runtime", "tmp", `commit-${active.executionId}.txt`);
+    await mkdir(path.dirname(messageFile), { recursive: true });
+    await writeFile(messageFile, plan.message.text, "utf8");
+  }
+  const pushIndex = plan.commands.findIndex(command => command[1] === "push");
+  const local = runCommands(run, root, pushIndex < 0 ? plan.commands : plan.commands.slice(0, pushIndex));
+  if (!local.ok) return stop(local.command.includes("--check") ? "DIFF_CHECK_FAILED" : "COMMIT_FAILED", `Command failed: ${local.command}`, local);
+  const commit = out(git(run, root, ["rev-parse", "HEAD"]));
+  let remoteSha = null;
+  let pushed = false;
+  if (plan.push.enabled) {
+    const remoteNow = out(git(run, root, ["ls-remote", "--heads", "origin", plan.remoteBranch])).split(/\s+/)[0] || null;
+    if (remoteNow !== commit) {
+      const result = git(run, root, ["push", "-u", "origin", plan.push.refspec]);
+      if (!result.ok) {
+        const failure = classifyPushFailure(result.stderr);
+        return { ...stop(failure.code, `Push failed (${failure.code}); the commit ${commit.slice(0, 7)} is kept locally.`, { next: failure.next, stderr: trimStderr(result.stderr) }), commit, severity: failure.code === "PUSH_NETWORK" ? "warn" : "stop" };
+      }
+      pushed = true;
+    }
+    remoteSha = out(git(run, root, ["ls-remote", "--heads", "origin", plan.remoteBranch])).split(/\s+/)[0] || null;
+    if (remoteSha !== commit) return { ...stop("REMOTE_MISMATCH", `Remote ${plan.remoteBranch} is ${remoteSha || "missing"}, local HEAD is ${commit}.`), commit };
+  }
+  return {
+    ok: true, branch: plan.branch, remoteBranch: plan.remoteBranch, commit, remoteSha, pushed,
+    remoteVerified: plan.push.enabled ? remoteSha === commit : false,
+    committed: plan.commit, files: plan.paths.own, excluded: plan.paths.excluded, foreign: plan.paths.foreign,
+    header: plan.message.header, verification: plan.verification, warnings: plan.warnings,
+    next: { action: "run", command: "integrate options" }, card: null,
+  };
+}
+
+// -------------------------------------------------------------- integration
+
+export function forgeOf(remoteUrl) {
+  const value = String(remoteUrl || "").trim();
+  let host = null;
+  let repoPath = null;
+  const scp = value.match(/^(?:[^@/\s]+@)?([^:/\s]+):(?!\/)(.+)$/);
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) {
+    try { const url = new URL(value); host = url.hostname; repoPath = url.pathname.replace(/^\/+/, ""); } catch { /* not a URL */ }
+  } else if (scp && !/^[a-z]:[\\/]/i.test(value)) { host = scp[1]; repoPath = scp[2]; }
+  if (!host || !repoPath || /^file$/i.test(host)) return { forge: "none", host: null, path: null, webUrl: null };
+  repoPath = repoPath.replace(/\.git$/i, "").replace(/\/+$/, "");
+  const forge = /github\.com$/i.test(host) ? "github" : /gitlab/i.test(host) ? "gitlab" : "none";
+  return { forge, host, path: repoPath, webUrl: `https://${host}/${repoPath}` };
+}
+
+export function compareUrl(forge, remote, source, target) {
+  const info = typeof remote === "string" ? forgeOf(remote) : remote;
+  if (!info?.webUrl) return null;
+  const kind = forge === "auto" || !forge ? info.forge : forge;
+  const ref = value => String(value).split("/").map(encodeURIComponent).join("/");
+  if (kind === "github") return `${info.webUrl}/compare/${ref(target)}...${ref(source)}?expand=1`;
+  if (kind === "gitlab") return `${info.webUrl}/-/merge_requests/new?merge_request%5Bsource_branch%5D=${encodeURIComponent(source)}&merge_request%5Btarget_branch%5D=${encodeURIComponent(target)}`;
+  return null;
+}
+
+function parseJson(text, fallback) {
+  try { return JSON.parse(text); } catch { return fallback; }
+}
+
+function forgeContext(root, policy, run) {
+  const remote = git(run, root, ["remote", "get-url", "origin"]);
+  const info = forgeOf(remote.ok ? remote.stdout.trim() : "");
+  const configured = policy?.integration?.forge || "auto";
+  const forge = configured === "auto" ? info.forge : configured;
+  const cli = forge === "github" ? "gh" : forge === "gitlab" ? "glab" : null;
+  const ready = Boolean(cli) && run(cli, ["auth", "status"], { cwd: root }).ok;
+  return { ...info, forge, cli, ready };
+}
+
+function findOpenPr(root, context, source, target, run) {
+  if (!context.ready) return null;
+  if (context.forge === "github") {
+    const list = run("gh", ["pr", "list", "--head", source, "--base", target, "--state", "open", "--json", "number,url"], { cwd: root });
+    const first = parseJson(list.stdout, [])[0];
+    return first ? { number: first.number, url: first.url } : null;
+  }
+  const list = run("glab", ["mr", "list", "--source-branch", source, "--target-branch", target, "-F", "json"], { cwd: root });
+  const first = parseJson(list.stdout, [])[0];
+  return first ? { number: first.iid, url: first.web_url } : null;
+}
+
+function viewPr(root, context, number, run) {
+  if (context.forge === "github") {
+    const view = run("gh", ["pr", "view", String(number), "--json", "mergeStateStatus,reviewDecision,statusCheckRollup,url"], { cwd: root });
+    return parseJson(view.stdout, null);
+  }
+  const view = parseJson(run("glab", ["mr", "view", String(number), "-F", "json"], { cwd: root }).stdout, null);
+  if (!view) return null;
+  const status = String(view.detailed_merge_status || view.merge_status || "").toLowerCase();
+  const pipeline = String(view.head_pipeline?.status || view.pipeline?.status || "").toLowerCase();
+  return {
+    url: view.web_url,
+    mergeStateStatus: ["mergeable", "can_be_merged"].includes(status) ? "CLEAN" : /pipeline|ci_/.test(status) ? "UNSTABLE" : "BLOCKED",
+    reviewDecision: status === "not_approved" ? "REVIEW_REQUIRED" : null,
+    statusCheckRollup: pipeline ? [{ status: ["running", "pending", "created"].includes(pipeline) ? "IN_PROGRESS" : "COMPLETED", conclusion: pipeline === "success" ? "SUCCESS" : ["failed", "canceled"].includes(pipeline) ? "FAILURE" : null }] : [],
+  };
+}
+
+export function prDecision(view, { whenGreen = false } = {}) {
+  if (!view) return { decision: "unknown" };
+  const checks = Array.isArray(view.statusCheckRollup) ? view.statusCheckRollup : [];
+  const failing = checks.some(check => ["FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "ERROR"].includes(String(check.conclusion || check.state || "").toUpperCase()));
+  const pending = checks.some(check => (check.status && String(check.status).toUpperCase() !== "COMPLETED") || ["PENDING", "EXPECTED"].includes(String(check.state || "").toUpperCase()));
+  if (["REVIEW_REQUIRED", "CHANGES_REQUESTED"].includes(view.reviewDecision)) return { decision: "blocked", waiting: `review ${String(view.reviewDecision).toLowerCase()}` };
+  if (failing) return { decision: "checks-failing" };
+  if (pending) return { decision: whenGreen ? "auto-merge" : "pending" };
+  if (["CLEAN", "HAS_HOOKS", "UNSTABLE"].includes(view.mergeStateStatus)) return { decision: "merge" };
+  return { decision: "blocked", waiting: String(view.mergeStateStatus || "unknown").toLowerCase() };
+}
+
+function mergeFlags(context, policy, { auto = false } = {}) {
+  const strategy = policy?.integration?.mergeStrategy || "merge-commit";
+  const warnings = [];
+  if (context.forge === "github") {
+    const flags = [strategy === "squash" ? "--squash" : "--merge"];
+    if (strategy === "ff-only") warnings.push(warning("FF_ONLY_AS_MERGE", "pull-request", "ff-only maps to --merge in PR mode; rebase is never used"));
+    if (policy?.integration?.deleteBranchAfterMerge === "always") flags.push("--delete-branch");
+    if (auto) flags.push("--auto");
+    return { flags, warnings };
+  }
+  const flags = ["--yes", ...(strategy === "squash" ? ["--squash"] : []), ...(policy?.integration?.deleteBranchAfterMerge === "always" ? ["--remove-source-branch"] : []), ...(auto ? ["--auto-merge"] : [])];
+  return { flags, warnings };
+}
+
+function integrationTargets(policy, workType) {
+  const type = policy?.branching?.workTypes?.[workType] || {};
+  return [...new Set([policy?.branching?.integrationBranch, policy?.branching?.stableBranch, type.target, ...(type.backMerge || [])].filter(Boolean))];
+}
+
+export async function integrationOptions({ root, policy, delivery, run = defaultRun }) {
+  if (!delivery?.branch) return stop("DELIVERY_REQUIRED", "No delivered work branch in this session; deliver first.", { next: { action: "run", command: "deliver plan" } });
+  const workType = delivery.workType || workTypeOf(policy, delivery.branch) || "feature";
+  const typePolicy = policy?.branching?.workTypes?.[workType] || {};
+  const target = typePolicy.target || policy?.branching?.integrationBranch || "develop";
+  const method = policy?.integration?.method || "pull-request";
+  const context = forgeContext(root, policy, run);
+  const unverified = (delivery.warnings || []).some(item => (item.code || item) === "DELIVERED_UNVERIFIED");
+  const pr = method === "pull-request" || unverified ? findOpenPr(root, context, delivery.remoteBranch || delivery.branch, target, run) : null;
+  const backMerge = typePolicy.backMerge?.length ? ` แล้ว back-merge ${typePolicy.backMerge.join(", ")}` : "";
+  let options;
+  if (unverified) {
+    options = [
+      { id: "1", label: "แก้ต่อให้ test ผ่าน", effect: "ทำงานต่อบน work branch แล้ว deliver ใหม่", value: "continue" },
+      ...(context.forge !== "none" ? [{ id: "2", label: `เปิด PR แบบ draft → ${target}`, effect: "ให้ทีมเห็นงานโดยยังไม่ merge", value: "open-pr-draft" }] : []),
+      { id: String(context.forge !== "none" ? 3 : 2), label: "พักไว้", effect: "คง branch และสถานะไว้ให้ resume", value: "park" },
+    ];
+  } else if (method === "pull-request" && !pr) {
+    options = [
+      { id: "1", label: `เปิด PR → ${target}`, effect: context.ready ? `${context.cli} สร้าง PR จาก ${delivery.remoteBranch || delivery.branch}` : "ให้ลิงก์เปิด PR เอง (ไม่มี CLI ที่ login)", value: "open-pr" },
+      { id: "2", label: "แก้ต่อ", effect: "ทำงานต่อบน work branch", value: "continue" },
+      { id: "3", label: "พักไว้", effect: "คง branch ไว้ให้ resume", value: "park" },
+    ];
+  } else if (method === "pull-request") {
+    options = [
+      { id: "1", label: `Merge PR #${pr.number} (เมื่อ review ผ่าน)`, effect: `merge เข้า ${target}${backMerge} แล้วตรวจ remote`, value: "integrate" },
+      { id: "2", label: `อัปเดต branch จาก ${target}`, effect: `merge ${target} ล่าสุดเข้า work branch แล้ว push`, value: "update-branch" },
+      { id: "3", label: "แก้ต่อ", effect: "ทำงานต่อบน work branch", value: "continue" },
+    ];
+  } else {
+    options = [
+      { id: "1", label: `Merge เข้า ${target}${backMerge}`.slice(0, 60), effect: "merge หลัง review แล้ว push แบบไม่ force และตรวจ remote", value: "integrate" },
+      ...(context.forge !== "none" ? [{ id: "2", label: "เปิด PR แทน", effect: `เปิด PR → ${target} ให้ทีม review`, value: "open-pr" }] : []),
+      { id: String(context.forge !== "none" ? 3 : 2), label: "แก้ต่อ", effect: "ทำงานต่อบน work branch", value: "continue" },
+      { id: String(context.forge !== "none" ? 4 : 3), label: "พักไว้", effect: "คง branch ไว้ให้ resume", value: "park" },
+    ];
+  }
+  return {
+    ok: true, target, method, pr, forge: context.forge, unverified, warnings: [],
+    card: {
+      kind: "integration", topic: "git/integration", risk: "R3", confidence: "high",
+      question: "ถัดไปทำอะไรกับ work branch นี้",
+      impact: `${delivery.branch} ถูก commit${delivery.remoteVerified ? " และ push" : ""} แล้ว${unverified ? " แต่ verification ยังไม่ผ่าน" : ""}`,
+      checked: [`policy ${method} → ${target}`, pr ? `PR #${pr.number} เปิดอยู่` : `forge ${context.forge}${context.ready ? " (CLI พร้อม)" : ""}`],
+      options, recommended: "1", recommendedReason: unverified ? "ยังไม่ควร merge จนกว่า test ผ่าน" : "ตาม workflow policy ของทีม",
+      blocking: true, default: null, recordAs: "none", paths: [], expiresHours: 72,
+    },
+  };
+}
+
+function resolveSource({ branch, active, delivery, current, policy }) {
+  return branch || active?.branch || delivery?.branch || (workTypeOf(policy, current) ? current : null);
+}
+
+function remoteHead(run, root, branch) {
+  return out(git(run, root, ["ls-remote", "--heads", "origin", branch])).split(/\s+/)[0] || null;
+}
+
+function ownDirty(root, preexisting, run) {
+  const pre = new Set((preexisting || []).map(entry => entry.path));
+  return dirtyInventory(root, { run }).filter(entry => !entry.path.startsWith(".agrimap-agent/") && !pre.has(entry.path)).map(entry => entry.path);
+}
+
+function stageAMerge(run, root, source, target) {
+  const current = out(git(run, root, ["branch", "--show-current"]));
+  if (current !== source) {
+    const switched = git(run, root, ["switch", source]);
+    if (!switched.ok) return stop("BRANCH_MISMATCH", `Could not switch to ${source}.`, { stderr: trimStderr(switched.stderr) });
+  }
+  if (isAncestor(run, root, `origin/${target}`, source)) return { ok: true, merged: false };
+  const merged = git(run, root, ["merge", "--no-edit", `origin/${target}`]);
+  if (!merged.ok) {
+    const conflicts = lines(git(run, root, ["diff", "--name-only", "--diff-filter=U"]).stdout);
+    git(run, root, ["merge", "--abort"]);
+    return stop("MERGE_CONFLICT", `origin/${target} conflicts with ${source}; nothing was merged into ${target}.`, {
+      conflicts, next: { action: "ask" },
+      card: {
+        kind: "integration", topic: "git/merge-conflict", risk: "R2", confidence: "high",
+        question: `${target} มีการแก้ชนกับงานนี้ ${conflicts.length} ไฟล์`,
+        impact: `ยังไม่ได้ merge อะไรเข้า ${target}`,
+        checked: conflicts.slice(0, 5),
+        options: [
+          { id: "1", label: "แก้ conflict บน work branch แล้ว test ใหม่", effect: `${target} ไม่ถูกแตะจนกว่าผ่าน`, value: "continue" },
+          { id: "2", label: "หยุดไว้ให้ดูเอง", effect: "ไม่ทำอะไรเพิ่ม", value: "park" },
+        ],
+        recommended: "1", recommendedReason: "conflict ต้องแก้บน work branch ก่อนรวม", blocking: true, default: null, recordAs: "none", paths: conflicts, expiresHours: 24,
+      },
+    });
+  }
+  return { ok: true, merged: true };
+}
+
+function pushBranch(run, root, source, remoteBranch) {
+  const local = out(git(run, root, ["rev-parse", source]));
+  if (remoteHead(run, root, remoteBranch) === local) return { ok: true, pushed: false };
+  const pushed = git(run, root, ["push", "origin", `${source}:refs/heads/${remoteBranch}`]);
+  if (!pushed.ok) return { ...stop(classifyPushFailure(pushed.stderr).code, "Pushing the work branch failed.", { stderr: trimStderr(pushed.stderr) }) };
+  return { ok: true, pushed: true };
+}
+
+async function localMergeToTarget({ run, root, state, source, target, executionId, policy }) {
+  if (!isAncestor(run, root, `origin/${target}`, source)) return stop("REMOTE_TARGET_ADVANCED", `origin/${target} is not contained in ${source}; run integrate plan again.`, { next: { action: "run", command: "integrate plan --intent integrate" } });
+  const strategy = policy?.integration?.mergeStrategy || "merge-commit";
+  const sourceSha = out(git(run, root, ["rev-parse", source]));
+  let sha = sourceSha;
+  if (strategy !== "ff-only") {
+    const messageFile = path.join(state, "runtime", "tmp", `merge-${executionId || "manual"}-${target.replace(/[^a-z0-9._-]+/gi, "-")}.txt`);
+    await mkdir(path.dirname(messageFile), { recursive: true });
+    await writeFile(messageFile, `Merge branch '${source}' into ${target}\n\n${executionId ? `AGM-Execution: ${executionId}\n` : ""}`, "utf8");
+    const signing = out(git(run, root, ["config", "--get", "commit.gpgsign"])) === "true" ? ["-S"] : [];
+    const parents = strategy === "squash" ? ["-p", `origin/${target}`] : ["-p", `origin/${target}`, "-p", source];
+    const created = git(run, root, ["commit-tree", ...signing, `${source}^{tree}`, ...parents, "-F", messageFile]);
+    if (!created.ok) return stop("MERGE_COMMIT_FAILED", "git commit-tree failed.", { stderr: trimStderr(created.stderr) });
+    sha = created.stdout.trim();
+  }
+  const pushed = git(run, root, ["push", "origin", `${sha}:refs/heads/${target}`]);
+  if (!pushed.ok) {
+    const stderr = pushed.stderr;
+    if (/protected branch|GH006|pre-receive hook declined|not allowed to push|denied/i.test(stderr) && !/non-fast-forward|fetch first/i.test(stderr)) return stop("PROTECTED_BY_SERVER", `The server refused the push to ${target}; switch integration.method to pull-request.`, { stderr: trimStderr(stderr) });
+    if (/\[rejected\]|non-fast-forward|fetch first/i.test(stderr)) return stop("REMOTE_TARGET_ADVANCED", `${target} moved on the remote; nothing changed locally. Run integrate plan again.`, { next: { action: "run", command: "integrate plan --intent integrate" } });
+    return stop(classifyPushFailure(stderr).code, `Push to ${target} failed.`, { stderr: trimStderr(stderr) });
+  }
+  const remoteSha = remoteHead(run, root, target);
+  if (remoteSha !== sha) return stop("REMOTE_MISMATCH", `Remote ${target} is ${remoteSha}, expected ${sha}.`);
+  const warnings = [];
+  const worktrees = out(git(run, root, ["worktree", "list", "--porcelain"]));
+  if (refExists(run, root, `refs/heads/${target}`) && !worktrees.split(/\r?\n/).includes(`branch refs/heads/${target}`)) {
+    if (!git(run, root, ["fetch", "origin", `${target}:${target}`]).ok) warnings.push(warning("LOCAL_TARGET_NOT_UPDATED", target, `local ${target} is not a fast-forward of origin; update it yourself`));
+  }
+  return { ok: true, mergeSha: sha, sourceSha, remoteVerified: true, warnings };
+}
+
+async function writePrBody(state, delivery) {
+  const file = path.join(state, "runtime", "tmp", `pr-${delivery.executionId || "manual"}.md`);
+  const warnings = (delivery.warnings || []).map(item => `- ${item.code}: ${item.subject || ""}${item.fix ? ` — fix: ${item.fix}` : ""}`);
+  const body = [
+    `## Summary`, "", delivery.objective || delivery.header || "", "",
+    `## Files`, "", ...(delivery.files || []).slice(0, 50).map(file => `- \`${file}\``), "",
+    `## Verification`, "", `- ${delivery.verification || "not recorded"}`, "",
+    ...(warnings.length ? ["## ⚠️ Open warnings", "", ...warnings, ""] : []),
+    ...(delivery.executionId ? [`AGM-Execution: ${delivery.executionId}`, ""] : []),
+  ].join("\n");
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, body, "utf8");
+  return file;
+}
+
+export async function planIntegration(options) {
+  const { root, policy, active = null, delivery = null, intent, ackRequired = [], whenGreen = false, confirmUnverified = false, choice = null, run = defaultRun } = options;
+  if (!["integrate", "open-pr", "open-pr-draft", "update-branch", "park", "abandon"].includes(intent)) return stop("INTENT_INVALID", "--intent must be integrate|open-pr|update-branch|park|abandon.");
+  if (ackRequired.length) return stop("INSTRUCTIONS_NOT_ACKNOWLEDGED", "Read and ack the AGENTS chain first.", { next: { action: "read-and-ack", files: ackRequired } });
+  const current = out(git(run, root, ["branch", "--show-current"]));
+  const source = resolveSource({ branch: options.branch, active, delivery, current, policy });
+  if (!source) return stop("DELIVERY_REQUIRED", "No work branch to integrate; deliver first.", { next: { action: "run", command: "deliver plan" } });
+  const workType = delivery?.workType || active?.workType || workTypeOf(policy, source) || "feature";
+  const policyTarget = policy?.branching?.workTypes?.[workType]?.target || policy?.branching?.integrationBranch || "develop";
+  const target = options.target || policyTarget;
+  if (["jenkins", "jenkins-release"].includes(target)) return stop("TARGET_IS_RELEASE_FLOW", `${target} is a release branch; use the project release intents (AGENTS §2).`);
+  if (!integrationTargets(policy, workType).includes(target)) return stop("TARGET_NOT_ALLOWED", `${target} is not an integration target in the workflow policy.`);
+  const remoteBranch = (delivery?.branch === source && delivery.remoteBranch) || (active?.branch === source && active.remoteBranch) || source;
+  const base = { ok: true, intent, source, remoteBranch, target, workType, warnings: [], card: null };
+  if (intent === "park") return { ...base, commands: [], planHash: planHashOf({ intent, source }), next: { action: "report" } };
+  if (intent === "abandon") {
+    if (!choice) {
+      return {
+        ...base, planHash: null, next: { action: "ask" },
+        card: {
+          kind: "integration", topic: "git/abandon", risk: "R3", confidence: "high",
+          question: `ทิ้ง work branch ${source} ไหม`, impact: "ลบ branch แล้วงานที่ยังไม่ merge จะหาได้ยาก",
+          checked: [`remote ${remoteBranch}: ${remoteHead(run, root, remoteBranch) ? "มี" : "ไม่มี"}`],
+          options: [
+            { id: "1", label: "ลบ local เก็บ remote ไว้", effect: `ลบ ${source} ในเครื่อง, origin/${remoteBranch} ยังอยู่`, value: "local" },
+            { id: "2", label: "ลบทั้ง local และ remote", effect: `ลบ ${source} และ origin/${remoteBranch}`, value: "both" },
+            { id: "3", label: "ยกเลิก", effect: "ไม่ลบอะไร", value: "cancel" },
+          ],
+          recommended: "1", recommendedReason: "remote ยังกู้งานได้", blocking: true, default: null, recordAs: "none", paths: [], expiresHours: 24,
+        },
+      };
+    }
+    if (choice === "cancel") return { ...base, commands: [], planHash: planHashOf({ intent, source, choice }), next: { action: "report" } };
+    const merged = isAncestor(run, root, source, `origin/${policyTarget}`);
+    const commands = [
+      ...(current === source ? [["git", "switch", policy?.branching?.workTypes?.[workType]?.base || policyTarget]] : []),
+      ["git", "branch", merged ? "-d" : "-D", source],
+      ...(choice === "both" ? [["git", "push", "origin", "--delete", remoteBranch]] : []),
+    ];
+    return { ...base, commands, planHash: planHashOf({ intent, source, choice, commands }), next: { action: "run", command: "integrate apply" } };
+  }
+  if (options.fetch !== false && ["integrate", "update-branch"].includes(intent)) {
+    if (!git(run, root, ["fetch", "--prune", "origin"]).ok) base.warnings.push(warning("OFFLINE_FETCH_FAILED", "origin", "integration uses the last fetched refs"));
+  }
+  const localSha = out(git(run, root, ["rev-parse", source]));
+  const remoteSha = remoteHead(run, root, remoteBranch);
+  if (!remoteSha || remoteSha !== localSha) return stop("DELIVERY_REQUIRED", `${source} is not pushed with its latest commit; deliver first.`, { next: { action: "run", command: "deliver apply --push-only" } });
+  const dirty = ownDirty(root, active?.preexistingDirty || delivery?.preexistingDirty, run);
+  if (dirty.length) return stop("DIRTY_TREE", `Uncommitted changes on ${source}; deliver or ask first.`, { paths: dirty });
+  const unverified = (delivery?.warnings || []).some(item => (item.code || item) === "DELIVERED_UNVERIFIED");
+  if (intent === "integrate" && unverified && !confirmUnverified) {
+    return {
+      ...base, planHash: null, next: { action: "ask" },
+      card: {
+        kind: "integration", topic: "git/integrate-unverified", risk: "R3", confidence: "high",
+        question: `ยืนยัน merge ${source} ทั้งที่ verification ยังไม่ผ่าน`, impact: `${target} จะได้งานที่ test ยังไม่ผ่าน`,
+        checked: [`delivery ${delivery?.commit?.slice(0, 7) || ""} มี AGM-Verification: ${delivery?.verification || "not-run"}`],
+        options: [
+          { id: "1", label: "ยังไม่ merge แก้ต่อให้ผ่าน", effect: "ทำงานต่อบน work branch", value: "continue" },
+          { id: "2", label: "merge ทั้งที่ยังไม่ผ่าน", effect: `integrate plan --confirm-unverified เข้า ${target}`, value: "confirm" },
+        ],
+        recommended: "1", recommendedReason: "ไม่ควรรวมงานที่ test ไม่ผ่าน", blocking: true, default: null, recordAs: "none", paths: [], expiresHours: 24,
+      },
+    };
+  }
+  if (options.target && options.target !== policyTarget && !options.confirmTarget) {
+    return {
+      ...base, planHash: null, next: { action: "ask" },
+      card: {
+        kind: "integration", topic: "git/integration-target", risk: "R2", confidence: "high",
+        question: `รวม ${source} เข้า ${target} แทน ${policyTarget} ตาม policy ไหม`, impact: "target ต่างจาก workflow ของทีม",
+        checked: [`policy ${workType} target = ${policyTarget}`],
+        options: [
+          { id: "1", label: `รวมเข้า ${policyTarget} ตาม policy`, effect: `integrate plan --target ${policyTarget}`, value: policyTarget },
+          { id: "2", label: `รวมเข้า ${target}`, effect: `integrate plan --target ${target} --confirm-target`, value: target },
+        ],
+        recommended: "1", recommendedReason: "ตาม workflow ของทีม", blocking: true, default: null, recordAs: "none", paths: [], expiresHours: 24,
+      },
+    };
+  }
+  const method = intent === "integrate" ? policy?.integration?.method || "pull-request" : intent;
+  if (intent === "open-pr" || intent === "open-pr-draft" || method === "pull-request") {
+    const context = forgeContext(root, policy, run);
+    const pr = findOpenPr(root, context, remoteBranch, target, run);
+    if (!context.ready) {
+      return { ...base, method: "pull-request", status: "manual-pr", compareUrl: compareUrl(context.forge, context, remoteBranch, target), commands: [], planHash: null, next: { action: "report", command: "give the requester the compare URL" } };
+    }
+    if (intent !== "integrate") {
+      const draft = intent === "open-pr-draft";
+      return { ...base, method: "pull-request", forge: context.forge, pr, status: pr ? "exists" : "create", draft, planHash: planHashOf({ intent, source, target, localSha, pr, forge: context.forge }), next: pr ? { action: "report" } : { action: "run", command: "integrate apply" } };
+    }
+    const view = pr ? viewPr(root, context, pr.number, run) : null;
+    const decision = pr ? prDecision(view, { whenGreen }) : { decision: "create-then-check" };
+    if (decision.decision === "blocked") return stop("PR_BLOCKED", `PR #${pr.number} is waiting for ${decision.waiting}; reviews are never bypassed.`, { pr: { ...pr, url: view?.url || pr.url } });
+    if (decision.decision === "checks-failing") {
+      return stop("PR_CHECKS_FAILING", `Checks are failing on PR #${pr.number}.`, {
+        pr, next: { action: "ask" },
+        card: {
+          kind: "integration", topic: "git/pr-checks", risk: "R2", confidence: "high", question: `check ของ PR #${pr.number} ไม่ผ่าน`, impact: "merge ขณะ check ไม่ผ่านต้องได้รับอนุญาตแยก",
+          checked: [`PR ${pr.url}`], options: [
+            { id: "1", label: "แก้ต่อบน branch", effect: "แก้แล้ว deliver ใหม่", value: "continue" },
+            { id: "2", label: "รอแล้วค่อยสั่งใหม่", effect: "ไม่ทำอะไรตอนนี้", value: "park" },
+          ], recommended: "1", recommendedReason: "ต้องให้ check ผ่านก่อน", blocking: true, default: null, recordAs: "none", paths: [], expiresHours: 24,
+        },
+      });
+    }
+    if (decision.decision === "pending") {
+      return {
+        ...base, method: "pull-request", pr, planHash: null, next: { action: "ask" },
+        card: {
+          kind: "integration", topic: "git/pr-pending", risk: "R3", confidence: "high", question: `check ของ PR #${pr.number} ยังรันอยู่`, impact: "merge ได้เมื่อ CI ผ่าน",
+          checked: [`PR ${pr.url}`], options: [
+            { id: "1", label: "merge เมื่อ CI ผ่าน (auto-merge)", effect: "integrate plan --when-green", value: "when-green" },
+            { id: "2", label: "รอแล้วค่อยสั่งใหม่", effect: "ไม่ทำอะไรตอนนี้", value: "park" },
+          ], recommended: "1", recommendedReason: "ไม่ต้องรอดูเอง", blocking: true, default: null, recordAs: "none", paths: [], expiresHours: 24,
+        },
+      };
+    }
+    const { flags, warnings } = mergeFlags(context, policy, { auto: decision.decision === "auto-merge" });
+    return { ...base, method: "pull-request", forge: context.forge, pr, decision: decision.decision, mergeFlags: flags, warnings, planHash: planHashOf({ intent, source, target, localSha, pr, decision, flags }), next: { action: "run", command: "integrate apply" } };
+  }
+  // local-merge or update-branch
+  const needsMerge = !isAncestor(run, root, `origin/${target}`, source);
+  const verified = !unverified && ["passed", "not-applicable"].includes(delivery?.verification || active?.verificationStatus);
+  const stages = intent === "update-branch" ? ["merge-into-branch", "push-branch"] : [...(needsMerge ? ["merge-into-branch", "push-branch"] : []), "push-target"];
+  const verificationRequired = intent === "integrate" && (needsMerge || !verified);
+  return {
+    ...base, method: intent === "update-branch" ? "update-branch" : "local-merge", needsMerge, stages, verificationRequired,
+    backMerge: intent === "integrate" ? policy?.branching?.workTypes?.[workType]?.backMerge || [] : [],
+    planHash: planHashOf({ intent, source, target, localSha, targetSha: out(git(run, root, ["rev-parse", `origin/${target}`])), stages }),
+    next: { action: "run", command: verificationRequired && needsMerge ? "integrate apply (merges target into the branch, then asks for verification)" : "integrate apply" },
+  };
+}
+
+export async function applyIntegration(options) {
+  const run = options.run || defaultRun;
+  const { root, state, policy } = options;
+  const stage = options.stage || null;
+  const plan = await planIntegration({ ...options, fetch: false });
+  if (!plan.ok) return plan;
+  if (plan.card) return { ...plan, ok: false, code: "CARD_PENDING", message: "Answer the card first." };
+  if (plan.status === "manual-pr") return { ...plan, ok: true };
+  if (stage !== "push" && plan.planHash !== options.planHash) return stop("PLAN_STALE", "State changed since the plan; run integrate plan again.", { next: { action: "run", command: "integrate plan" } });
+  const executionId = options.delivery?.executionId || options.active?.executionId || null;
+  if (plan.intent === "park") return { ok: true, intent: "park", source: plan.source, warnings: [] };
+  if (plan.intent === "abandon") {
+    const result = runCommands(run, root, plan.commands);
+    return result.ok ? { ok: true, intent: "abandon", source: plan.source, deleted: plan.commands.map(command => command.join(" ")), warnings: [] } : stop("ABANDON_FAILED", `Command failed: ${result.command}`, result);
+  }
+  if (plan.method === "pull-request") {
+    const context = forgeContext(root, policy, run);
+    let pr = plan.pr;
+    if (!pr) {
+      const header = options.delivery?.header || out(git(run, root, ["log", "-1", "--format=%s", plan.source]));
+      const bodyFile = await writePrBody(state, { ...(options.delivery || {}), header });
+      const created = context.forge === "github"
+        ? run("gh", ["pr", "create", "--base", plan.target, "--head", plan.remoteBranch, "--title", header, "--body-file", bodyFile, ...(plan.draft ? ["--draft"] : [])], { cwd: root })
+        : run("glab", ["mr", "create", "--source-branch", plan.remoteBranch, "--target-branch", plan.target, "--title", header, "--description", await readFile(bodyFile, "utf8"), "--yes", ...(plan.draft ? ["--draft"] : [])], { cwd: root });
+      if (!created.ok) return stop("PR_CREATE_FAILED", `${context.cli} could not create the PR.`, { stderr: trimStderr(created.stderr) });
+      pr = findOpenPr(root, context, plan.remoteBranch, plan.target, run) || { number: null, url: created.stdout.trim().split(/\s+/).find(item => /^https?:\/\//.test(item)) || null };
+      if (plan.intent !== "integrate") return { ok: true, intent: plan.intent, pr, created: true, warnings: [] };
+      const decision = prDecision(viewPr(root, context, pr.number, run), { whenGreen: options.whenGreen });
+      if (decision.decision !== "merge" && decision.decision !== "auto-merge") return stop(decision.decision === "checks-failing" ? "PR_CHECKS_FAILING" : "PR_BLOCKED", `PR ${pr.url || pr.number} was opened; it cannot merge yet (${decision.waiting || decision.decision}).`, { pr });
+      plan.decision = decision.decision;
+      plan.mergeFlags = mergeFlags(context, policy, { auto: decision.decision === "auto-merge" }).flags;
+    } else if (plan.intent !== "integrate") return { ok: true, intent: plan.intent, pr, created: false, warnings: [] };
+    const merged = context.forge === "github"
+      ? run("gh", ["pr", "merge", String(pr.number), ...plan.mergeFlags], { cwd: root })
+      : run("glab", ["mr", "merge", String(pr.number), ...plan.mergeFlags], { cwd: root });
+    if (!merged.ok) return stop("PR_MERGE_FAILED", `Merging PR ${pr.number} failed; nothing was bypassed.`, { stderr: trimStderr(merged.stderr), pr });
+    if (plan.decision === "auto-merge") return { ok: true, intent: "integrate", pr, autoMerge: true, remoteVerified: false, warnings: plan.warnings || [] };
+    git(run, root, ["fetch", "--prune", "origin"]);
+    const sourceSha = out(git(run, root, ["rev-parse", plan.source]));
+    const remoteVerified = isAncestor(run, root, sourceSha, `origin/${plan.target}`);
+    return { ok: true, intent: "integrate", method: "pull-request", pr, source: plan.source, target: plan.target, sourceSha, mergeSha: out(git(run, root, ["rev-parse", `origin/${plan.target}`])), remoteVerified, warnings: plan.warnings || [] };
+  }
+  const warnings = [];
+  if (stage !== "push" && plan.stages.includes("merge-into-branch")) {
+    const merged = stageAMerge(run, root, plan.source, plan.target);
+    if (!merged.ok) return merged;
+    const pushed = pushBranch(run, root, plan.source, plan.remoteBranch);
+    if (!pushed.ok) return pushed;
+    if (plan.intent === "update-branch") return { ok: true, intent: "update-branch", source: plan.source, target: plan.target, merged: merged.merged, pushed: pushed.pushed, warnings };
+    if (plan.verificationRequired) {
+      return { ok: true, intent: "integrate", stage: "merge-into-branch", source: plan.source, target: plan.target, merged: merged.merged, warnings, next: { action: "run-verification", command: "run the verification for the merged branch, then integrate apply --stage push" } };
+    }
+  } else if (plan.intent === "update-branch") return { ok: true, intent: "update-branch", source: plan.source, target: plan.target, merged: false, pushed: false, warnings };
+  if (stage !== "push" && plan.verificationRequired) return { ok: true, intent: "integrate", stage: "verification", source: plan.source, target: plan.target, warnings, next: { action: "run-verification", command: "verify, then integrate apply --stage push" } };
+  const result = await localMergeToTarget({ run, root, state, source: plan.source, target: plan.target, executionId, policy });
+  if (!result.ok) return result;
+  return {
+    ok: true, intent: "integrate", method: "local-merge", source: plan.source, target: plan.target, mergeSha: result.mergeSha, sourceSha: result.sourceSha,
+    remoteVerified: result.remoteVerified, backMerge: plan.backMerge, warnings: [...warnings, ...result.warnings],
+    next: plan.backMerge.length ? { action: "run", command: `integrate plan --intent integrate --target ${plan.backMerge[0]} --confirm-target` } : { action: "report" },
+  };
+}

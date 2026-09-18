@@ -26,6 +26,11 @@ import { isLogEvent, logEventError, MILESTONE_TYPES, QA_FAILED_EVENT } from "./l
 import { loadTaskArtifactSchema } from "./task-artifact-schema.mjs";
 import { selectWorkflow, instructionProfile } from './governance-policy.mjs';
 import { applyBootstrap } from './project-bootstrap.mjs';
+import { ensureStateIgnore } from './local-memory.mjs';
+import { snapshotDirty } from './git-flow.mjs';
+import { instructionChain, readRequired } from './instruction-chain.mjs';
+import { GOVERNANCE_COMMANDS, runGovernanceCommand } from './governance-commands.mjs';
+import { GOVERNANCE_SESSION_FIELDS } from './session-state.mjs';
 
 const AUDIT_SCHEMA_VERSION = 4;
 const SUPPORTED_AUDIT_SCHEMA_VERSIONS = new Set([1, 2, 3, AUDIT_SCHEMA_VERSION]);
@@ -281,8 +286,7 @@ async function ensureLayout(root, bootstrap = false) {
   // Runtime events must not initialize a project or populate unused directories.
   await mkdir(state, { recursive: true });
   if (!bootstrap) {
-    const ignore = path.join(state, '.gitignore');
-    if (!(await exists(ignore))) await writeFile(ignore, 'runtime/\ncache/\n', 'utf8');
+    await ensureStateIgnore(state);
     return state;
   }
   const directories = [
@@ -295,16 +299,14 @@ async function ensureLayout(root, bootstrap = false) {
     "prompts",
     "instructions",
     "reports",
+    "policy",
     "runtime/active",
     "runtime/sessions",
     "runtime/reservations",
   ];
   await Promise.all(directories.map((directory) => mkdir(path.join(state, directory), { recursive: true })));
 
-  const stateIgnorePath = path.join(state, ".gitignore");
-  if (!(await exists(stateIgnorePath))) {
-    await writeFile(stateIgnorePath, "runtime/\ncache/\n", "utf8");
-  }
+  await ensureStateIgnore(state);
 
   const configPath = path.join(state, "config.json");
   const existingConfig = await readJson(configPath).catch(() => ({}));
@@ -330,10 +332,22 @@ async function ensureLayout(root, bootstrap = false) {
         projectPath: ".agrimap-agent/memory/project.md",
         currentTaskPath: ".agrimap-agent/memory/current/YYYY-MM/<run-id>-<slug>.md",
         recentPath: ".agrimap-agent/memory/recent/YYYY-MM/<run-id>-<slug>.md",
+        // Completed work is read from history and recent memory; appending it to
+        // project.md made every work branch conflict.
+        completedWorkInProjectMd: existingConfig.memory?.completedWorkInProjectMd === true,
       },
       logs: {
-        mode: "daily",
-        path: ".agrimap-agent/logs/YYYY-MM/YYYY-MM-DD.jsonl",
+        mode: "per-execution",
+        path: ".agrimap-agent/logs/YYYY-MM/YYYY-MM-DD/<execution-id>.jsonl",
+      },
+      governance: {
+        workflowPolicy: true,
+        delivery: true,
+        decisionMemory: false,
+        guards: false,
+        projectMode: true,
+        specSync: false,
+        ...(existingConfig.governance || {}),
       },
       tasks: {
         activePath: ".agrimap-agent/tasks/YYYY-MM/<task-id>",
@@ -429,7 +443,10 @@ async function identify(state, args) {
     ...localAuditMetadata(),
     updatedAt: confirmedAt,
   };
-  await writeJson(sessionIdentityPath(state, sessionId), identity);
+  // Preserve governance fields (acks, cards, delivery) stored in the same file.
+  const previous = await readJson(sessionIdentityPath(state, sessionId)).catch(() => ({}));
+  const preserved = Object.fromEntries(GOVERNANCE_SESSION_FIELDS.filter((key) => previous?.[key] !== undefined).map((key) => [key, previous[key]]));
+  await writeJson(sessionIdentityPath(state, sessionId), { ...identity, ...preserved });
   const local = localAuditMetadata();
   const userKey = safeSessionId(`${local.machine}-${local.osUser}`);
   await writeJson(path.join(state, 'runtime', 'users', `${userKey}.json`), identity);
@@ -589,7 +606,7 @@ function auditEventIssues(rawEvent) {
     if (event.files.some((file) => typeof file !== "string" || !file.trim())) {
       issues.push({ field: "files", reason: "must-contain-nonblank-paths" });
     }
-    if (event.event === "changed" && !event.files.some((file) => typeof file === "string" && file.trim())) {
+    if (event.event === "changed" && event.milestone !== "work-branch" && !event.files.some((file) => typeof file === "string" && file.trim())) {
       issues.push({ field: "files", reason: "required-on-changed-event" });
     }
   }
@@ -649,6 +666,8 @@ async function appendLog(state, event) {
     ...(trackableEvent.request ? { request: trackableEvent.request } : {}),
     files: trackableEvent.files || [],
     verification: trackableEvent.verification || [],
+    ...(Array.isArray(trackableEvent.warnings) && trackableEvent.warnings.length ? { warnings: trackableEvent.warnings.map((item) => typeof item === "string" ? { code: item } : item) } : {}),
+    ...(Array.isArray(trackableEvent.precedents) && trackableEvent.precedents.length ? { precedents: trackableEvent.precedents } : {}),
     git_head: gitSnapshot.gitHead,
     git_dirty: gitSnapshot.gitDirty,
   };
@@ -659,9 +678,12 @@ async function appendLog(state, event) {
     error.issues = issues;
     throw error;
   }
-  const directory = path.join(state, "logs", local.period);
+  // One file per execution per day: parallel work branches never append to the
+  // same file, so merging them cannot conflict. Readers are recursive.
+  const directory = path.join(state, "logs", local.period, local.date);
   await mkdir(directory, { recursive: true });
-  const logPath = path.join(directory, `${local.date}.jsonl`);
+  const executionFile = safeTaskId(record.execution_id) || `_session-${safeSessionId(trackableEvent.sessionId).slice(0, 8) || "unknown"}`;
+  const logPath = path.join(directory, `${executionFile}.jsonl`);
   const lockPath = `${logPath}.lock`;
   let lock = null;
   for (let attempt = 0; attempt < 100; attempt += 1) {
@@ -673,7 +695,7 @@ async function appendLog(state, event) {
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
   }
-  if (!lock) throw new Error(`Could not acquire daily audit log lock: ${stateRelative(state, lockPath)}`);
+  if (!lock) throw new Error(`Could not acquire audit log lock: ${stateRelative(state, lockPath)}`);
   try {
     await appendFile(logPath, `${JSON.stringify(record)}\n`, "utf8");
   } finally {
@@ -753,6 +775,10 @@ async function start(root, args) {
   if (await exists(activePath)) {
     return { ok: false, activeTask: await readJson(activePath), message: "This session already has an active task." };
   }
+  // Snapshot before this command writes anything: delivery never stages these.
+  const inGit = gitOutput(root, ["rev-parse", "--is-inside-work-tree"]).stdout === "true";
+  const preexistingDirty = inGit ? await snapshotDirty(root) : [];
+  const startWarnings = inGit && (await readRequired(root, sessionId, await instructionChain(root, []))).length ? ["INSTRUCTIONS_UNACKNOWLEDGED"] : [];
 
   const startedAt = now();
   const reservation = await reserveExecutionId(
@@ -855,6 +881,7 @@ async function start(root, args) {
     taskPath: taskPath ? stateRelative(state, taskPath) : null,
     currentMemoryPath: `memory/current/${reservation.period}/${executionId}-${slug}.md`,
     recentMemoryPath: `memory/recent/${reservation.period}/${executionId}-${slug}.md`,
+    preexistingDirty,
   };
   await writeJson(activePath, active);
   if (taskPath && active.artifactVersion === 3) {
@@ -895,6 +922,7 @@ async function start(root, args) {
   return {
     ok: true,
     activeTask: active,
+    warnings: startWarnings,
     commitReminder: dirty ? "Preserve unrelated working-copy changes; current scope remains authoritative." : null,
   };
 }
@@ -1034,6 +1062,7 @@ async function checkpoint(root, args) {
     reason,
     files,
     verification,
+    precedents: listValue(args.precedent),
   });
   const compaction = {
     summaryTruncated: rawSummary.replace(/\s+/g, " ") !== summary,
@@ -1605,6 +1634,7 @@ async function appendRecentTerminal(state, active, status, summary) {
 }
 
 async function updateProjectMemory(state, active, status, reportPath) {
+  if ((await workspaceConfig(state)).memory?.completedWorkInProjectMd !== true) return null;
   const projectPath = path.join(state, "memory", "project.md");
   const executionId = active.executionId || active.taskId;
   const date = zonedParts(now(), (await workspaceConfig(state)).timeZone || DEFAULT_PROJECT_TIME_ZONE).date;
@@ -1660,9 +1690,9 @@ async function writeCanonicalExecutionReport(state, active, status, files, verif
   const completionChecklist = [
     active.taskId ? "- [x] `result.md` terminal state checked" : "- [x] `result.md` correctly not applicable for light workflow",
     `- [x] Recent memory updated at \`.agrimap-agent/${stateRelative(state, memoryPaths.recent)}\``,
-    "- [x] Short terminal outcome promoted to `.agrimap-agent/memory/project.md`",
+    "- [x] Completed work stays in history and recent memory; `memory/project.md` keeps facts only",
     `- [x] Current memory removed at terminal close: \`.agrimap-agent/${stateRelative(state, memoryPaths.current)}\``,
-    `- [x] Daily terminal audit event written under \`.agrimap-agent/logs/${finishedLocal.period}/${finishedLocal.date}.jsonl\``,
+    `- [x] Terminal audit event written under \`.agrimap-agent/logs/${finishedLocal.period}/${finishedLocal.date}/${executionId}.jsonl\``,
     `- [x] Prompt source retained immutably: ${promptSource}`,
     active.taskId
       ? `- [x] Task terminal destination recorded: ${taskFolder}`
@@ -1747,6 +1777,7 @@ async function complete(root, args) {
         : "Artifactless light execution has memory and audit evidence.",
     files,
     verification,
+    precedents: listValue(args.precedent),
   });
   const memoryPaths = await appendRecentTerminal(state, active, "completed", "Completion gate passed.");
   const reportPath = await writeCanonicalExecutionReport(state, active, "completed", files, verification, taskPath);
@@ -2154,7 +2185,13 @@ async function prune(root) {
   return { ok: true, pruned: true, retentionDays, removed, logsPreserved: true };
 }
 
+async function executionSummaries(state, executionId) {
+  const { events } = await auditEvidenceForExecution(state, executionId);
+  return events.filter((event) => ["changed", "verified"].includes(event.event) && event.milestone !== "work-branch").map((event) => event.summary).filter(Boolean).slice(-5);
+}
+
 const command = process.argv[2];
+const subcommand = process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : null;
 // Redact before objective slugs and checkpoint truncation can expose fragments.
 const args = redactValue(parseCliArgs(process.argv.slice(3)));
 const root = workspaceRoot(args.cwd || process.cwd());
@@ -2197,7 +2234,17 @@ switch (command) {
     result = await prune(root);
     break;
   default:
-    result = { ok: false, message: "Use requester, init, identify, start, checkpoint, validate, complete, close, history, or prune." };
+    result = GOVERNANCE_COMMANDS.includes(command)
+      ? await runGovernanceCommand(command, subcommand, args, root, {
+        appendLog,
+        ensureLayout,
+        activeTaskPath,
+        resolveRequester,
+        executionSummaries,
+        isGitRoot: (target) => gitOutput(target, ["rev-parse", "--show-toplevel"]).ok,
+        appendRecent: (state, active, status, summary) => appendRecentTerminal(state, active, status, summary),
+      })
+      : { ok: false, message: `Use requester, init, identify, start, checkpoint, validate, complete, close, history, prune, ${GOVERNANCE_COMMANDS.join(", ")}.` };
 }
 
 process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
