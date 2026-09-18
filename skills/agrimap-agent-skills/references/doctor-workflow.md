@@ -19,6 +19,8 @@ Status gives a short local overview; check inspects applicable workflows. Use a 
 | SQL formatting | `sqlfluff --version` versus exact `assets/tool-versions.json` pin; Python/pip availability when repair is needed | Run bundled install-sqlfluff.mjs only in separately authorized SQL formatting/tool repair |
 | Managed SQL context | Availability of sql-context-pack and its connected read-only profile | Connect the missing service/profile; never expose credentials or probe database writes |
 | Product release | Git, .NET SDK/runtime, exact global package AgriMap.ProjectDevKit.NetCore.Release and its executable | Follow release-tools.md during an authorized product release; not required for doctor/package updates |
+| Stray state roots | `strayStateRoots` from `agm-workspace.mjs context --cwd <session cwd>`: `.agrimap-agent/` outside any Git root; status recommended | Move wanted files into the target repository yourself; doctor never deletes or moves them |
+| Workflow policy | `policy show` in the target repository: exists, valid, confirmed | Answer the first-run policy card; fix listed validation details |
 | Project bootstrap | When a product target is in scope, compare its AGENTS marker/receipt with this bundle | Recommend agm-release bootstrap upgrade; do not apply it from doctor |
 
 Detect missing tools using read-only version/help/list commands with bounded timeouts. Do not run install-sqlfluff.mjs, audit a product through a mutating tool, execute tests, install dependencies or repair configuration during checks. A dependency's presence does not prove end-to-end host, database or deployment compatibility. No product FE/BE/SQL artifacts or task files for these reports.

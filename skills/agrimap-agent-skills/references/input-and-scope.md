@@ -37,6 +37,7 @@ Interpret host-native references (`@file`, attach, drag-drop) by their observed 
 ## Pointed files and directories
 
 - Validate the path and scope before reading.
+- External spec packs: use the path `context` returns (local memory or bounded discovery); never search the disk yourself.
 - Respect ignore files and the configured binary skip list.
 - If the requester explicitly points to a normally skipped binary, use a suitable inspector; do not dump raw binary into context.
 

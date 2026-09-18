@@ -1,6 +1,6 @@
 # กติกากลาง Changelog, Release และ Deployment
 
-<!-- AGRIMAP BOOTSTRAP VERSION: 4.5.5 -->
+<!-- AGRIMAP BOOTSTRAP VERSION: 4.6.0 -->
 
 ไฟล์นี้เป็น canonical instruction ของ repository สำหรับ Codex, Claude Code, Gemini CLI, Cursor และผู้พัฒนา โดยไม่ต้องมี AgriMap skills หรือ local Git hook กติกา Markdown ช่วยกำกับพฤติกรรม; Agent ใช้ .NET Global Tool `agm-release` ตรวจ local gate และตรวจหลักฐาน Git ตามไฟล์นี้ ห้ามอนุมานว่า Jenkins บังคับ release gate อยู่ ส่วน GitLab Protected Branch/Tag ต้องตั้งค่าฝั่ง server แยกต่างหาก
 
@@ -23,7 +23,7 @@
 
 | Mode | Trigger | การทำงาน | สิ่งที่ห้าม |
 | --- | --- | --- | --- |
-| `develop-complete` | feature/fix/refactor/docs/config/pipeline เสร็จ รวมงานที่ commit แล้ว | audit committed + staged + unstaged + untracked, เติม changelog, update project index | version/commit/push/deploy หากไม่ได้สั่ง |
+| `develop-complete` | feature/fix/refactor/docs/config/pipeline เสร็จ รวมงานที่ commit แล้ว | audit committed + staged + unstaged + untracked, เติม changelog, update project index | version, push protected branch, merge, deploy หากไม่ได้สั่ง; commit/push work branch ทำตาม §10 |
 | `diff-only` | `Diff เท่านั้น`, `Diff + Changelog`, `อัปเดต Changelog เท่านั้น` | audit/reconcile changelog/index | version/commit/push/merge/tag/release |
 | `project-backfill` | `Project Backfill`, `Bootstrap Project Memory`, `สรุปประวัติโครงการ`, `อัปเดต Project Memory + Changelog` | Diff ก่อน แล้วเติม historical changelog ที่ขาด, project catalog และ README capability tables จาก source/tests/docs และ reachable Git history ทั้งโครงการ | เดาจาก commit subject อย่างเดียว, เขียนทุก commit ลง changelog, version/commit/push/deploy หากไม่ได้สั่งเพิ่ม |
 | `inhouse` | `Deploy/เตรียม/ดีพลอย Inhouse`, `Deploy/เตรียม/ดีพลอย Inh`, `Deploy Jenkins` | prepare Inhouse, push develop, promote jenkins | แตะ Production version/tag |
@@ -37,6 +37,7 @@
 | `version-both` | `Version Both`, `Version Inhouse และ Production`, `ขึ้นเวอร์ชันทั้งสอง` | bump ทั้ง `Jenkinsfile` และ `Jenkinsfile_Production` โดยคำนวณแยกที่ `develop` แล้ว promote `develop -> jenkins -> jenkins-release` ครบสามขั้น | บังคับสอง version ให้เท่ากัน, ข้ามขั้น `jenkins`, tag |
 | `version-only` | `Version Production`, `เวอร์ชันอย่างเดียว`, `ขึ้นเวอร์ชันไม่เอา Tag` | Production: prepare, เติม changelog/notes, verify, commit/push `develop` แล้ว promote `develop -> jenkins -> jenkins-release` ครบสามขั้นตาม §6.2 | tag, merge `develop -> jenkins-release` ตรง |
 | `version-with-tags` | `Version + Tags`, `Version พร้อม Tag`, `ขึ้นเวอร์ชันพร้อม Tag` | ทำ `version-only` ให้ครบก่อน แล้วสร้าง annotated tag `v<VERSION>` โดยใช้ `release-notes/<VERSION>.md` จาก Production SHA เป็น description และ push tag ตาม §7 | ข้ามขั้น `jenkins`, tag ก่อน push `jenkins-release` สำเร็จ |
+| `integrate` | `merge`, `รวม`, `รวมเข้า <branch>`, `pr`, `เปิด PR`, เลขตัวเลือกจาก Next-step card | ทำตาม §10.4 กับ work branch ปัจจุบัน | promote `jenkins`/`jenkins-release`, tag, force push |
 | `ambiguous` | `นำขึ้น Jenkins` ไม่มี qualifier | ถาม `Inhouse`, `Production` หรือ `Both` | mutation ทุกชนิดก่อนตอบ |
 
 Normalize ได้เฉพาะ case/whitespace และ semantic phrase boundary ห้ามจับ substring สั้นในคำอื่น เลือก exact phrase ที่เฉพาะเจาะจงที่สุดก่อน: `Prepare Both` -> `prepare-both`, `Version Both`/`Version Inhouse และ Production` -> `version-both`; ใช้ `both` เฉพาะ deploy สอง environment ที่ไม่ตรง phrase เหล่านี้ ถ้ายังขัดกันให้ถามก่อน mutation การยก keyword เป็นตัวอย่างในคำขอตรวจ/แก้เอกสารไม่ใช่คำสั่ง release
@@ -388,11 +389,13 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
   - `.agrimap-agent/knowledge/**`
   - `.agrimap-agent/logs/**`
   - `.agrimap-agent/memory/**`
+  - `.agrimap-agent/policy/**`
   - `.agrimap-agent/reports/**`
 - คำว่า `decision` ในคำสั่งหมายถึง canonical directory `decisions/` ซึ่งเป็นพหูพจน์ ห้ามสร้าง `.agrimap-agent/decision/` ซ้ำ
 - สำหรับกลุ่ม B อนุญาต stage/commit audit artifacts ที่มีอยู่ใน `.agrimap-agent/prompts/**` และ `.agrimap-agent/tasks/**` เพิ่มเติมหลังตรวจเนื้อหาและข้อมูลลับ เพื่อไม่ทิ้งงานที่ runtime สร้างไว้ สิทธิ์นี้ไม่สั่งให้สร้าง artifact เหล่านี้เพิ่ม; raw requester input คงอยู่เฉพาะ prompt history ตาม contract ของ host
 - Mode อื่นยังห้ามสร้าง แก้ stage หรือ commit `.agrimap-agent/prompts/**`, `.agrimap-agent/tasks/**` เว้นแต่ owner สั่ง path นั้นชัดเจน; `.agrimap-agent/runtime/**` และ path อื่นนอก allowlist ไม่ถูก publish อัตโนมัติทุก mode หากปรากฏใน inventory ให้รายงาน blocked ตาม §6.3
 - ไฟล์เดิมที่อยู่นอก allowlist ไม่ใช่สิทธิ์ให้ Agent แตะหรือลบ และห้ามล้าง artifact ของ Agent/ผู้พัฒนาคนอื่น
+- `.agrimap-agent/local/**` เป็นความจำเฉพาะเครื่อง (เช่น path ของ spec นอก repo) ถูก ignore และห้าม stage/commit ทุก mode; ไฟล์ที่ commit อ้าง spec นอก repo ด้วย id ใน `policy/project.json` เท่านั้น ห้ามใส่ absolute path ของเครื่อง
 
 ### 9.2 Run identity และรูปแบบ path
 
@@ -401,7 +404,7 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 - ใช้ path มาตรฐาน:
   - decision: `decisions/YYYY-MM/<RUN_ID>-<slug>.md`
   - instruction: `instructions/YYYY-MM/<RUN_ID>/<name>.md`
-  - log: `logs/YYYY-MM/YYYY-MM-DD.jsonl`
+  - log: `logs/YYYY-MM/YYYY-MM-DD/<RUN_ID>.jsonl` (ไฟล์รายวันแบบเดิม `logs/YYYY-MM/YYYY-MM-DD.jsonl` ยังอ่านได้ ห้ามย้ายหรือแก้)
   - current memory: `memory/current/YYYY-MM/<RUN_ID>-<slug>.md`
   - recent memory: `memory/recent/YYYY-MM/<RUN_ID>-<slug>.md`
   - report: `reports/YYYY-MM/<RUN_ID>-<slug>.md`
@@ -428,17 +431,66 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 3. ก่อน mutation ระบุ objective/non-goals, exact write boundary, logic ที่เปลี่ยน/ต้องคงเดิม, วิธีที่เล็กสุด และ acceptance/verification
 4. ระหว่างทำงาน บันทึกเฉพาะ material decision หรือ milestone ที่ outcome เปลี่ยน; raw command output อยู่ใน terminal ไม่คัดลอกลง memory/log
 5. ก่อนปิดงานรัน verification ที่เหมาะสมและ `git diff --check`; docs-only ใช้ `tests: not applicable` ได้แต่ห้ามอ้างว่าทดสอบ feature แล้ว
-6. ปิดงานด้วย report, terminal log, recent-memory event และหนึ่งบรรทัดสั้นใน `memory/project.md` เมื่อผลนั้น reusable ข้ามงาน; `completed|cancelled` ให้ลบ current memory ของ run นั้น ส่วน `blocked` ต้องเก็บ current memory พร้อม blocker/next action
+6. ปิดงานด้วย report, terminal log, recent-memory event และเพิ่ม fact ใน `memory/project.md` `## Facts` เฉพาะเมื่อเป็นข้อเท็จจริงที่ใช้ซ้ำข้ามงาน (ไม่ใช่รายการงานที่เสร็จ); `completed|cancelled` ให้ลบ current memory ของ run นั้น ส่วน `blocked` ต้องเก็บ current memory พร้อม blocker/next action
 7. Artifact เป็น append-only ตามธรรมชาติของ log/history; การแก้ข้อเท็จจริงใช้ correction/supersedes ที่อ้างไฟล์เดิม ห้าม rewrite audit history หรือลบหลักฐานเพื่อให้ผลดูผ่าน
 
 ### 9.5 Git coverage gate
 
-- ก่อน commit แสดงไฟล์ allowlist ที่ modified/untracked จริงด้วย `git status --short -- <six-allowlisted-subtrees>` และตรวจว่าทุก artifact ของ run ถูกนับครบ
+- ก่อน commit แสดงไฟล์ allowlist ที่ modified/untracked จริงด้วย `git status --short -- <allowlisted-subtrees>` และตรวจว่าทุก artifact ของ run ถูกนับครบ
 - Stage ด้วย exact file paths ที่ตรวจแล้วเท่านั้น เช่น `git add -- <file-1> <file-2>`; ห้าม `git add .`, `git add -A` หรือ `git add -- .agrimap-agent`
 - ห้าม stage path นอก allowlist เพียงเพราะอยู่ใน worktree; หากงานจำเป็นต้องใช้ path นอก allowlist ให้หยุดและขอ owner authority ก่อน
 - ห้าม complete หากมี artifact ที่ run นี้สร้าง/แก้ใน allowlist แต่ตกหล่นจาก intended commit หรือ report ไม่ตรงกับ Git diff/status จริง
-- หากไม่ได้สั่ง commit ให้รายงาน exact modified/untracked paths เป็น local deliverables ได้ ไม่ต้อง commit เพื่อปิดงาน; กลุ่ม B ต้อง commit/push final audit artifacts ตาม §6.3 ส่วน release mode อื่นคง local follow-up ตาม §8.1
+- หาก policy §10 ไม่เปิด delivery และไม่ได้สั่ง commit ให้รายงาน exact modified/untracked paths เป็น local deliverables; กลุ่ม B ต้อง commit/push final audit artifacts ตาม §6.3
 - ห้ามเก็บ secret, token, credential, ข้อมูลส่วนบุคคลที่ไม่จำเป็น, hidden reasoning, transcript หรือ raw telemetry ใน artifact ใด ๆ; raw requester input อนุญาตเฉพาะ prompt history ตามข้อยกเว้น §9.1 และ contract ของ host ห้ามคัดลอกเข้า memory/log/report
+
+## 10. Team workflow: repository, work branch, delivery และ integration
+
+### 10.1 Repository และ instruction chain
+
+- Target repository คือ `git rev-parse --show-toplevel` ของไฟล์ที่จะแก้ ไม่ใช่ directory ที่เปิด session; ถ้า session อยู่นอก repo และมีหลาย repo ให้ถามว่าเป็น repo ไหนก่อนเขียน
+- ก่อนเขียนครั้งแรกใน repository อ่าน `AGENTS.md` ทุกไฟล์ตั้งแต่ root ของ repo ขึ้นไปถึง root ของ drive และ `AGENTS.md` ใน subdirectory ที่มีไฟล์ที่จะแก้ ไฟล์ที่ใกล้ไฟล์เป้าหมายกว่ามีผลเหนือกว่าเมื่อขัดกัน
+- ห้ามสร้าง `.agrimap-agent/` ใน directory ที่ไม่ใช่ root ของ Git repository
+
+### 10.2 Policy
+
+- `.agrimap-agent/policy/workflow.json` คือ workflow ของทีม (prefix/base/target ของ branch, delivery, integration) อ่านก่อนงานที่แก้ repository ทุกครั้ง
+- ถ้าไม่มี: ตรวจ `Jenkinsfile*`, `git branch -a` และ remote แล้วเสนอ workflow ที่ตรวจพบเป็นคำถามเดียวพร้อมตัวเลือก ก่อนเขียนครั้งแรก เมื่อ owner ตอบ ให้สร้างไฟล์ `status: confirmed` และ decision record แล้วไม่ถามซ้ำ
+- Policy ที่ confirmed เป็นสิทธิ์ถาวรให้ commit และ push **work branch** เมื่องานผ่าน verification เท่านั้น ไม่ใช่สิทธิ์ push/merge `develop`, `jenkins`, `jenkins-release`, `main` หรือสร้าง tag
+- Repository ที่ promote `develop -> jenkins -> jenkins-release` แบบ `--ff-only` (§6.2): ทุก work type รวม hotfix แตกจาก `develop` และรวมกลับ `develop`
+
+### 10.3 เริ่มงานและส่งงาน
+
+1. ก่อนเขียน: บันทึก `git status --porcelain` ไว้เป็นรายการไฟล์ที่ค้างก่อนเริ่ม
+2. ถ้าอยู่บน protected branch: `git fetch origin`, ถ้า tree สะอาดให้ `git merge --ff-only origin/<base>` แล้ว `git switch -c <prefix><english-kebab-slug>`; ถ้า tree ไม่สะอาดให้ `git switch -c` จาก HEAD เดิมโดยไม่ pull ห้าม stash/reset/สร้าง worktree
+3. Branch ที่ host สร้างเอง (เช่น `claude/*`, `codex/*`) ไม่ต้องเปลี่ยนชื่อ local แต่ push ด้วยชื่อทีม: `git push -u origin HEAD:refs/heads/<prefix><slug>`
+4. เมื่อ verification ผ่าน: เติม changelog ตาม §5, stage เฉพาะไฟล์ของงานนี้ด้วย `git add -- <paths>` (ห้ามรวมไฟล์ที่ค้างก่อนเริ่มโดยไม่ถาม), `git diff --cached --check`, commit แบบ Conventional Commits ภาษาอังกฤษ header ≤ 72 ตัวอักษร, push work branch แล้วตรวจ `git ls-remote --heads origin <branch>` ให้ SHA ตรง
+5. สรุปจบงานไม่เกิน 12 บรรทัด: branch/commit/remote, ไฟล์และผลทดสอบ, สิ่งที่ตัดสินใจแทน, ไฟล์ที่ไม่ได้รวม แล้วปิดด้วยตัวเลือกถัดไปแบบมีเลข (ข้อ 1 คือที่แนะนำ)
+6. หยุดถามเฉพาะเรื่องที่ย้อนไม่ได้หรือไม่ปลอดภัย (push/merge branch หลัก, ข้อมูลลับ, conflict, สิทธิ์); ปัญหาอื่น เช่น test ไม่ผ่าน หรืออัปเดต spec ไม่ได้ ให้ส่งงานเข้า work branch ต่อ (commit ระบุ `AGM-Verification: failed` เมื่อ test ไม่ผ่าน) แล้วสรุปใน section `⚠️ ต้องตามต่อ` ที่บอกสิ่งที่เกิด ผลกระทบ และวิธีแก้ — ห้ามเสนอ merge จนกว่า test ผ่าน
+
+### 10.4 คำสั่งสั้นหลังส่งงาน
+
+| ผู้ใช้พิมพ์ | ความหมาย |
+| --- | --- |
+| เลขตัวเลือก | ทำตามตัวเลือกนั้นของคำถามล่าสุด |
+| `merge`, `รวม`, `รวมเข้า <branch>`, `ship`, `ผ่าน รวมได้`, `LGTM` | รวม work branch เข้า target ตาม policy |
+| `pr`, `mr`, `เปิด PR`, `ส่งรีวิว` | เปิด PR/MR เข้า target |
+| `อัปเดต branch`, `sync` | merge target ล่าสุดเข้า work branch แล้ว push |
+| `แก้ต่อ`, `พักไว้` | ทำงานต่อ / หยุดไว้ให้ resume |
+| `ทิ้ง`, `ยกเลิก branch` | ถามก่อนว่าจะลบ local หรือทั้ง local และ remote |
+
+- ข้อความที่เป็นคำถาม ("merge ยังไง?") หรือยกตัวอย่างในเครื่องหมายคำพูด ไม่ใช่คำสั่ง
+- คำสั่งสั้นเป็นการยืนยันเฉพาะ action นั้น: รวมเข้า target ที่ policy กำหนดและ push/verify remote; การลบ branch, target อื่น หรือ merge ขณะ check ไม่ผ่าน ต้องถามแยก
+- รวมแบบ local: merge `origin/<target>` เข้า work branch ก่อน (conflict ให้ `git merge --abort` แล้วรายงาน path), ทดสอบ, push work branch แล้ว push ผล merge เข้า target โดยไม่ force; ถ้า remote ปฏิเสธให้รายงาน ห้าม force/bypass review/เปิด auto-merge เว้นแต่ผู้ใช้สั่ง
+- `jenkins` และ `jenkins-release` ไม่ใช่ target ของ integration ให้ใช้ release intent ใน §2
+
+### 10.5 โหมดการพัฒนาและ spec
+
+- `.agrimap-agent/policy/project.json` บอก `developmentMode`: `code-first` (Not AI-First: ของเดิม ยึด code และ test), `spec-first` (AI-First: ยึด markdown spec) หรือ `hybrid` (ของเดิมยึด code งานใหม่หรือ path ใน `specs.scopes` ยึด spec)
+- ไม่มีไฟล์: ตรวจหลักฐานใน repo, history และ spec pack ข้างเคียง ถ้ามั่นใจให้บันทึก `status: inferred` แล้วบอกผู้ใช้บรรทัดเดียว ถ้าไม่มั่นใจให้ถามก่อนเริ่มเขียนพร้อมให้ระบุตำแหน่ง spec
+- Spec นอก repo อ้างด้วย id และ fingerprint ใน policy; path จริงของแต่ละเครื่องอยู่ใน `.agrimap-agent/local/memory.md` อ่านจากไฟล์นั้นก่อน ค้นหาเฉพาะ directory ข้างเคียงเมื่อไม่มี และถามเมื่อหาไม่เจอ ห้ามค้นทั้ง disk
+- `spec-first` หรือไฟล์ใน scope ของ `hybrid`: อ่าน spec item ที่เกี่ยวข้องก่อนเขียน; คำขอที่เพิ่ม/เปลี่ยน requirement ให้แก้ spec ก่อนใน branch เดียวกัน; คำขอที่ขัดกับ spec หรือ open question ที่ block ให้ถาม; หลัง verify ให้อัปเดต status ของ task, evidence ใน traceability, changelog และ manifest ของ spec เองทุกงานโดยไม่ต้องรอสั่ง; ส่วนที่เป็นเนื้อหา (requirement, acceptance criteria, design) แก้ตามคำสั่งในรอบนั้นเท่านั้น ถ้างานเผยว่า spec ผิดหรือขาดโดยไม่ได้สั่ง หรือไม่มั่นใจว่าคำสั่งครอบคลุมแค่ไหน ให้ถามก่อน; ปัญหาในการอัปเดต spec ไม่ทำให้ส่งงานไม่ได้ แต่ต้องแจ้งเป็น warning ให้ชัด
+- `code-first`: ยึด code และ test; ไม่แก้ spec หรือเอกสารเองนอกจาก changelog/README ตาม §5; เจอเอกสารขัด code ให้บอกบรรทัดเดียว
+- ผู้ใช้สั่งเรื่อง spec ครั้งเดียว (เช่น "อัปเดต spec ด้วย") ให้ถามว่าจะทำทุกงานไหม แล้วบันทึกลง `project.json` เพื่อไม่ต้องสั่งซ้ำ
 
 ## Bootstrap contract freshness
 

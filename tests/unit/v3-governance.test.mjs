@@ -4,6 +4,7 @@ import {mkdir,readFile,readdir,writeFile,stat} from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {createHarness,projectRoot} from '../helpers/harness.mjs';
+import {initRepo,createGitFixture,gitIn} from '../helpers/git-fixture.mjs';
 import {selectWorkflow,classifyRequest,instructionProfile,verificationDecision,sqlContextToolAllowed,validateReadQuery} from '../../skills/agrimap-agent-skills/scripts/governance-policy.mjs';
 import {normalizeIdentity,confirmationExpiry,localAuditMetadata} from '../../skills/agrimap-agent-skills/scripts/identity.mjs';
 import {createPromptVersion} from '../../skills/agrimap-agent-skills/scripts/agm-prompt-version.mjs';
@@ -188,7 +189,7 @@ test('hooks stay silent for SessionStart and unrelated prompts despite active st
  assert.equal(await present(path.join(root,'.agrimap-agent/prompts')),false);
 });
 test('relevant Gemini submit retries archive once without mixing AI output',async t=>{
- const h=await fixture(t);const root=path.join(h.temp,'agrimap-example');await mkdir(root);
+ const h=await fixture(t);const root=path.join(h.temp,'agrimap-example');await initRepo(root);
  const input={cwd:root,session_id:'one',hook_event_name:'BeforeAgent',prompt:'ช่วยอธิบายโค้ดในโครงการ',prompt_id:'submit-1'};
  h.run(h.scripts.hook,['--provider','gemini'],input);h.run(h.scripts.hook,['--provider','gemini'],input);
  const periods=await readdir(path.join(root,'.agrimap-agent/prompts'));
@@ -316,4 +317,54 @@ test('Antigravity recording keeps host separate from actual model and preserves 
   if(value.label==='Provider' && value.enum){assert.ok(value.enum.includes('antigravity'));assert.ok(value.enum.includes('gemini'));}
   Object.values(value).forEach(inspect);
  };inspect(schema);
+});
+
+// ---- 4.6.0 Agent Collaboration Governance (P1)
+test('hook in a non-git parent writes nothing and points to context with child repositories',async t=>{
+ const h=await fixture(t);const parent=path.join(h.temp,'platform');
+ await initRepo(path.join(parent,'agmws-orders-netcore'));
+ const hook=h.run(h.scripts.hook,['--provider','claude'],{cwd:parent,session_id:'p1',hook_event_name:'UserPromptSubmit',prompt:'แก้ไข validation ในโค้ด service นี้'});
+ assert.match(hook.hookSpecificOutput.additionalContext,/outside any Git repository/);
+ assert.match(hook.hookSpecificOutput.additionalContext,/agmws-orders-netcore/);
+ assert.equal(await present(path.join(parent,'.agrimap-agent')),false);
+});
+test('hook short replies: option with a stored card, silence without, question guard for delivered work',async t=>{
+ const h=await fixture(t);const root=path.join(h.temp,'agmws-x-netcore');await initRepo(root);
+ const send=prompt=>h.run(h.scripts.hook,['--provider','claude'],{cwd:root,session_id:'s1',hook_event_name:'UserPromptSubmit',prompt});
+ assert.equal(send('1').hookSpecificOutput,undefined);
+ const sessions=path.join(root,'.agrimap-agent/runtime/sessions');await mkdir(sessions,{recursive:true});
+ const lastCard={cardId:'s1-integration-1',kind:'integration',topic:'git/integration',risk:'R3',options:[{id:'1',label:'เปิด PR → develop'},{id:'2',label:'แก้ต่อ'}],recommended:'1',recordAs:'none',expiresAt:new Date(Date.now()+3600000).toISOString()};
+ await writeFile(path.join(sessions,'s1.json'),JSON.stringify({lastCard,lastDelivery:{branch:'feature/x'}}));
+ assert.match(send('1').hookSpecificOutput.additionalContext,/selects option 1 "เปิด PR → develop" of card s1-integration-1/);
+ const question=send('merge ยังไง').hookSpecificOutput.additionalContext;
+ assert.match(question,/question about integrate; answer it without running git actions/);assert.doesNotMatch(question,/integrate plan/);
+ assert.match(send('merge').hookSpecificOutput.additionalContext,/integrate plan --intent integrate/);
+});
+test('completion stops appending Completed work unless the config opts in; logs are per execution and history reads old daily files',async t=>{
+ const h=await fixture(t);await initRepo(h.temp);
+ const run=title=>{const s=h.run(h.scripts.workspace,['start','--operation','execute','--session','c1','--requested-by','T','--report','--title',title]);const id=s.activeTask.executionId;
+  h.run(h.scripts.workspace,['checkpoint','--session','c1','--execution',id,'--event','verified','--summary','ok']);h.run(h.scripts.workspace,['complete','--session','c1','--execution',id]);return id;};
+ h.run(h.scripts.workspace,['init']);
+ const first=run('First work');
+ const project=path.join(h.temp,'.agrimap-agent/memory/project.md');
+ assert.doesNotMatch(await readFile(project,'utf8'),/Completed work/);
+ const logs=path.join(h.temp,'.agrimap-agent/logs');const period=(await readdir(logs))[0];const day=(await readdir(path.join(logs,period)))[0];
+ assert.ok((await readdir(path.join(logs,period,day))).includes(`${first}.jsonl`));
+ const config=path.join(h.temp,'.agrimap-agent/config.json');const c=JSON.parse(await readFile(config,'utf8'));c.memory.completedWorkInProjectMd=true;await writeFile(config,JSON.stringify(c));
+ await new Promise(r=>setTimeout(r,1100));const second=run('Second work');
+ assert.match(await readFile(project,'utf8'),new RegExp(`execution \`${second}\``));
+ const legacy={...JSON.parse((await readFile(path.join(logs,period,day,`${first}.jsonl`),'utf8')).split('\n')[0]),execution_id:'legacy01',task_id:null};
+ await writeFile(path.join(logs,period,`${day}.jsonl`),JSON.stringify(legacy)+'\n');
+ const history=h.run(h.scripts.workspace,['history']);
+ assert.ok(history.tasks.some(x=>x.executionId==='legacy01'));assert.ok(history.tasks.some(x=>x.executionId===first));
+});
+test('an integrated event after completed is a valid audit event',async t=>{
+ const h=await fixture(t);await initRepo(h.temp);
+ const s=h.run(h.scripts.workspace,['start','--operation','execute','--session','i1','--requested-by','T','--title','Integrate later']);const id=s.activeTask.executionId;
+ h.run(h.scripts.workspace,['checkpoint','--session','i1','--execution',id,'--event','verified','--summary','ok']);h.run(h.scripts.workspace,['complete','--session','i1','--execution',id]);
+ const logs=path.join(h.temp,'.agrimap-agent/logs');const period=(await readdir(logs))[0];const day=(await readdir(path.join(logs,period)))[0];
+ const file=path.join(logs,period,day,`${id}.jsonl`);const completed=JSON.parse((await readFile(file,'utf8')).trim().split('\n').at(-1));
+ await writeFile(file,(await readFile(file,'utf8'))+JSON.stringify({...completed,timestamp:new Date().toISOString(),event:'integrated',log_type:'result',message:'Integrated feature/x into develop',reason:'method=local-merge'})+'\n');
+ const history=h.run(h.scripts.workspace,['history','--task',id]);
+ assert.equal(history.invalidLines.length,0);assert.ok(history.tasks[0].events.includes('integrated'));
 });

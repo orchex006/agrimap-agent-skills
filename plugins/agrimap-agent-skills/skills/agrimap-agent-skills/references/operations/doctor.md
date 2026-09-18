@@ -41,6 +41,6 @@ Resolve exactly one action before target inspection or product writes. Safe defa
 
 ## Load only when the condition matches
 
-- No additional conditional reference by default; select one target pattern only when lifecycle-core routing requires it.
+- When you are about to ask the requester a question: [autonomy.md](../autonomy.md) — ask only requester-owned material choices, with a decision card
 
 Do not read the router `SKILL.md` during operation execution. If this generated entrypoint is missing or corrupt, stop with `PACKAGE_ENTRYPOINT_MISSING` and ask for package sync/reinstallation; never broaden into the router.

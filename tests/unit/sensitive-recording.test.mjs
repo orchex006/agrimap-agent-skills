@@ -1,3 +1,4 @@
+import { initRepo } from '../helpers/git-fixture.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile, readdir } from 'node:fs/promises';
@@ -64,6 +65,7 @@ async function recordedFiles(root) {
 
 test('hook and workspace never persist synthetic credentials, including before summary truncation', async t => {
   const h = await createHarness('agm-sensitive-'); t.after(() => h.cleanup());
+  await initRepo(h.temp); // raw prompts are archived only inside a Git root
   const secret = 'ghp_' + 'A'.repeat(36);
   const password = 'SyntheticOnlyPassword987';
   const prompt = '$agm-exec fix logging password="' + password + '" token=' + secret;

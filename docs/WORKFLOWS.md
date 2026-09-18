@@ -32,6 +32,13 @@
 
 สำหรับ repo ที่รับ bootstrap AGENTS ฉบับ owner-supplied ล่าสุด ให้ใช้ project-specific portable recording §9: งานแก้ repository ต้องมี terminal report และ allowlist ตาม contract นั้น ตารางข้างต้นเป็นค่าเริ่มต้นของ package ไม่ใช้ลบข้อกำหนด project หรือเปิด lifecycle ซ้ำ ดู [Release](RELEASE.md)
 
+## ทำงานบน work branch และส่งงาน (4.6.0)
+
+- งานแรกที่แก้ repository: Agent อ่าน `AGENTS.md` ของ repo (และระดับบน) ก่อน แล้วถาม workflow ของทีม **ครั้งเดียว** บันทึกเป็น `.agrimap-agent/policy/workflow.json` (commit เข้า repo)
+- เมื่อ policy ยืนยันแล้ว งานใหม่จะอยู่บน `feature/…`, `fix/…`, `hotfix/…` และเมื่อจบงาน Agent จะ commit + push **เฉพาะ work branch** แล้วตรวจ SHA บน remote ไม่ push/merge `develop`, `main`, `jenkins*` เอง
+- ไฟล์ที่ค้างอยู่ก่อนเริ่มงานจะไม่ถูกรวมใน commit; test ไม่ผ่านยังส่งขึ้น work branch ได้แต่จะมี `⚠️ ต้องตามต่อ` และไม่เสนอ merge
+- `.agrimap-agent/policy/project.json` บอกว่า project เป็น Not AI-First (code-first), AI-First (spec-first) หรือ hybrid; path ของ spec นอก repo จำไว้เฉพาะเครื่องใน `.agrimap-agent/local/memory.md` ซึ่งไม่ถูก commit
+
 ## Identity ไม่ใช่ authority
 
 ชื่อผู้สั่งใช้บอกว่าใครขอทำงาน ส่วนสิทธิ์แก้โค้ด/เผยแพร่มาจากโจทย์ปัจจุบันและขอบเขตที่อนุมัติ ไม่ใช่ชื่อ OS หรือ Git config

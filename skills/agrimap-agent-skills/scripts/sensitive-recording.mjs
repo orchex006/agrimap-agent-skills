@@ -60,3 +60,17 @@ function safeRecord(file, data) {
 
 export const writeRecord = (file, data, options) => fsWriteFile(file, safeRecord(file, data), options);
 export const appendRecord = (file, data, options) => fsAppendFile(file, safeRecord(file, data), options);
+
+// Detection for delivery gates: same patterns as redactText, reporting only the
+// marker kind and 1-based line number. Callers must never echo detected values.
+export function detectSensitive(value) {
+  const findings = [];
+  const lines = String(value ?? '').split(/\r?\n/);
+  for (let index = 0; index < lines.length; index += 1) {
+    const redacted = redactText(lines[index]);
+    if (redacted === lines[index]) continue;
+    const kinds = new Set([...redacted.matchAll(/\[REDACTED:([A-Z_]+)\]/g)].map(match => match[1]));
+    for (const kind of kinds) if (!lines[index].includes(marker(kind))) findings.push({ kind, line: index + 1 });
+  }
+  return findings;
+}
