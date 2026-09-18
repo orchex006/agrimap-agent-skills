@@ -1,7 +1,7 @@
 // runtime/sessions/<session>.json is shared by identity confirmation and the
 // governance fields below; every writer merges instead of replacing.
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile as plainWrite } from "node:fs/promises";
+import { chmod, mkdir, readFile, writeFile as plainWrite } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { writeRecord as writeFile } from "./sensitive-recording.mjs";
@@ -53,8 +53,10 @@ export async function writeSessionPointer(session, targetRoots) {
   const file = sessionPointerPath(session);
   const current = await readJsonFile(file);
   const roots = [...new Set([...(targetRoots || []).map(root => path.resolve(root)), ...(current?.targetRoots || [])])].slice(0, 8);
-  await mkdir(path.dirname(file), { recursive: true });
-  // Machine-local temp file outside .agrimap-agent: plain JSON of absolute paths.
-  await plainWrite(file, `${JSON.stringify({ targetRoots: roots, updatedAt: new Date().toISOString() }, null, 2)}\n`, "utf8");
+  // Machine-local temp file outside .agrimap-agent holding absolute paths:
+  // owner-only permissions so other users of a shared temp dir cannot read it.
+  await mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
+  await plainWrite(file, `${JSON.stringify({ targetRoots: roots, updatedAt: new Date().toISOString() }, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+  await chmod(file, 0o600).catch(() => {});
   return file;
 }
