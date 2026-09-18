@@ -11,6 +11,12 @@ requested_by: {{requested_by}}
 requester_authority: {{requester_authority}}
 decision_owner: {{decision_owner}}
 authority_evidence: {{authority_evidence}}
+kind: convention # workflow|architecture|convention|contract|preference
+summary: "" # <= 140 chars; used by recall
+scope_paths: [] # globs such as ["src/Orders/**"]
+applies_when: "" # short condition, for example "new stored procedure"
+origin: explicit # explicit|card|correction|promoted
+card_id: null
 ---
 
 # Decision: {{title}}

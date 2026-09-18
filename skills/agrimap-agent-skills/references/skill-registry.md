@@ -16,6 +16,9 @@
 | `agm:qa-and-done` | `qa-and-done.md` | QA scope, sequence, completion gate |
 | `agm:analysis-discipline` | `analysis-discipline.md` | แยก FACT/INFERENCE/HYPOTHESIS/UNKNOWN |
 | `agm:elicitation` | `elicitation.md` | resolve parameter ที่ขาด |
+| `agm:autonomy` | `autonomy.md` | ตัดสินเอง/ถาม/ยืนยัน และ Decision Card |
+| `agm:git-workflow` | `git-workflow.md` | work branch, delivery, integration และคำตอบสั้น |
+| `agm:spec-driven` | `spec-driven.md` | development mode และตำแหน่ง spec |
 | `agm:input-and-scope` | `input-and-scope.md` | normalize inputs/attachments |
 | `agm:goal-rules` | `goal-rules.md` | mandatory Think/Simplicity/Surgical/Goal-Driven discipline |
 | `agm:passive-map` | `assets/passive-skill-map.json` | canonical routing for embedded supporting capabilities and their non-authorizing effects |

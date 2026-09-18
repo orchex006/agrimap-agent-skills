@@ -33,14 +33,16 @@
 
 ## Pre-write gate
 
-Before a product write, be able to state all six items:
+Before a product write, be able to state every item:
 
 1. authorized objective and non-goals;
 2. exact write boundary;
 3. behavior/logic allowed to change and required to remain stable;
 4. simplest complete approach and why a smaller one is insufficient;
 5. observable acceptance and verification method;
-6. the golden checklist loaded for the detected target kind, the entries actually opened, and every `MUST` row that conflicts with current project code, with the reason.
+6. the golden checklist loaded for the detected target kind, the entries actually opened, and every `MUST` row that conflicts with current project code, with the reason;
+7. AGENTS chain acknowledged (path + sha12);
+8. policy work branch, or why skipped.
 
 If a material item is unresolved, stop before writing.
 

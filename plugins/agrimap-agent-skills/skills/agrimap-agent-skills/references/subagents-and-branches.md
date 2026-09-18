@@ -24,6 +24,8 @@ Every packet defines `workspace_need`: isolation, requested mode, `base_ref`, ex
 - A normal subagent starts in the current working directory unless the provider proves isolation.
 - Codex managed worktrees are surface-dependent; never infer them from agent creation alone.
 - If required uncommitted parent state is absent from the base commit, use shared/sequential work or obtain an authorized commit boundary.
+- A host-created worktree branch follows the policy's `hostWorktreeBranch` (default: keep the local name, push under the team name).
+- Subagents never deliver or integrate; the Leader does.
 
 ## Delegation packet
 

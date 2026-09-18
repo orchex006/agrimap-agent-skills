@@ -2,6 +2,21 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.6.0 — 2026-09-18
+
+Agent Collaboration Governance, phase P1 (spec `specs/agent-collaboration-governance-v2.md` v2.1).
+
+- Resolve the target repository and its AGENTS chain before writing: new `agm-workspace.mjs context` (read-only unless `--ack`) returns the target root, the chain outer→inner with sha12, `readRequired`, stray `.agrimap-agent` roots, the project mode and resolved spec paths. The hook no longer archives prompts or reads config outside a Git root and points to `context` instead.
+- Decide, ask or confirm by owner × risk × confidence (`references/autonomy.md`); `decide card|record` validate, render and store one Decision Card and apply its `recordAs` once.
+- Team workflow policy `.agrimap-agent/policy/workflow.json` (`policy show|infer|init|set`): asked once per project, then a standing authorization to commit and push only the execution's work branch.
+- `branch plan|apply` creates the work branch from `origin/<base>` without touching local protected branches; host worktree branches push under the team name. `start` snapshots pre-existing dirty files.
+- `deliver plan|apply` stages exact own paths only, refuses protected branches, suspected secrets (values never shown), missing acknowledgement or changelog and machine-local path leaks, then commits (Conventional Commits, `AGM-Execution` trailer) and verifies the remote SHA. Failed or missing verification still delivers the work branch with `AGM-Verification` and a `DELIVERED_UNVERIFIED` warning; merge is not offered until it passes.
+- `integrate options|plan|apply`: next-step card, PR via `gh` (`glab` flags unverified), compare URL fallback, or local merge through `commit-tree` and one non-force push. Short replies (`1`, `merge`, `รวมเข้า dev`, `pr`) resolve through `resolveShortIntent` and the hook; questions never trigger git actions.
+- Development mode `.agrimap-agent/policy/project.json` (`project show|infer|init|set`) with machine-local spec paths in the Git-ignored `.agrimap-agent/local/memory.md` (`local show|set-path|note`).
+- Audit logs are one file per execution (`logs/YYYY-MM/YYYY-MM-DD/<id>.jsonl`); `project.md` no longer accumulates completed work unless `memory.completedWorkInProjectMd` is true. Older daily logs stay readable.
+- Bootstrap AGENTS template: §10 team workflow (repository, policy, delivery, short replies, development mode), `policy/**` allowlist, `local/**` exclusion and the new log path.
+- Eight token-coverage scenarios; direct and required budgets are unchanged (prose was trimmed to fit).
+
 ## 4.5.5 — 2026-09-17
 
 - Route golden patterns by detected target kind. `fe`, `be`, `sql` and `execute` now declare conditional references to a per-collection checklist; previously only one golden entry was reachable from any operation and `fe`/`sql` declared none.

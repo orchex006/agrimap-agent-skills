@@ -2,12 +2,13 @@
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat } from "node:fs/promises";
 import { appendRecord as appendFile, writeRecord as writeFile, redactText } from './sensitive-recording.mjs';
 import path from "node:path";
 import { parseCliArgs } from "./cli-args.mjs";
 import { readConfirmedIdentity } from "./identity.mjs";
-import { classifyRequest, unquotedIntent } from './governance-policy.mjs';
+import { classifyRequest, resolveShortIntent, unquotedIntent } from './governance-policy.mjs';
+import { sessionPointerPath } from './session-state.mjs';
 import { AGRIMAP_OPERATION_ALIASES, AGRIMAP_ROUTER_ALIAS } from "./operation-aliases.mjs";
 
 const AGRIMAP_PROJECT_PATTERNS = Object.freeze([
@@ -38,16 +39,55 @@ function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// Outside Git the hook never writes or reads project config under cwd (ACG H1.1).
 function workspaceRoot(cwd) {
   try {
-    return execFileSync("git", ["rev-parse", "--show-toplevel"], {
+    const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
       cwd,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     }).trim();
+    return root ? { root: path.resolve(root), isRepo: true } : { root: cwd, isRepo: false };
   } catch {
-    return cwd;
+    return { root: cwd, isRepo: false };
   }
+}
+
+// Bounded child-repository scan: depth <= 2, <= 200 directories, 150 ms.
+async function childRepositories(cwd) {
+  const found = [];
+  const queue = [[cwd, 0]];
+  const deadline = Date.now() + 150;
+  let visited = 0;
+  while (queue.length && visited < 200 && Date.now() < deadline) {
+    const [dir, level] = queue.shift();
+    visited += 1;
+    const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+    if (level > 0 && entries.some((entry) => entry.name === ".git")) { found.push(dir); continue; }
+    if (level >= 2) continue;
+    for (const entry of entries) {
+      if (entry.isDirectory() && !entry.name.startsWith(".") && !["node_modules", "bin", "obj", "dist"].includes(entry.name)) queue.push([path.join(dir, entry.name), level + 1]);
+    }
+  }
+  return found;
+}
+
+// Nearest ancestor holding `.git`, without calling git.
+async function nearestRepository(target) {
+  let current = path.resolve(target);
+  for (let level = 0; level < 32; level += 1) {
+    if (await stat(path.join(current, ".git")).then(() => true, () => false)) return current;
+    const parent = path.dirname(current);
+    if (parent === current) return null;
+    current = parent;
+  }
+  return null;
+}
+
+function referencedPaths(prompt) {
+  const text = String(prompt || "");
+  const matches = text.match(/(?:[A-Za-z]:[\\/][^\s"'`<>|]+|(?<![\w.])\.\.[\\/][^\s"'`<>|]+|(?<![\w:])\/(?:[\w.-]+\/)+[\w.-]*)/g) || [];
+  return [...new Set(matches)].slice(0, 5);
 }
 
 function remoteRepositoryName(cwd) {
@@ -84,8 +124,10 @@ function primarySqlProductIntent(prompt) {
   return SQL_ACTION_PATTERN.test(value) && SQL_TARGET_PATTERN.test(value);
 }
 
-function projectActivation(cwd, config) {
+function projectActivation(cwd, config, children = []) {
   if (config?.activation?.auto === true) return { active: true, reason: "config-opt-in" };
+  const child = children.find((dir) => recognizedProjectName(path.basename(dir)));
+  if (child) return { active: true, reason: `child-repository:${path.basename(child)}` };
   const rootName = path.basename(cwd);
   if (recognizedProjectName(rootName)) return { active: true, reason: `project-name:${rootName}` };
   const remoteName = remoteRepositoryName(cwd);
@@ -238,18 +280,48 @@ const args = parseCliArgs(process.argv.slice(2));
 const input = await readStdin();
 const configuredProvider = normalizeProvider(args.provider);
 const provider = resolveHookProvider(configuredProvider, process.env).provider;
-const cwd = workspaceRoot(path.resolve(input.cwd || process.cwd()));
+const sessionCwd = path.resolve(input.cwd || process.cwd());
+const { root: cwd, isRepo } = workspaceRoot(sessionCwd);
 const stateRoot = path.join(cwd, '.agrimap-agent');
-const config = await readJson(path.join(stateRoot, 'config.json'));
+const config = isRepo ? await readJson(path.join(stateRoot, 'config.json')) : null;
+const children = isRepo ? [] : await childRepositories(cwd);
 const sessionId = safeSessionId(input.session_id || input.sessionId || input.conversation_id || input.conversationId);
 const prompt = input.prompt || '';
 const explicit = explicitSkillInvocation(provider, prompt);
-const selection = classifyRequest({ prompt, explicit, recognized: projectActivation(cwd, config).active });
+const selection = classifyRequest({ prompt, explicit, recognized: projectActivation(cwd, config, children).active });
 const output = { continue: true, suppressOutput: true };
+
+// Short replies to a stored card or delivered branch (ACG C6). Reads at most two
+// JSON files; never runs git or network.
+async function shortReplyContext() {
+  if (!sessionId) return null;
+  let sessionState = null;
+  if (isRepo) sessionState = await readJson(path.join(stateRoot, 'runtime', 'sessions', sessionId + '.json'));
+  else {
+    const pointer = await readJson(sessionPointerPath(sessionId));
+    const root = pointer?.targetRoots?.[0];
+    if (root) sessionState = await readJson(path.join(root, '.agrimap-agent', 'runtime', 'sessions', sessionId + '.json'));
+  }
+  if (!sessionState?.lastCard && !sessionState?.lastDelivery) return null;
+  const resolved = resolveShortIntent(prompt, { lastCard: sessionState.lastCard || null });
+  const delivery = sessionState.lastDelivery;
+  if (resolved.intent === 'select-option') {
+    const card = sessionState.lastCard;
+    return `User reply "${String(prompt).trim()}" selects option ${resolved.option} "${resolved.label}" of card ${card.cardId} (${card.kind}/${card.topic}). This is the explicit instruction for that option. Record it with decide record --card ${card.cardId} --choice ${resolved.option}, then continue.`;
+  }
+  if (['integrate', 'open-pr', 'update-branch', 'park', 'abandon'].includes(resolved.intent) && delivery?.branch) {
+    if (resolved.code) return `Short integration intent "${resolved.intent}" targets ${resolved.target}: ${resolved.code}. Explain it; do not run git actions.`;
+    const target = resolved.target ? ` --target ${resolved.target}` : '';
+    return `Short integration intent "${resolved.intent}" for ${delivery.branch} → ${resolved.target || 'policy target'}. Run agm-workspace.mjs integrate plan --intent ${resolved.intent}${target}${resolved.whenGreen ? ' --when-green' : ''} and follow its result.`;
+  }
+  if (resolved.intent === 'question') return `The reply is a question about ${resolved.about}; answer it without running git actions.`;
+  return null;
+}
+const shortReply = await shortReplyContext();
 // SessionStart is intentionally silent. Current-turn intent precedes identity,
 // old execution state and all persistence. Names/cwd alone are insufficient.
-if (selection.active) {
-  await archiveRawPrompt(stateRoot, config, input);
+if (selection.active || shortReply) {
+  if (isRepo && selection.active) await archiveRawPrompt(stateRoot, config, input);
   const active = sessionId ? await readJson(path.join(stateRoot, 'runtime', 'active', sessionId + '.json')) : null;
   const identity = await readConfirmedIdentity(stateRoot, sessionId, {defaultProvider: provider});
   const packageWork = await isSkillPackageRepository(cwd);
@@ -265,6 +337,19 @@ if (selection.active) {
     sessionId ? 'Session: ' + sessionId : 'Use a stable session for durable work.'
   ];
   if (active) context.push('Existing execution ' + (active.executionId || active.taskId) + ': resume only if this request concerns it; unrelated conversation does not replace it.');
-  output.hookSpecificOutput = { hookEventName: input.hook_event_name || input.hookEventName || 'UserPromptSubmit', additionalContext: context.join('\n') };
+  if (!isRepo) context.push('Session cwd is outside any Git repository. Before any write run `agm-workspace.mjs context --cwd "' + cwd.replaceAll('\\', '/') + '" --hint "<project>"`, then read and ack the target AGENTS.md chain. Repositories below: ' + (children.slice(0, 5).map((dir) => path.basename(dir)).join(', ') || 'none found') + '.');
+  else {
+    for (const reference of referencedPaths(prompt)) {
+      const other = await nearestRepository(path.resolve(cwd, reference));
+      if (other && path.resolve(other).toLowerCase() !== path.resolve(cwd).toLowerCase()) {
+        context.push('The request references another repository (' + path.basename(other) + '); resolve it with context --paths before writing.');
+        break;
+      }
+    }
+  }
+  if (shortReply) context.push(shortReply);
+  // A bare short reply ("1", "merge") gets only its own line.
+  const lines = selection.active ? context : [shortReply];
+  output.hookSpecificOutput = { hookEventName: input.hook_event_name || input.hookEventName || 'UserPromptSubmit', additionalContext: lines.join('\n') };
 }
 process.stdout.write(JSON.stringify(output));

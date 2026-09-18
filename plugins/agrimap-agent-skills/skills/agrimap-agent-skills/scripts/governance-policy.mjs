@@ -57,3 +57,54 @@ export function validateReadQuery(sql) {
   }
   return { ok: true };
 }
+
+// Short replies after a card or delivery (ACG C6). Pure: the caller supplies the
+// stored card and, optionally, the policy's allowed integration targets.
+export const QUESTION_PATTERN = /[?？]|ยังไง|อย่างไร|ไหม|มั้ย|หรือเปล่า|รึเปล่า|ได้ไหม|\b(?:how|what|why|should|can i)\b/iu;
+export const TARGET_ALIASES = Object.freeze({ dev: 'develop', prod: 'jenkins-release', inh: 'jenkins', inhouse: 'jenkins' });
+const RELEASE_TARGETS = new Set(['jenkins', 'jenkins-release']);
+const POLITE_SUFFIX = /(?:\s*(?:ครับ|ค่ะ|คะ|นะ|จ้า|จ้ะ|เลย|ด้วย|หน่อย|please|pls|[.!]))+$/u;
+const INTEGRATE = String.raw`(?:merge|รวม(?:ได้|เลย)?|ship(?: it)?|lgtm(?: merge)?|ผ่าน(?:แล้ว)?(?:\s*(?:รวม|merge)(?:ได้|เลย)?)?)`;
+const WHEN_GREEN = String.raw`\s*(?:เมื่อ|when)\s*(?:ci|pipeline|checks?)\s*(?:ผ่าน|green|pass(?:es)?)`;
+const SHORT_PATTERNS = [
+  ['select-option', /^(?:ข้อ\s*|option\s*|ตัวเลือก(?:ที่)?\s*)?([1-9])$/u],
+  ['integrate', new RegExp(`^${INTEGRATE}${WHEN_GREEN}$`, 'u'), { whenGreen: true }],
+  ['integrate', new RegExp(`^${INTEGRATE}$`, 'u')],
+  ['integrate', /^(?:merge|รวม|เอา)\s*(?:เข้า|to|into|ไป|ขึ้น)?\s*([a-z0-9._/-]+)$/u, { target: true }],
+  ['open-pr', /^(?:pr|mr|เปิด\s*(?:pr|mr)|ส่ง\s*(?:รีวิว|review)|create\s+(?:pr|mr))$/u],
+  ['update-branch', /^(?:(?:อัปเดต|อัพเดท|update|sync)(?:\s*branch)?(?:\s*(?:กับ|with|จาก|from)\s*[a-z0-9._/-]+)?|rebase)$/u],
+  ['continue', /^(?:แก้ต่อ|ทำต่อ|continue|ยังไม่\s*(?:merge|รวม))$/u],
+  ['park', /^(?:พัก(?:ไว้)?|hold|park|รอก่อน)$/u],
+  ['abandon', /^(?:ทิ้ง(?:\s*branch)?|ยกเลิก\s*branch|abandon|discard)$/u],
+];
+const QUESTION_TOPICS = [['integrate', /merge|รวม|ship/u], ['open-pr', /\bpr\b|\bmr\b|รีวิว|review/u], ['update-branch', /update|sync|rebase|อัปเดต|อัพเดท/u], ['abandon', /ทิ้ง|abandon|discard/u]];
+
+export function resolveShortIntent(text, { lastCard = null, now = Date.now(), allowedTargets = null } = {}) {
+  let value = unquotedIntent(text).trim().toLowerCase();
+  if (!value) return { intent: 'none', reason: 'empty-or-quoted' };
+  if (value.length > 60) return { intent: 'none', reason: 'not-short' };
+  if (QUESTION_PATTERN.test(value)) {
+    const about = QUESTION_TOPICS.find(([, pattern]) => pattern.test(value))?.[0] || 'integration';
+    return { intent: 'question', about, reason: 'question-guard' };
+  }
+  value = value.replace(POLITE_SUFFIX, '').trim();
+  for (const [intent, pattern, flags = {}] of SHORT_PATTERNS) {
+    const match = value.match(pattern);
+    if (!match) continue;
+    if (intent === 'select-option') {
+      const expired = !lastCard || !(Date.parse(lastCard.expiresAt) > now);
+      const option = lastCard?.options?.find(item => String(item.id) === match[1]);
+      if (expired || !option) return { intent: 'none', reason: expired ? 'no-active-card' : 'option-not-in-card' };
+      return { intent, option: option.id, label: option.label, cardId: lastCard.cardId, reason: 'card-option' };
+    }
+    const result = { intent, reason: 'short-intent', ...(flags.whenGreen ? { whenGreen: true } : {}) };
+    if (flags.target) {
+      const target = TARGET_ALIASES[match[1]] || match[1];
+      result.target = target;
+      if (RELEASE_TARGETS.has(target)) return { ...result, code: 'TARGET_IS_RELEASE_FLOW', reason: 'release-target' };
+      if (Array.isArray(allowedTargets) && !allowedTargets.includes(target)) return { ...result, code: 'TARGET_NOT_ALLOWED', reason: 'target-outside-policy' };
+    }
+    return result;
+  }
+  return { intent: 'none', reason: 'no-match' };
+}

@@ -172,3 +172,11 @@ $agm-be action=analyze
 ```
 
 อย่าใช้ “Prepare Both” แทนคำว่า “ตรวจความพร้อม” เพราะ intent นั้นรวม bump และ push develop ดู [Release](RELEASE.md) ก่อนสั่งเผยแพร่จริง
+
+## 13. ส่งงานขึ้น branch แล้วรวม — ตอบสั้น (4.6.0)
+
+```text
+$agm-exec เพิ่ม export CSV ให้หน้า order
+```
+
+Agent ถาม workflow ของทีมครั้งแรกครั้งเดียว แตก `feature/<slug>` จาก base ตาม policy, commit + push work branch เมื่อจบ แล้วสรุปพร้อมตัวเลือกถัดไป ตอบ `1` หรือ `pr` เพื่อเปิด PR, `merge` เพื่อรวมตาม policy
