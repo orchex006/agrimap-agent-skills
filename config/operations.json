@@ -88,7 +88,13 @@
           "why": "evidence-calibrated readiness and repair advice"
         }
       ],
-      "conditionalReferences": []
+      "conditionalReferences": [
+        {
+          "when": "you are about to ask the requester a question",
+          "path": "autonomy.md",
+          "why": "ask only requester-owned material choices, with a decision card"
+        }
+      ]
     },
     {
       "name": "agm-analyze",
@@ -173,6 +179,16 @@
           "when": "database context is needed",
           "path": "sql-context-readonly.md",
           "why": "managed read-only metadata and SELECT; never database writes"
+        },
+        {
+          "when": "you are about to ask the requester a question",
+          "path": "autonomy.md",
+          "why": "ask only requester-owned material choices, with a decision card"
+        },
+        {
+          "when": "the project profile is spec-first or hybrid and the question concerns specified behavior",
+          "path": "spec-driven.md",
+          "why": "spec items are the source of truth for specified behavior"
         }
       ]
     },
@@ -260,6 +276,11 @@
           "when": "database context is needed",
           "path": "sql-context-readonly.md",
           "why": "managed read-only metadata and SELECT; never database writes"
+        },
+        {
+          "when": "you are about to ask the requester a question",
+          "path": "autonomy.md",
+          "why": "ask only requester-owned material choices, with a decision card"
         }
       ]
     },
@@ -341,6 +362,16 @@
           "when": "material intent remains unresolved",
           "path": "elicitation.md",
           "why": "resolve only consequential ambiguity"
+        },
+        {
+          "when": "you are about to ask the requester a question",
+          "path": "autonomy.md",
+          "why": "ask only requester-owned material choices, with a decision card"
+        },
+        {
+          "when": "the project profile is spec-first or hybrid and the question concerns specified behavior",
+          "path": "spec-driven.md",
+          "why": "spec items are the source of truth for specified behavior"
         }
       ]
     },
@@ -422,6 +453,16 @@
           "when": "material intent remains unresolved",
           "path": "elicitation.md",
           "why": "resolve only consequential ambiguity"
+        },
+        {
+          "when": "you are about to ask the requester a question",
+          "path": "autonomy.md",
+          "why": "ask only requester-owned material choices, with a decision card"
+        },
+        {
+          "when": "the project profile is spec-first or hybrid and the question concerns specified behavior",
+          "path": "spec-driven.md",
+          "why": "spec items are the source of truth for specified behavior"
         }
       ]
     },
@@ -579,6 +620,21 @@
           "when": "project bootstrap, versioning, branches or release are requested",
           "path": "release-and-bootstrap.md",
           "why": "project-specific adoption and release knowledge"
+        },
+        {
+          "when": "an action writes files or a requester decision is needed",
+          "path": "autonomy.md",
+          "why": "decide, ask or confirm; decision card format"
+        },
+        {
+          "when": "the action writes product files in a Git repository",
+          "path": "git-workflow.md",
+          "why": "work branch, delivery and next-step card per the team workflow policy"
+        },
+        {
+          "when": "the project profile is spec-first or hybrid",
+          "path": "spec-driven.md",
+          "why": "development mode, spec locations and spec-first request handling"
         }
       ]
     },
@@ -751,6 +807,21 @@
           "when": "project bootstrap, versioning, branches or release are requested",
           "path": "release-and-bootstrap.md",
           "why": "project-specific adoption and release knowledge"
+        },
+        {
+          "when": "an action writes files or a requester decision is needed",
+          "path": "autonomy.md",
+          "why": "decide, ask or confirm; decision card format"
+        },
+        {
+          "when": "the action writes product files in a Git repository",
+          "path": "git-workflow.md",
+          "why": "work branch, delivery and next-step card per the team workflow policy"
+        },
+        {
+          "when": "the project profile is spec-first or hybrid",
+          "path": "spec-driven.md",
+          "why": "development mode, spec locations and spec-first request handling"
         }
       ]
     },
@@ -900,6 +971,21 @@
           "when": "database context is needed",
           "path": "sql-context-readonly.md",
           "why": "managed read-only metadata and SELECT; never database writes"
+        },
+        {
+          "when": "an action writes files or a requester decision is needed",
+          "path": "autonomy.md",
+          "why": "decide, ask or confirm; decision card format"
+        },
+        {
+          "when": "the action writes product files in a Git repository",
+          "path": "git-workflow.md",
+          "why": "work branch, delivery and next-step card per the team workflow policy"
+        },
+        {
+          "when": "the project profile is spec-first or hybrid",
+          "path": "spec-driven.md",
+          "why": "development mode, spec locations and spec-first request handling"
         }
       ]
     },
@@ -984,6 +1070,16 @@
           "when": "material intent remains unresolved",
           "path": "elicitation.md",
           "why": "resolve only consequential ambiguity"
+        },
+        {
+          "when": "you are about to ask the requester a question",
+          "path": "autonomy.md",
+          "why": "ask only requester-owned material choices, with a decision card"
+        },
+        {
+          "when": "the project profile is spec-first or hybrid and the question concerns specified behavior",
+          "path": "spec-driven.md",
+          "why": "spec items are the source of truth for specified behavior"
         }
       ]
     },
@@ -1091,6 +1187,11 @@
           "when": "project bootstrap, versioning, branches or release are requested",
           "path": "release-and-bootstrap.md",
           "why": "project-specific adoption and release knowledge"
+        },
+        {
+          "when": "you are about to ask the requester a question",
+          "path": "autonomy.md",
+          "why": "ask only requester-owned material choices, with a decision card"
         }
       ]
     },
@@ -1128,6 +1229,10 @@
         {
           "path": "recommendations.md",
           "why": "visible evidence-calibrated recommendations and routine uncertainty disclosure"
+        },
+        {
+          "path": "autonomy.md",
+          "why": "decide, ask or confirm; decision card format"
         }
       ],
       "conditionalReferences": [
@@ -1225,6 +1330,21 @@
           "when": "project bootstrap, versioning, branches or release are requested",
           "path": "release-and-bootstrap.md",
           "why": "project-specific adoption and release knowledge"
+        },
+        {
+          "when": "the authorized work writes files in a Git repository",
+          "path": "git-workflow.md",
+          "why": "work branch, delivery and next-step card per the team workflow policy"
+        },
+        {
+          "when": "the request is a short integration reply (merge, pr, รวม or a card option) for a delivered work branch",
+          "path": "git-workflow.md",
+          "why": "short integration intents and their authorization boundary"
+        },
+        {
+          "when": "the project profile is spec-first or hybrid",
+          "path": "spec-driven.md",
+          "why": "development mode, spec locations and spec-first request handling"
         }
       ]
     },

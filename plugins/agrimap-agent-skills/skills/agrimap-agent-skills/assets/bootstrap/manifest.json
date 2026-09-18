@@ -1,12 +1,12 @@
 {
-  "version": "4.5.5",
+  "version": "4.6.0",
   "source": "Owner-supplied canonical contract submitted 2026-09-08; owner-authorized missing-memory indexing revision 2026-09-09; owner-authorized explicit Version/Patch precedence and compatible direct preparation revision 2026-09-09",
   "files": [
     {
       "source": "AGENTS.md",
       "target": "AGENTS.md",
       "mode": "copy",
-      "sha256": "195f3134fc9e6eb1c0ae707b6f7762f87b3508a8046cdb8722da373d3742d5f6",
+      "sha256": "fad1f7543023feb4a35bc0c7420b26a9857ed98de737a861a22dce5be5a10c7b",
       "previous": [
         {
           "version": "3.2.2",
@@ -71,6 +71,10 @@
         {
           "version": "4.5.4",
           "sha256": "92c672b66e5103d1dca321e112bfd8fff6126a83dbbb6358670c07a5bf8bc485"
+        },
+        {
+          "version": "4.5.5",
+          "sha256": "195f3134fc9e6eb1c0ae707b6f7762f87b3508a8046cdb8722da373d3742d5f6"
         }
       ]
     },

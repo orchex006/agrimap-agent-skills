@@ -635,6 +635,122 @@
         "patterns/sql.md",
         "patterns/checklists/sql.md"
       ]
+    },
+    {
+      "id": "execute-git-delivery-light",
+      "description": "4.6.0 execution in a Git repository loads autonomy and the team git workflow",
+      "operation": "execute",
+      "depth": "light",
+      "activate": [
+        "git-workflow.md"
+      ],
+      "mustLoad": [
+        "goal-rules.md",
+        "recommendations.md",
+        "autonomy.md",
+        "git-workflow.md"
+      ]
+    },
+    {
+      "id": "execute-short-integration-light",
+      "description": "4.6.0 short integration reply (merge, pr, option number) after delivery",
+      "operation": "execute",
+      "depth": "light",
+      "activate": [
+        "git-workflow.md"
+      ],
+      "mustLoad": [
+        "autonomy.md",
+        "git-workflow.md"
+      ]
+    },
+    {
+      "id": "fe-edit-git-delivery-light",
+      "description": "4.6.0 frontend edit with work branch and delivery",
+      "operation": "fe",
+      "depth": "light",
+      "activate": [
+        "patterns/checklists/frontend-main.md",
+        "autonomy.md",
+        "git-workflow.md"
+      ],
+      "mustLoad": [
+        "frontend-engineer.md",
+        "patterns/frontend.md",
+        "patterns/checklists/frontend-main.md",
+        "autonomy.md",
+        "git-workflow.md"
+      ]
+    },
+    {
+      "id": "sql-edit-git-delivery-light",
+      "description": "4.6.0 SQL edit with work branch and delivery",
+      "operation": "sql",
+      "depth": "light",
+      "activate": [
+        "autonomy.md",
+        "git-workflow.md"
+      ],
+      "mustLoad": [
+        "patterns/sql.md",
+        "autonomy.md",
+        "git-workflow.md"
+      ]
+    },
+    {
+      "id": "analyze-question-autonomy-light",
+      "description": "4.6.0 analysis that needs a requester question loads autonomy only",
+      "operation": "analyze",
+      "depth": "light",
+      "activate": [
+        "autonomy.md"
+      ],
+      "mustLoad": [
+        "autonomy.md"
+      ]
+    },
+    {
+      "id": "execute-spec-first-sync-light",
+      "description": "4.6.0 spec-first execution loads mode/location rules with the git workflow",
+      "operation": "execute",
+      "depth": "light",
+      "activate": [
+        "spec-driven.md",
+        "git-workflow.md"
+      ],
+      "mustLoad": [
+        "autonomy.md",
+        "spec-driven.md",
+        "git-workflow.md"
+      ]
+    },
+    {
+      "id": "fe-spec-first-edit-light",
+      "description": "4.6.0 spec-first frontend edit",
+      "operation": "fe",
+      "depth": "light",
+      "activate": [
+        "spec-driven.md",
+        "git-workflow.md"
+      ],
+      "mustLoad": [
+        "frontend-engineer.md",
+        "patterns/frontend.md",
+        "spec-driven.md",
+        "git-workflow.md"
+      ]
+    },
+    {
+      "id": "analyze-spec-first-question-light",
+      "description": "4.6.0 spec-first analysis of specified behavior",
+      "operation": "analyze",
+      "depth": "light",
+      "activate": [
+        "spec-driven.md"
+      ],
+      "mustLoad": [
+        "spec-driven.md"
+      ]
     }
   ]
 }

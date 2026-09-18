@@ -24,6 +24,7 @@
 
 - [goal-rules.md](../goal-rules.md) — mandatory Think/Simplicity/Surgical/Goal-Driven discipline
 - [recommendations.md](../recommendations.md) — visible evidence-calibrated recommendations and routine uncertainty disclosure
+- [autonomy.md](../autonomy.md) — decide, ask or confirm; decision card format
 
 ## Load only when the condition matches
 
@@ -46,5 +47,8 @@
 - When material intent remains unresolved: [elicitation.md](../elicitation.md) — resolve only consequential ambiguity
 - When database context is needed: [sql-context-readonly.md](../sql-context-readonly.md) — managed read-only metadata and SELECT; never database writes
 - When project bootstrap, versioning, branches or release are requested: [release-and-bootstrap.md](../release-and-bootstrap.md) — project-specific adoption and release knowledge
+- When the authorized work writes files in a Git repository: [git-workflow.md](../git-workflow.md) — work branch, delivery and next-step card per the team workflow policy
+- When the request is a short integration reply (merge, pr, รวม or a card option) for a delivered work branch: [git-workflow.md](../git-workflow.md) — short integration intents and their authorization boundary
+- When the project profile is spec-first or hybrid: [spec-driven.md](../spec-driven.md) — development mode, spec locations and spec-first request handling
 
 Do not read the router `SKILL.md` during operation execution. If this generated entrypoint is missing or corrupt, stop with `PACKAGE_ENTRYPOINT_MISSING` and ask for package sync/reinstallation; never broaden into the router.
