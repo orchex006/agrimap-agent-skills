@@ -75,7 +75,7 @@ export function isIdentitySource(value) {
   return IDENTITY_SOURCE_SET.has(value);
 }
 
-const identityKey = value => String(value || '').trim().replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120);
+export const identityKey = value => String(value || '').trim().replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120);
 
 // Read local confirmation records only; never infer the requester from Git/OS names.
 // Shared by hooks and runtime so an expired session cannot hide a newer confirmation.

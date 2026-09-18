@@ -1,5 +1,5 @@
 export const QA_FAILED_EVENT = "qa-failed";
-export const MILESTONE_TYPES = Object.freeze(["scope-decision", "acceptance-slice", "integration", "verification-gate"]);
+export const MILESTONE_TYPES = Object.freeze(["scope-decision", "acceptance-slice", "integration", "verification-gate", "work-branch", "delivery"]);
 
 export const LOG_EVENTS = Object.freeze([
   "created",
@@ -11,6 +11,9 @@ export const LOG_EVENTS = Object.freeze([
   "blocked",
   "cancelled",
   "completed",
+  // Git delivery/integration events are not terminal; integrated may follow completed.
+  "delivered",
+  "integrated",
 ]);
 
 const LOG_EVENT_SET = new Set(LOG_EVENTS);
