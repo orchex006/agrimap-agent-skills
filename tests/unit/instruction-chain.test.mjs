@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {mkdir,readdir,readFile,writeFile,stat} from 'node:fs/promises';
+import {realpathSync} from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {createHarness} from '../helpers/harness.mjs';
 import {initRepo} from '../helpers/git-fixture.mjs';
 
 const present=p=>stat(p).then(()=>true,()=>false);
-async function fixture(t){const h=await createHarness('agm-chain-');t.after(()=>h.cleanup());return h;}
+// Windows runners hand out 8.3 short temp paths (RUNNER~1); Git reports long ones.
+async function fixture(t){const h=await createHarness('agm-chain-');t.after(()=>h.cleanup());h.temp=realpathSync.native(h.temp);return h;}
 function cli(h,args,cwd=h.temp){const r=h.spawn(h.scripts.workspace,args,undefined,cwd);return JSON.parse(r.stdout);}
 async function tree(dir){const out=[];for(const e of await readdir(dir,{withFileTypes:true}).catch(()=>[])){const p=path.join(dir,e.name);out.push(p);if(e.isDirectory()&&e.name!=='.git')out.push(...await tree(p));}return out.sort();}
 
