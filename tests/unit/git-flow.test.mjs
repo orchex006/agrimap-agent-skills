@@ -200,6 +200,25 @@ test('short reply "1" then local merge: merge commit on origin/develop, branch t
   assert.equal(result.card?.card?.topic||result.card?.topic,'git/delete-branch');
 });
 
+test('audit written after delivery rides with the next delivery instead of becoming preexisting (R1, AC24)',async t=>{
+  const h=await fixture(t);const p=await project(h,{method:'local-merge'});
+  const first=await deliveredBranch(p,{session:'s1',slug:'residue',file:'one.js'});
+  const plan=p.cli(['integrate','plan','--session','s1','--intent','integrate']);
+  assert.equal(p.cli(['integrate','apply','--session','s1','--intent','integrate','--plan-hash',plan.planHash]).ok,true);
+  const residue=p.git(['status','--porcelain','--untracked-files=all']).match(/\.agrimap-agent\/logs\/\S+/g)||[];
+  assert.ok(residue.length,'integrate/complete leave audit dirty');
+  p.ack('s2');
+  const started=p.cli(['start','--operation','execute','--session','s2','--requested-by','Tester','--title','Second change']);
+  assert.ok(!started.activeTask.preexistingDirty.some(e=>e.path.startsWith('.agrimap-agent/logs/')));
+  const bplan=p.cli(['branch','plan','--session','s2','--type','feature','--slug','residue','--mode','current']);
+  p.cli(['branch','apply','--session','s2','--type','feature','--slug','residue','--mode','current','--plan-hash',bplan.planHash]);
+  await writeFile(path.join(p.repo,'two.js'),'y'+String.fromCharCode(10));verify(p,'s2',started.activeTask.executionId);
+  const {applied}=deliver(p,'s2');
+  assert.equal(applied.ok,true,JSON.stringify(applied));assert.notEqual(applied.commit,first.commit);
+  const committed=p.git(['show','--name-only','--format=','HEAD']).split(String.fromCharCode(10));
+  for(const file of residue)assert.ok(committed.includes(file),`${file} committed`);
+});
+
 test('two branches delivered the same day merge into develop without .agrimap-agent conflicts (AC7, git-flow 13)',async t=>{
   const h=await fixture(t);const p=await project(h,{method:'local-merge'});
   // Second developer works in another clone on the same day.

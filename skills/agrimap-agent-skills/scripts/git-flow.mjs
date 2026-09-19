@@ -15,6 +15,10 @@ const TYPE_BY_WORK = { feature: "feat", fix: "fix", hotfix: "fix", refactor: "re
 const HEADER = /^(feat|fix|refactor|docs|chore|test|perf|build|ci)(\([a-z0-9._/-]+\))?: \S.*$/;
 const SLUG = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 const toSlash = value => String(value || "").replaceAll("\\", "/");
+// Append-only audit written after a delivery (delivered/completed/integrated,
+// recent memory) rides with the next delivery instead of becoming preexisting.
+const CARRIED_AUDIT = /^\.agrimap-agent\/(?:logs|memory\/recent|reports|decisions)\//;
+export const isCarriedAudit = relative => CARRIED_AUDIT.test(toSlash(relative));
 const exists = file => stat(file).then(() => true, () => false);
 
 export function planHashOf(value) {
@@ -70,7 +74,7 @@ async function hashPath(root, relative, run) {
 // files that were already dirty when the execution began.
 export async function snapshotDirty(root, { run = defaultRun } = {}) {
   // The state ignore file is created by the runtime itself (context --ack), not pre-existing work.
-  const entries = dirtyInventory(root, { run }).filter(entry => entry.path !== ".agrimap-agent/.gitignore");
+  const entries = dirtyInventory(root, { run }).filter(entry => entry.path !== ".agrimap-agent/.gitignore" && !isCarriedAudit(entry.path));
   const snapshot = [];
   for (const entry of entries.slice(0, 5000)) snapshot.push({ path: entry.path, status: entry.status, hash: await hashPath(root, entry.path, run) });
   return snapshot;
@@ -302,7 +306,7 @@ export async function classifyPaths(root, { preexisting = [], includeAudit = tru
   for (const entry of inventory) {
     const relative = entry.path;
     if (relative.startsWith(".agrimap-agent/local/")) { groups.excluded.push({ ...entry, reason: "local-memory" }); continue; }
-    if (pre.has(relative)) {
+    if (pre.has(relative) && !isCarriedAudit(relative)) {
       const hash = await hashPath(root, relative, run);
       (hash === pre.get(relative).hash ? groups.foreign : groups.mixed).push(entry);
       continue;
