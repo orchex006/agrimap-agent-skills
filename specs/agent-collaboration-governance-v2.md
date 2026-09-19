@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status | v2.2 — P1 (4.6.0) implemented; §20 คือ spec สำหรับ P2–P4; Q1–Q6 ใช้ค่าที่แนะนำ |
+| Status | v2.2 (design reference) — งานที่เหลือ 4.7.0–4.9.0 ให้ทำตาม [acg-roadmap-4.7-4.9.md](acg-roadmap-4.7-4.9.md) (v3 runbook) ซึ่งมีลำดับความสำคัญสูงกว่าไฟล์นี้ |
 | Date | 2026-09-18 |
 | Baseline | package `4.5.5` (branch `release/4.5.5`, HEAD `9761da0`) |
 | Target | P1 → `4.6.0`, P2 → `4.7.0`, P3 → `4.8.0`, P4 → `4.9.0` |
