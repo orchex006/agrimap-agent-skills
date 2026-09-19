@@ -11,7 +11,7 @@ Agent Collaboration Governance, phase P3 (spec §20.3; runbook `specs/acg-roadma
 - Learning under `runtime/` (never committed): `decide record` and `decide correction` write signals; the same value chosen twice becomes `promotable` (`decide promote`, one card per session; "not needed" is never offered again); per-kind R1 calibration (10 signals, n ≥ 5, 0.8 / 0.5); `decide always-ask --kind`; `decide list`.
 - `complete` records `precedents` and `questions_avoided`.
 - Hook session digest: at most three lines / 600 characters (target, branch, policy, mode, decisions, open execution), only when its hash changes; no git or network.
-- Instruction diet: the bootstrap `AGENTS.md` core keeps §1, §3, §9, §10 and a short §2 (20,752 characters, from 61,058); §2 in full and §4–§8 moved verbatim to the new `AGENTS.release.md` with unchanged section numbers. Bootstrap installs it; an unmodified 4.7.0 template updates automatically.
+- Instruction diet: the bootstrap `AGENTS.md` core keeps §1, §3, §9, §10 and a short §2 (21,074 characters, from 61,058; includes the owner rule that explicit human instructions such as a chosen version take precedence over defaults but never over §3 safety invariants); §2 in full and §4–§8 moved verbatim to the new `AGENTS.release.md` with unchanged section numbers. Bootstrap installs it; an unmodified 4.7.0 template updates automatically.
 - `governance.decisionMemory` defaults to true (one-time switch of the earlier `false` default, `decisionMemoryDefault`).
 
 ## 4.7.0 — 2026-09-19
