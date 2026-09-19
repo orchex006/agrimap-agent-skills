@@ -1,5 +1,6 @@
 // Work branch, delivery and integration mechanics (ACG C4-C6).
-// Every function takes { run } so tests can stub gh/glab; git is always an argv
+// Every function takes { run } so tests can stub gh/glab (glab flags checked
+// against glab 1.115 --help); git is always an argv
 // array through run(). Plans are pure reads; apply() recomputes the plan and
 // refuses a different planHash. No force push, stash, reset, worktree or clone.
 import { createHash } from "node:crypto";
@@ -634,7 +635,9 @@ function mergeFlags(context, policy, { auto = false } = {}) {
     if (auto) flags.push("--auto");
     return { flags, warnings };
   }
-  const flags = ["--yes", ...(strategy === "squash" ? ["--squash"] : []), ...(policy?.integration?.deleteBranchAfterMerge === "always" ? ["--remove-source-branch"] : []), ...(auto ? ["--auto-merge"] : [])];
+  // glab 1.115 flags (verified with --help): --auto-merge defaults to true, so a
+  // plain merge passes --auto-merge=false explicitly.
+  const flags = ["--yes", ...(strategy === "squash" ? ["--squash"] : []), ...(policy?.integration?.deleteBranchAfterMerge === "always" ? ["--remove-source-branch"] : []), auto ? "--auto-merge" : "--auto-merge=false"];
   return { flags, warnings };
 }
 
@@ -947,7 +950,7 @@ export async function applyIntegration(options) {
       const bodyFile = await writePrBody(state, { ...(options.delivery || {}), header });
       const created = context.forge === "github"
         ? run("gh", ["pr", "create", "--base", plan.target, "--head", plan.remoteBranch, "--title", header, "--body-file", bodyFile, ...(plan.draft ? ["--draft"] : [])], { cwd: root })
-        : run("glab", ["mr", "create", "--source-branch", plan.remoteBranch, "--target-branch", plan.target, "--title", header, "--description", await readFile(bodyFile, "utf8"), "--yes", ...(plan.draft ? ["--draft"] : [])], { cwd: root });
+        : run("glab", ["mr", "create", "--source-branch", plan.remoteBranch, "--target-branch", plan.target, "--title", header, "--description-file", bodyFile, "--yes", ...(plan.draft ? ["--draft"] : [])], { cwd: root });
       if (!created.ok) return stop("PR_CREATE_FAILED", `${context.cli} could not create the PR.`, { stderr: trimStderr(created.stderr) });
       pr = findOpenPr(root, context, plan.remoteBranch, plan.target, run) || { number: null, url: created.stdout.trim().split(/\s+/).find(item => /^https?:\/\//.test(item)) || null };
       if (plan.intent !== "integrate") return { ok: true, intent: plan.intent, pr, created: true, warnings: [] };

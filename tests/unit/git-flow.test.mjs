@@ -476,3 +476,31 @@ test('4.6.0 configs with the unused specSync:false default are switched on once;
   after=JSON.parse(await readFile(file,'utf8')).governance;
   assert.equal(after.specSync,false);
 });
+
+test('stubbed glab uses flags verified against glab 1.115 --help (R2)',async t=>{
+  const h=await fixture(t);const p=await project(h);
+  await deliveredBranch(p,{session:'s1',slug:'mr-flow',file:'g.js'});
+  const delivery=JSON.parse(await readFile(path.join(p.repo,'.agrimap-agent/runtime/sessions/s1.json'),'utf8')).lastDelivery;
+  const policy=(await loadPolicy(p.repo)).policy;
+  const calls=[];let created=false;
+  const run=(command,args,options)=>{
+    if(command==='glab'){
+      calls.push(args);
+      if(args[0]==='auth')return {ok:true,stdout:'',stderr:''};
+      if(args[1]==='list')return {ok:true,stdout:JSON.stringify(created?[{iid:3,web_url:'https://gitlab.example.com/g/r/-/merge_requests/3'}]:[]),stderr:''};
+      if(args[1]==='create'){created=true;return {ok:true,stdout:'https://gitlab.example.com/g/r/-/merge_requests/3\n',stderr:''};}
+      if(args[1]==='view')return {ok:true,stdout:JSON.stringify({web_url:'u',detailed_merge_status:'mergeable',head_pipeline:{status:'success'}}),stderr:''};
+      if(args[1]==='merge')return {ok:true,stdout:'',stderr:''};
+    }
+    if(command==='git'&&args.join(' ')==='remote get-url origin')return {ok:true,stdout:'git@gitlab.example.com:g/r.git\n',stderr:''};
+    return defaultRun(command,args,options);
+  };
+  const base={root:p.repo,state:path.join(p.repo,'.agrimap-agent'),policy,delivery,intent:'integrate',ackRequired:[],fetch:false,run};
+  const plan=await planIntegration(base);
+  const result=await applyIntegration({...base,planHash:plan.planHash});
+  assert.equal(result.ok,true,JSON.stringify(result));
+  const create=calls.find(a=>a[1]==='create');
+  for(const flag of ['--source-branch','--target-branch','--title','--description-file','--yes'])assert.ok(create.includes(flag),flag);
+  assert.ok(calls.find(a=>a[1]==='list').includes('-F'));
+  assert.deepEqual(calls.find(a=>a[1]==='merge'),['mr','merge','3','--yes','--auto-merge=false']);
+});
