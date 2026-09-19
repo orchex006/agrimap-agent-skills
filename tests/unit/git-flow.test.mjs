@@ -463,3 +463,16 @@ test('first context of a session in spec-first scope reports open spec drift onc
   p.cli(['context','--session','s9','--ack',first.chain.filter(e=>first.readRequired.includes(e.relative)).map(e=>e.sha12).join(',')]);
   assert.equal(p.cli(['context','--session','s9']).openWarnings,undefined);
 });
+
+test('4.6.0 configs with the unused specSync:false default are switched on once; a later explicit false stays (Q-4.7.0-01)',async t=>{
+  const h=await fixture(t);const p=await project(h,{name:'migrated'});
+  const file=path.join(p.repo,'.agrimap-agent','config.json');
+  await writeFile(file,JSON.stringify({governance:{workflowPolicy:true,delivery:true,decisionMemory:false,guards:false,projectMode:true,specSync:false}},null,2));
+  p.cli(['init']);
+  let after=JSON.parse(await readFile(file,'utf8')).governance;
+  assert.equal(after.specSync,true);assert.equal(after.specSyncDefault,'4.7.0');
+  await writeFile(file,JSON.stringify({...JSON.parse(await readFile(file,'utf8')),governance:{...after,specSync:false}},null,2));
+  p.cli(['init']);
+  after=JSON.parse(await readFile(file,'utf8')).governance;
+  assert.equal(after.specSync,false);
+});
