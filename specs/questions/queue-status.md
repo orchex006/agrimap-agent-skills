@@ -5,19 +5,22 @@
 | Phase | Version | Status | Branch | Head | Draft PR | Tests | Questions (decided/skipped/deferred) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | P2 | 4.7.0 | done (CI ubuntu/windows pass) | feature/acg-p2-4.7.0 | f227cea | #24 | 152/152, release 4/4, tokens 61/61 strict ok, package:build ok | 3/0/0 |
-| P3 | 4.8.0 | done | feature/acg-p3-4.8.0 | c1ec519 | #25 (base #24) | 163/163, release 4/4, tokens 61/61 strict ok, package:build ok; core AGENTS 61,058 → 20,752 chars | 3/0/0 |
-| P4 | 4.9.0 | pending | — | — | — | — | — |
+| P3 | 4.8.0 | done (CI pass) | feature/acg-p3-4.8.0 | f14c02a | #25 (base #24) | 163/163, release 4/4, tokens 61/61 strict ok, package:build ok; core AGENTS 61,058 → 20,752 chars | 3/0/0 |
+| P4 | 4.9.0 | done | feature/acg-p4-4.9.0 | 284cf0c | #26 (base #25) | 171/171, release 4/4, tokens 61/61 strict ok, package:build ok | 3/0/0 |
 
-Head คือ commit ของงาน P2 ก่อน commit ของไฟล์นี้ (ไฟล์นี้อยู่ commit ถัดไปบน branch เดียวกัน)
+Head คือ commit ของงานก่อน commit ที่อัปเดตไฟล์นี้ · queue จบแล้ว (P2–P4 done)
 
 ## สิ่งที่ owner ต้องทำ (เรียงตามความสำคัญ)
 
-1. อ่าน `specs/questions/question-4.7.0.md` และ `question-4.8.0.md` (ข้อละ 3 decided) — ตอบหรือสั่ง `rewrite Q-… → <n>`; Q-4.7.0-02 rewrite cost กลาง ที่เหลือต่ำ
-2. ตรวจ CI ของ draft PR แล้ว merge ตามลำดับ #24 → #25 → P4 (stacked); หลัง merge แต่ละตัวเปลี่ยน base ของ PR ถัดไปเป็น `develop`
-3. Release `v4.7.0` (หรือรวมกับ 4.8.0/4.9.0 เป็นรุ่นเดียว) — ไม่อยู่ใน queue
+1. อ่าน `specs/questions/question-4.7.0.md`, `question-4.8.0.md`, `question-4.9.0.md` (ไฟล์ละ 3 decided) — ตอบหรือสั่ง `rewrite Q-… → <n>`; Q-4.7.0-02 rewrite cost กลาง ที่เหลือต่ำ
+2. ตรวจ CI ของ draft PR แล้ว merge ตามลำดับ #24 → #25 → #26 (stacked); หลัง merge แต่ละตัวเปลี่ยน base ของ PR ถัดไปเป็น `develop`
+3. Release `v4.7.0`, `v4.8.0`, `v4.9.0` แยกกัน หรือรวมเป็นรุ่นเดียว (owner เลือก) — ไม่อยู่ใน queue
 4. (ข้อเสนอ) ย้าย spec pack จริงเข้า Git ตาม D§19.21 เมื่อมี URL — ไม่อยู่ใน queue
 
 ## ⚠️ Warnings ที่ยังเปิด
+
+- CI ubuntu ของ #25 fail หนึ่งครั้งใน test "two branches delivered the same day…" (merge ถูกปฏิเสธ 0 conflict); หลังแก้ให้คืน `MERGE_FAILED` + stderr แล้ว run ใหม่ผ่าน และไม่เคย fail บน Windows — น่าจะขึ้นกับจังหวะเวลา ต้องเฝ้าดู
+- Guard ยังไม่ติดตั้งบน Codex, Gemini/Antigravity (`not-supported-on-host`)
 
 - `GLAB_UNVERIFIED` (บางส่วน): flag ตรวจกับ glab 1.115 แล้ว; ฟิลด์ JSON ของ GitLab ยังทดสอบด้วย stub (ไม่มี GitLab login ในเครื่อง)
 - ไฟล์ค้างใน working tree ที่ไม่ใช่ของ queue (`DEVELOPMENT.md`, `tests/unit/package-release.test.mjs`, `tools/check-package-pr.mjs`) ยังไม่ถูกแตะ/commit
