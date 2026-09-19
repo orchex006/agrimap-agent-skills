@@ -2,6 +2,18 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.8.0 — 2026-09-19
+
+Agent Collaboration Governance, phase P3 (spec §20.3; runbook `specs/acg-roadmap-4.7-4.9.md` §6).
+
+- Decision memory: `recall --topic --paths --kind` scores approved decisions (topic, area, scope glob, kind, age) from a cached index (`cache/decisions-index.json`), output at most 2,000 characters. Decisions now record `value`, `scope_paths` and `applies_when`.
+- Every card (`decide card` and the git cards of branch/deliver/integrate) is checked first: an approved precedent with a matching option suppresses it (`suppressed`, counted as a question avoided); a calibrated R1 medium card is `autoDecided` unless the requester said "always ask" for that kind. `governance.decisionMemory:false` restores 4.7.0 behaviour.
+- Learning under `runtime/` (never committed): `decide record` and `decide correction` write signals; the same value chosen twice becomes `promotable` (`decide promote`, one card per session; "not needed" is never offered again); per-kind R1 calibration (10 signals, n ≥ 5, 0.8 / 0.5); `decide always-ask --kind`; `decide list`.
+- `complete` records `precedents` and `questions_avoided`.
+- Hook session digest: at most three lines / 600 characters (target, branch, policy, mode, decisions, open execution), only when its hash changes; no git or network.
+- Instruction diet: the bootstrap `AGENTS.md` core keeps §1, §3, §9, §10 and a short §2 (20,752 characters, from 61,058); §2 in full and §4–§8 moved verbatim to the new `AGENTS.release.md` with unchanged section numbers. Bootstrap installs it; an unmodified 4.7.0 template updates automatically.
+- `governance.decisionMemory` defaults to true (one-time switch of the earlier `false` default, `decisionMemoryDefault`).
+
 ## 4.7.0 — 2026-09-19
 
 Agent Collaboration Governance, phase P2 (spec `specs/agent-collaboration-governance-v2.md` §20.2; runbook `specs/acg-roadmap-4.7-4.9.md`).
