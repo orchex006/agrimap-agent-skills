@@ -319,7 +319,15 @@ AC13, AC30, AC31 มีหลักฐาน, ตาราง host ใน PR, �
 
 | Phase | # | ต่างจาก spec อย่างไร | เหตุผล | Question |
 | --- | --- | --- | --- | --- |
-| — | — | — | — | — |
+| P2 | 3 | `governance.specSync` default `true` + migration ครั้งเดียวของค่า `false` ที่ 4.6.0 เขียน (`specSyncDefault`) | D§16.5 P2 → true แต่ config 4.6.0 มี `false` อยู่แล้ว | Q-4.7.0-01 |
+| P2 | 5 | `spec` มี subcommand เพิ่ม `standing` และ `semantic` (ออก card §19.10 / §19.8.1); `agm-workspace` ส่งคำที่สามเป็น `args._action` | agent ต้องมีทางเรียก card ทั้งสองแบบ CLI | — |
+| P2 | 5 | code-first + `specs.sync:"off"`: `spec sync plan` คืน `SPEC_SYNC_OFF` เว้นแต่ส่ง `--once` (คำสั่งของผู้ใช้ในรอบนั้น) | AC19: ไม่แก้ spec ถ้าไม่ได้สั่ง | — |
+| P2 | 6 | ไม่ใช้ `activeByRoot` เป็นที่เก็บ execution: spec repo เก็บ `linkedExecution` ใน session state ของตัวเอง; repo code เก็บ `activeByRoot` (pointer) และ `specDeliveries` (commit ของ spec repo) | session state แยกต่อ root อยู่แล้ว; `deliver --cwd <specRoot>` อ่านได้ตรง | Q-4.7.0-02 |
+| P2 | 6 | spec repo ที่ไม่มี policy: `deliver plan` ไม่ auto-card แต่คืน `next` = `policy infer --cwd <specRoot>` หรือ `--explicit commit\|push` | ใช้ flow policy เดิม (§6.4) ไม่สร้าง card ซ้ำ | — |
+| P2 | 8 | `openWarnings` คำนวณทุกครั้งที่ยังไม่มี `specCheckedAt`; บันทึก `specCheckedAt` เฉพาะ `context --ack` | B2: `context` read-only นอกจาก `--ack` | — |
+| P2 | 9 | standing card non-blocking default ข้อ 2 (value `off`); ข้อ 1 เป็น object patch ผ่าน `applyProjectPatch` | `validateCard` บังคับ default ของ card ที่ไม่ block | Q-4.7.0-03 |
+| P2 | R2 | ตรวจกับ glab 1.115: `mr create --description-file`, `mr merge --auto-merge=false` เมื่อไม่ใช่ auto-merge (default ของ glab คือ true); ฟิลด์ JSON ของ GitLab ยังทดสอบด้วย stub | มี `glab` ในเครื่อง | — |
+| P2 | 12 | ไม่แก้ `goal-rules.md` แบบเพิ่มคำ: ข้อ 9 (14 words) + ย่อย่อหน้า item 6 → required ลดลง 3 words | §4 ข้อ 6 budget direct/required ห้ามเพิ่ม | — |
 
 ---
 
