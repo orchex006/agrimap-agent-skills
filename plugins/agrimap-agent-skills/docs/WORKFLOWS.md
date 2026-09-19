@@ -45,7 +45,7 @@
 - หลัง test ผ่าน Agent อัปเดต status ของ task, evidence ใน traceability, changelog และ manifest ของ spec เอง **โดยผู้ใช้ไม่ต้องสั่ง** (`spec sync plan|apply`) แล้วรวมอยู่ใน commit เดียวกับ code; ส่วนที่เป็นเนื้อหา (requirement/AC/design) แก้ตามคำสั่งเท่านั้น ที่เหลือถามด้วย card
 - อัปเดต spec ไม่ได้ (เช่น TASKS.yaml อ่านไม่ได้) ไม่ทำให้ส่งงานไม่ได้: งานยัง commit/push และ summary มี `⚠️ ต้องตามต่อ` พร้อม code และวิธีแก้; ทีมที่ต้องการบังคับตั้ง `specs.enforcement: "block"`
 - spec pack ที่เป็น Git repo แยก: ได้สอง commit (repo code และ repo spec); pack ที่ยังไม่อยู่ใน Git ถูกแก้ในเครื่องเท่านั้นและมี warning `SPEC_SOURCE_NOT_GIT` ทุกครั้งที่ส่งงาน
-- Not AI-First (code-first): Agent ไม่แตะ spec เอง; ถ้าสั่ง "อัปเดต spec ด้วย" ครั้งเดียว Agent ทำให้แล้วถามครั้งเดียวว่าจะทำทุกงานไหม
+- Not AI-First (code-first): Agent ไม่แตะ spec เอง; ถ้าสั่ง "อัปเดต spec ด้วย" ครั้งเดียว Agent ทำให้และตั้งเป็นกติกาของทุกงานทันทีโดยไม่ถาม (แจ้งใน "ตัดสินใจแทนไว้")
 - ปิดทั้งหมดต่อ project ด้วย `governance.specSync: false` ใน `.agrimap-agent/config.json`
 
 ## จำการตัดสินใจ (4.8.0)

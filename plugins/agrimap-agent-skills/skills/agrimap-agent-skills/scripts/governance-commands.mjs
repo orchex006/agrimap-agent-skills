@@ -8,7 +8,7 @@ import { acknowledge, instructionChain, readRequired, resolveTargetRoots, scanBe
 import { inferPolicy, initPolicy, loadPolicy, setPolicyValue } from "./workflow-policy.mjs";
 import { recordChoice, renderCard, normalizeOptions, storeCard, validateCard } from "./decision-card.mjs";
 import { applyBranch, applyDelivery, applyIntegration, dirtyInventory, integrationOptions, planBranch, planDelivery, planIntegration, snapshotDirty } from "./git-flow.mjs";
-import { inferProject, initProject, loadProject, resolveSpecSources, setProjectValue, specStandingCard, verifySpecPath } from "./project-profile.mjs";
+import { applyProjectPatch, inferProject, initProject, loadProject, resolveSpecSources, setProjectValue, specStandingCard, verifySpecPath } from "./project-profile.mjs";
 import { applySpecSync, coveredBy, planSpecSync, specCheck, specContext, specSemanticCard } from "./spec-sync.mjs";
 import { addWorkingNote, loadLocalMemory, localPathsForLeakCheck, setLocalPath } from "./local-memory.mjs";
 import { readJsonFile, readSessionState, safeSession, updateSessionState, writeJsonFile, writeSessionPointer } from "./session-state.mjs";
@@ -526,10 +526,15 @@ async function specCommand(ctx, sub, args, root) {
     return result;
   }
   if (sub === "check") return specCheck({ root, sessionCwd, source: text(args.source), limit: Math.min(200, Number(args.limit) || 50) });
+  // Owner answer Q-4.7.0-03: no card. A one-off spec instruction in code-first
+  // becomes the standing rule at once and is reported as decided for you.
   if (sub === "standing") {
     const project = await loadProject(root);
     const card = specStandingCard({ profile: project.profile, paths: list(args.paths) });
-    return { ok: true, ...(await storeAndRender(state, session, card, active?.executionId)) };
+    const every = card.options.find(option => option.id === "1");
+    const result = await applyProjectPatch(root, every.value, await ctx.resolveRequester(state, args));
+    if (!result.ok) return result;
+    return { ok: true, applied: every.value, written: result.written, decidedForYou: `อัปเดต spec ให้ทุกงานแล้ว (${every.effect}) — เปลี่ยนได้โดยบอก "ไม่ต้องแตะ spec" (project set specs.sync off)` };
   }
   if (sub === "semantic") {
     const card = specSemanticCard({ ids: list(args.tasks), finding: text(args.finding) || "", evidence: list(args.evidence) });
