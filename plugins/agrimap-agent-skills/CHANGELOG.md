@@ -2,6 +2,21 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.7.0 — 2026-09-19
+
+Agent Collaboration Governance, phase P2 (spec `specs/agent-collaboration-governance-v2.md` §20.2; runbook `specs/acg-roadmap-4.7-4.9.md`).
+
+- Spec Read Gate: `spec context --tasks|--query|--paths` returns at most eight files to read first (goal READMEs first), the matching task/requirement/acceptance items and the open questions that block them.
+- Spec Sync Gate: `spec sync plan|apply` updates task status (the file's own status words; `statusMap` override; `STATUS_VALUE_NEW`/`STATUS_VALUE_UNKNOWN`/`TASK_STATUS_LINE_ADDED` are warnings), appends implementation evidence, the spec changelog and `manifest.sha256`, and writes each file through temp + rename keeping line endings. Evidence paths must be repository-relative. `--deviation` records a decision. Adapters: `morynth-context-index@1` and `generic-markdown`; spec-kit, kiro and openspec layouts fall back with `SPEC_FORMAT_FALLBACK`. YAML goes through a new line-based subset (`yaml-lines.mjs`), no dependency.
+- `deliver plan` precondition 7: covered work returns `SPEC_NOT_SYNCED` as a self-fix; after a failed sync attempt the work still delivers with the warning. `--spec-na "<reason>"` skips it; `specs.enforcement: "block"` stops with `SPEC_SYNC_REQUIRED`. Delivery returns `specLine` for the summary and `SPEC_SOURCE_NOT_GIT` for a non-Git spec pack.
+- A spec pack in its own Git repository is a second target root: sync links the execution there, it is delivered with that repository's policy (or `--explicit`), and the code delivery reports both commits.
+- `spec check` reports manifest mismatches, missing evidence, done tasks without evidence and executions that touched spec scopes without a sync; the first `context` of a session in spec-first scope shows up to five of them (`openWarnings`).
+- `spec semantic` stores the R2 card for a spec gap the work revealed; while it is open, sync warns `SPEC_DECISION_PENDING` and keeps the mechanical updates. `spec standing` turns a one-off "update the spec too" in a code-first project into the rule for every task (hybrid + sync auto for the touched directories) without asking, reported as decided for you.
+- `governance.specSync` defaults to true; a 4.6.0 config still holding the unused `false` default is switched on once (`specSyncDefault`).
+- Fix: audit written after a delivery (`logs/`, `memory/recent/`, `reports/`, `decisions/`) is no longer snapshotted as pre-existing work and is committed by the next delivery.
+- `glab` merge request flags checked against glab 1.115: `--description-file`, and `--auto-merge=false` for a plain merge.
+- Pre-write gate item 9 and the After-verification section of `spec-driven.md`; direct and required budgets are unchanged.
+
 ## 4.6.0 — 2026-09-18
 
 Agent Collaboration Governance, phase P1 (spec `specs/agent-collaboration-governance-v2.md` v2.1).

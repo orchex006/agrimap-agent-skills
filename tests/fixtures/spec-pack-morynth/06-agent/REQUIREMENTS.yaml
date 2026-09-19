@@ -1,0 +1,8 @@
+schema: requirement-catalog@1
+groups:
+  - id: AUTH
+    title: Sign in
+    ids: AUTH-001..AUTH-003
+  - id: REG
+    title: Registry summary and export
+    ids: REG-001..REG-002

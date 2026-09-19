@@ -1,0 +1,17 @@
+schema: morynth-context-index@1
+# Synthetic fixture for AGM spec sync tests; not a real product pack.
+project:
+  id: demo-console
+  version: 1.0.0
+  name: "Demo console"
+read_order:
+  - AGENT-START-HERE.md
+  - ../00-source-of-truth/SPEC.md
+  - TASKS.yaml
+  - REQUIREMENTS.yaml
+canonical_files:
+  spec: ../00-source-of-truth/SPEC.md
+  traceability: ../00-source-of-truth/TRACEABILITY.md
+  tasks: TASKS.yaml
+  requirements: REQUIREMENTS.yaml
+  open_questions: OPEN-QUESTIONS.yaml

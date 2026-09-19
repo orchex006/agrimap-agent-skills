@@ -1,0 +1,19 @@
+schema: task-manifest@1
+tasks:
+  - id: FE-001
+    title: Login form
+    status: delivered # shipped in 0.9
+    requirements: [AUTH-001]
+    acceptance: [AC-LOGIN-001]
+  - id: FE-002
+    title: Registry summary totals
+    status: planned
+    requirements: [REG-001]
+    acceptance: [AC-REG-001, AC-REG-002]
+  - id: FE-003
+    title: Export registry to CSV
+    requirements: [REG-002]
+    acceptance: [AC-REG-003]
+execution_packets:
+  - id: EP-1
+    tasks: [FE-001, FE-002]
