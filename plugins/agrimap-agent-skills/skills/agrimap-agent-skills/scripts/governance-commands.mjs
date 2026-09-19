@@ -220,6 +220,7 @@ async function decideCommand(ctx, sub, args, root) {
     return { ok: true, decisions: index.entries.filter(entry => !status || entry.status === status).map(({ id, topic, kind, status: entryStatus, summary, date, file }) => ({ id, topic, kind, status: entryStatus, summary, date, file })) };
   }
   if (sub === "promote") {
+    if (!text(args.topic) || !text(args.value)) return { ok: false, code: "PROMOTION_INVALID", message: "decide promote needs --topic and --value." };
     const sessionState = await readSessionState(state, session);
     if (sessionState.promotionOffered) return { ok: true, skipped: true, reason: "one promotion card per session" };
     const card = promotionCard({ topic: text(args.topic), value: text(args.value), count: Number(args.count) || 2, kind: text(args.kind) || "convention" });

@@ -1770,7 +1770,8 @@ async function complete(root, args) {
   const verification = (await auditEvidenceForExecution(state, executionId)).events.filter(e => e.event === 'verified').flatMap(e => e.verification || []);
   const priorTerminal = (await auditEvidenceForExecution(state, executionId)).events.some((event) => event.event === "completed");
   // Cards suppressed by a precedent in this execution (decision memory, P3).
-  const avoided = ((await readSessionState(state, safeSessionId(args.session) || activeMatch.session || '')).questionsAvoided || []).filter((item) => item.executionId === executionId);
+  const avoidedSession = safeSessionId(args.session) || activeMatch.session || null;
+  const avoided = avoidedSession ? ((await readSessionState(state, avoidedSession)).questionsAvoided || []).filter((item) => item.executionId === executionId) : [];
   if (!priorTerminal) await appendLog(state, {
     executionId,
     taskId: active.taskId,

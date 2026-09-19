@@ -87,7 +87,7 @@ export async function loadDecisionIndex(root) {
   const state = path.join(root, ".agrimap-agent");
   const files = await decisionFiles(path.join(state, "decisions"));
   let maxMtimeMs = 0;
-  for (const file of files) maxMtimeMs = Math.max(maxMtimeMs, (await stat(file)).mtimeMs);
+  for (const info of await Promise.all(files.map(file => stat(file)))) maxMtimeMs = Math.max(maxMtimeMs, info.mtimeMs);
   const cacheFile = path.join(state, "cache", "decisions-index.json");
   const cached = JSON.parse(await readFile(cacheFile, "utf8").catch(() => "null"));
   if (cached && cached.fileCount === files.length && cached.maxMtimeMs === maxMtimeMs) return { ...cached, rebuilt: false };

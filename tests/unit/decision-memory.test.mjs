@@ -157,3 +157,10 @@ test('hook digest: first prompt ≤ 600 chars, next prompt none, new branch agai
   gitIn(root,['switch','-q','-c','feature/csv']);
   assert.match(digestOf(hook()),/branch feature\/csv/);
 });
+
+test('decide promote requires --topic and --value',async t=>{
+  const {h,repo:root}=await repo(t);
+  const cli=args=>JSON.parse(h.spawn(h.scripts.workspace,[...args,'--cwd',root]).stdout);
+  assert.equal(cli(['decide','promote','--session','s1']).code,'PROMOTION_INVALID');
+  assert.equal(cli(['decide','promote','--session','s1','--topic','sql/x']).code,'PROMOTION_INVALID');
+});
