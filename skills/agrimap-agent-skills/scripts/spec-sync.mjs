@@ -240,7 +240,7 @@ export function specSemanticCard({ ids = [], finding, evidence = [] }) {
       { id: "2", label: "แก้ code ให้ตรง spec", effect: "Agent แก้ code แล้ว verify ใหม่", value: "update-code" },
       { id: "3", label: "บันทึกเป็น open question แล้วไปต่อ", effect: "ไม่แก้เนื้อหา spec ในรอบนี้", value: "open-question" },
     ],
-    recommended: "1", recommendedReason: "มีหลักฐานจาก test/code ของงานนี้", blocking: false, default: null, recordAs: "decision", paths: [], expiresHours: 72,
+    recommended: "1", recommendedReason: "มีหลักฐานจาก test/code ของงานนี้", blocking: true, default: null, recordAs: "decision", paths: [], expiresHours: 72,
   };
 }
 

@@ -358,7 +358,7 @@ function findChangelog(entries, target) {
 
 export async function planDelivery({
   root, policy, active, ackRequired = [], explicit = null, input = null, changelogNa = null, mixed = null,
-  allowSecretPaths = [], excludePaths = [], localPaths = [], bodyFallback = [], governance = {}, run = defaultRun, pushOnly = false,
+  allowSecretPaths = [], excludePaths = [], localPaths = [], bodyFallback = [], governance = {}, run = defaultRun, pushOnly = false, spec = null,
 }) {
   if (!active) return stop("NO_ACTIVE_EXECUTION", "Start the execution first (start --objective <same objective>).", { next: { action: "run", command: "start" } });
   if (ackRequired.length) return stop("INSTRUCTIONS_NOT_ACKNOWLEDGED", "Read and ack the AGENTS chain first.", { next: { action: "read-and-ack", files: ackRequired, command: "context --ack <sha12,...>" } });
@@ -443,6 +443,16 @@ export async function planDelivery({
       return stop("CHANGELOG_REQUIRED", `${file || policy.delivery.changelog.path} needs an entry for this change.`, { next: { action: "run", command: "add the changelog entry per project AGENTS §5, then deliver plan (or --changelog-na \"<reason>\")" } });
     }
   }
+  // Precondition 7 (spec §8.2/§19.9): spec sync is a self-fix first; when it
+  // could not be done the work still delivers with the warning, unless the
+  // team opted into enforcement "block".
+  if (spec?.required && !spec.synced && !spec.specNa) {
+    const next = { action: "run", command: "spec sync plan --session <id> [--tasks <ids>] [--evidence ID=<path>], then spec sync apply and deliver plan (or --spec-na \"<reason>\")" };
+    if (spec.enforcement === "block") return stop("SPEC_SYNC_REQUIRED", "The project enforces spec sync before delivery.", { severity: "stop", next });
+    if (!spec.attempted) return stop("SPEC_NOT_SYNCED", "Sync the spec for this work, then plan delivery again.", { severity: "self-fix", next });
+    warnings.push(warning("SPEC_NOT_SYNCED", (spec.items || []).join(", ") || "spec", "spec sync plan, fix the reported warning, spec sync apply; the spec was not updated by this delivery"));
+  }
+  for (const item of spec?.warnings || []) if (!warnings.some(existing => existing.code === item.code && existing.subject === item.subject)) warnings.push(item);
   const verification = active.verificationStatus;
   const verified = ["passed", "not-applicable"].includes(verification);
   if (!verified) warnings.push(warning("DELIVERED_UNVERIFIED", active.executionId, "run the tests, fix them, deliver again; merge is not offered until verification passes"));
@@ -478,7 +488,7 @@ export async function planDelivery({
     ok: true, authorized: true, branch, remoteBranch, counts, paths,
     message: { header: message.header, trailers: message.trailers, text: message.text },
     commit: Boolean(commit), alreadyCommitted, push, commands, warnings, card: null,
-    verification: verified ? verification : verification || "not-run",
+    verification: verified ? verification : verification || "not-run", specLine: spec?.line || null,
   };
   plan.planHash = planHashOf({ branch, head, own: ownHashes, message: message.text, push, commands });
   plan.next = { action: "run", command: `deliver apply --plan-hash ${plan.planHash}` };
@@ -528,7 +538,7 @@ export async function applyDelivery(options) {
     ok: true, branch: plan.branch, remoteBranch: plan.remoteBranch, commit, remoteSha, pushed,
     remoteVerified: plan.push.enabled ? remoteSha === commit : false,
     committed: plan.commit, files: plan.paths.own, excluded: plan.paths.excluded, foreign: plan.paths.foreign,
-    header: plan.message.header, verification: plan.verification, warnings: plan.warnings,
+    header: plan.message.header, verification: plan.verification, warnings: plan.warnings, specLine: plan.specLine,
     next: { action: "run", command: "integrate options" }, card: null,
   };
 }
