@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Draft v2.1 — Q7–Q10 ตอบแล้ว, Q1–Q6 รอ owner |
+| Status | v2.2 — P1 (4.6.0) implemented; §20 คือ spec สำหรับ P2–P4; Q1–Q6 ใช้ค่าที่แนะนำ |
 | Date | 2026-09-18 |
 | Baseline | package `4.5.5` (branch `release/4.5.5`, HEAD `9761da0`) |
 | Target | P1 → `4.6.0`, P2 → `4.7.0`, P3 → `4.8.0`, P4 → `4.9.0` |
@@ -16,6 +16,7 @@
 | v1 | 2026-09-18 | C1–C8: target root, autonomy/card, workflow policy, work branch, delivery, integration intents, decision memory, hooks |
 | v2 | 2026-09-18 | เพิ่ม **C9** (§19): development mode `code-first` (Not AI-First) / `spec-first` (AI-First) / `hybrid`, ถามก่อนเริ่มเมื่อไม่มั่นใจ, Spec Read/Sync Gate อัตโนมัติ ("สั่งครั้งเดียวพอ"), local memory `.agrimap-agent/local/memory.md` (gitignored) เก็บ path ของ spec ต่อเครื่อง; ปรับ §0–§3, §8.2, §12, §13, §16–§18 และ Appendix C ให้อ้าง §19 |
 | v2.1 | 2026-09-18 | ตามคำตอบ Q7–Q10: phase ใหม่ (P2 spec sync 4.7.0, P3 C7 4.8.0, P4 guards 4.9.0); severity model `stop`/`self-fix`/`warn` + Warning contract (§2.4) และปรับ code ทั้งฉบับ; task status แบบ semantic (§19.7.1); ตัด spec ownership → กติกาเนื้องาน+คำสั่ง (§19.8.1); ขั้นตอนย้าย spec pack เข้า Git (§19.21); Appendix C มีคอลัมน์ Severity |
+| v2.2 | 2026-09-19 | เพิ่ม §20: as-built 4.6.0 (module map, decision B1–B8, carry-over), spec ลงมือทำของ P2 4.7.0 / P3 4.8.0 / P4 4.9.0 พร้อมลำดับงาน ไฟล์ test และ AC23–AC31; เมื่อขัดกับ §4–§19 ให้ถือ §20 |
 
 > ไฟล์นี้เป็น maintainer spec ไม่ถูกแจกจ่ายกับ runtime package (`tools/package-release.mjs` ใช้ allowlist และ root `specs/` ไม่อยู่ในนั้น) และไม่อยู่ใต้ `docs/` จึงไม่ต้องมี plugin mirror
 
@@ -44,6 +45,7 @@
 17. Acceptance criteria
 18. Decisions ใน spec นี้ และคำถามที่ owner ต้องตอบ
 19. **C9 Project development mode, spec sync และ local memory (ใหม่ใน V2)**
+20. **Phase specs P2–P4 บน baseline as-built 4.6.0 (ใหม่ใน V2.2)**
 - Appendix A ตัวอย่าง flow · B ตัวอย่าง JSON · C Error code catalog · D ร่าง reference ใหม่ (ร่าง `spec-driven.md` อยู่ใน §19.18)
 
 | ศัพท์ | ความหมาย |
@@ -2067,6 +2069,197 @@ An instruction about specs given once becomes the project rule: `project set spe
 7. `manifest.sha256`: คงไว้ (ใช้ตรวจความครบของ pack สำหรับคนที่ไม่ได้ใช้ git) และให้ `spec sync` สร้างใหม่ทุกครั้งที่แก้ไฟล์ใน pack
 8. หลังย้าย: เครื่องที่มี folder เดิม → `context` เจอ `LOCAL_PATH_STALE` (ถ้าย้ายที่) หรือยังใช้ได้ (ถ้า `git init` ที่เดิม); เครื่องใหม่ → card clone (§19.5 ข้อ 2.6)
 9. warning `SPEC_SOURCE_NOT_GIT` หายไปเองเมื่อ `git -C <path> rev-parse` สำเร็จ
+
+
+---
+
+## 20. Phase specs P2–P4 บน baseline as-built 4.6.0 (V2.2)
+
+ส่วนนี้คือ spec สำหรับลงมือทำ 4.7.0 → 4.8.0 → 4.9.0 โดยอิงโค้ดจริงของ 4.6.0 (PR #21) — เมื่อข้อความใน §4–§19 ขัดกับ §20 ให้ถือ §20
+
+### 20.1 As-built 4.6.0 ที่ phase ถัดไปต้องยึด
+
+**Module map** (อย่าสร้างซ้ำ — ต่อยอดจากของเดิม):
+
+| หน้าที่ | ไฟล์ (ใต้ `skills/agrimap-agent-skills/scripts/`) | export ที่ใช้ต่อ |
+| --- | --- | --- |
+| dispatch คำสั่ง governance | `governance-commands.mjs` | `GOVERNANCE_COMMANDS` (ตอนนี้: context, policy, decide, branch, deliver, integrate, project, local), `runGovernanceCommand` — **คำสั่งใหม่เพิ่มที่นี่** ไม่ใช่ใน `switch` ของ `agm-workspace.mjs` |
+| session state + pointer | `session-state.mjs` | `readSessionState`, `updateSessionState`, `writeSessionPointer`, `GOVERNANCE_SESSION_FIELDS` |
+| git runner | `run-command.mjs` | `defaultRun`, `gitRunner`, `trimStderr` |
+| decision card | `decision-card.mjs` | `CARD_KINDS`, `validateCard`, `normalizeOptions`, `renderCard`, `storeCard`, `loadLastCard`, `recordChoice` |
+| decision file / project fact | `decision-records.mjs` | `writeDecision`, `upsertProjectFact`, `bangkokParts` |
+| git flow | `git-flow.mjs` | `planHashOf`, `dirtyInventory`, `snapshotDirty`, `gitFacts`, `planBranch/applyBranch`, `classifyPaths`, `planDelivery/applyDelivery`, `forgeOf`, `compareUrl`, `prDecision`, `integrationOptions`, `planIntegration/applyIntegration` |
+| project mode / spec location | `project-profile.mjs` | `loadProject`, `validateProject`, `specIndexInfo`, `fingerprintMatches`, `discoverSpecCandidates`, `verifySpecPath`, `resolveSpecSources`, `inferProject`, `initProject`, `setProjectValue` |
+| local memory | `local-memory.mjs` | `loadLocalMemory`, `setLocalPath`, `addWorkingNote`, `localPathsForLeakCheck`, `ensureStateIgnore` |
+| workflow policy | `workflow-policy.mjs` | `loadPolicy`, `isProtected`, `workTypeOf`, `policyCard`, `setPolicyValue` |
+| instruction chain | `instruction-chain.mjs` | `resolveTargetRoots`, `instructionChain`, `readRequired`, `acknowledge`, `rootCard` |
+| identity | `identity.mjs` | `identityKey` (export แล้ว) |
+
+**Decision ของ 4.6.0 ที่ override spec เดิม**:
+
+| # | As-built | Override |
+| --- | --- | --- |
+| B1 | work branch สร้างด้วย `git switch --no-track -c <name> origin/<base>`; local protected branch ไม่ถูก checkout/เลื่อน | §7.3 D1 |
+| B2 | `context` read-only เสมอ; ผล discovery เขียน local memory เฉพาะตอน `--ack`; นอก repo ต้องมี `--target` (`ACK_TARGET_REQUIRED`) | §19.5 ข้อ 2.4 |
+| B3 | mode confidence high = คะแนนสูงสุด ≥ 4 และนำ ≥ 3; หลักฐาน spec/code ขัดกัน = low เสมอ | §19.6 |
+| B4 | policy card ใช้ `recordAs: "policy:init"`; card kind มี `project` และ namespace `project:` / `local:spec:` | §5.7, §19.12 |
+| B5 | `memory/current/**` ไม่ถูก deliver; `.agrimap-agent/.gitignore` stage ได้; commit ที่มี trailer ของ execution แล้วจะไม่ commit audit-only ซ้ำ | §8.2 |
+| B6 | local-merge ใช้ verification ของ delivery ซ้ำ ตรวจใหม่เมื่อ target ขยับหรือ delivery unverified; `backMerge` คืนเป็นคำสั่ง follow-up ไม่รันเอง | §9.4 |
+| B7 | root card นอก repo render แต่ไม่เก็บเป็น `lastCard` | §4.2, §9.6 |
+| B8 | marker maintainer-only ประกอบ string ตอน runtime (`package:build` ปฏิเสธไฟล์ที่มี literal) | §4.2 |
+
+**Carry-over ที่ต้องปิดใน P2** (§20.2 งาน R):
+- `GLAB_UNVERIFIED` — flag ของ `glab` ทดสอบแค่ stub
+- **Audit residue**: event ที่เขียนหลัง delivery (`delivered`, `completed`, `integrated`, recent memory) ค้าง dirty; `ownDirty()` ข้าม `.agrimap-agent/` จึงไม่ block integrate แต่ `start` ของงานถัดไป snapshot เป็น `preexistingDirty` → **ไม่มีวันถูก commit** (audit หาย)
+- one-time card ของ §19.10 ("ทำแบบนี้ทุกงานไหม" เมื่อ code-first สั่งอัปเดต spec) ยังไม่มีในโค้ด
+
+### 20.2 P2 — 4.7.0: Spec sync (C9-B) + carry-over
+
+**Scope**: §19.7, §19.7.1, §19.8, §19.8.1, §19.9, §19.10, §19.11, `spec` commands ของ §19.12, แถว C5/C6 ของ §19.13, pre-write gate ข้อ 9, `spec-driven.md` ส่วน Before writing / After verification, tests §19.19 (P2), AC18–AC21 + AC23–AC26 ด้านล่าง
+**นอก scope**: recall/signals/digest (P3), guards (P4), การย้าย spec pack จริงเข้า Git (§19.21 — งาน operator ที่ต้องมี URL แยกต่างหาก)
+
+**ลำดับงาน**
+
+| # | งาน | ไฟล์ | รายละเอียดที่ต้องทำ |
+| --- | --- | --- | --- |
+| 1 | YAML line-subset | `scripts/yaml-lines.mjs` (ใหม่) | ดู §20.2.1 |
+| 2 | Adapters | `scripts/spec-adapters.mjs` (ใหม่) | interface §19.7; `morynth-context-index@1` ตรวจจากบรรทัด `schema: morynth-context-index@1` ใน `06-agent/CONTEXT-INDEX.yaml`; `generic-markdown` เป็น fallback; เจอ `.specify/`, `.kiro/specs/`, `openspec/` → generic + warning `SPEC_FORMAT_FALLBACK` |
+| 3 | Sync engine | `scripts/spec-sync.mjs` (ใหม่) | `specContext`, `planSpecSync`, `applySpecSync`, `specCheck`, `chooseStatusValue` (§19.7.1); เขียนไฟล์แบบ temp + rename ต่อไฟล์; `planHashOf` จาก `git-flow.mjs`; manifest: `sha256(bytes)` + สองช่องว่าง + path แบบ `/`, LF, คงลำดับเดิม ไฟล์ใหม่ต่อท้าย |
+| 4 | Commands | `governance-commands.mjs` | เพิ่ม `spec` ใน `GOVERNANCE_COMMANDS`: `spec context`, `spec sync plan`, `spec sync apply --plan-hash H`, `spec check`; args ตาม §19.8, §19.9, §19.11 |
+| 5 | Delivery gate | `git-flow.mjs#planDelivery` | precondition 7: `SPEC_NOT_SYNCED` (self-fix → warn) + `--spec-na "<reason>"`; `specs.enforcement:"block"` → `SPEC_SYNC_REQUIRED` (stop); เพิ่ม `specLine` ให้ summary (`- Spec: FE-005 → delivered · evidence 3 · manifest updated` หรือ `- Spec: ไม่เกี่ยว (code-first)`) |
+| 6 | Spec repo แยก | `git-flow.mjs`, `session-state.mjs` | external source ที่ `git rev-parse` ผ่าน = target root ที่สอง: session state เก็บ execution ต่อ root (`activeByRoot[<root>]`); `deliver plan --cwd <specRoot>` ใช้ policy ของ spec repo (ไม่มี → card policy ตาม §6.4); summary รายงานสอง commit; non-git → warning `SPEC_SOURCE_NOT_GIT` ทุก delivery |
+| 7 | Semantic pending | `spec-sync.mjs` | semantic change ที่รอ card (§19.8.1) → ไม่เขียน, warning `SPEC_DECISION_PENDING` + card id, mechanical sync ทำต่อ |
+| 8 | Warning surfacing | `git-flow.mjs`, `governance-commands.mjs` | event `delivered` มี `warnings[]`; `context` ครั้งแรกของ session ใน scope spec-first เรียก `specCheck` แบบ bounded (≤ 50 รายการ) แล้วคืน `openWarnings` ≤ 5 บรรทัด; บันทึกว่าเรียกแล้วใน session state (`specCheckedAt`) |
+| 9 | One-time card §19.10 | `project-profile.mjs` + `spec-driven.md` | ฟังก์ชัน `specStandingCard({mode})` คืน card R1 "ทำแบบนี้ทุกงานไหม" (`recordAs: "project:specs.sync"` + ตั้ง `hybrid` + scope ของไฟล์ที่แตะ เมื่อเลือกข้อ 1); agent เรียกเมื่อผู้ใช้สั่งอัปเดต spec ในโหมด code-first |
+| 10 | Pre-write gate / refs | `references/goal-rules.md`, `references/spec-driven.md` | ข้อ 9 (≤ 30 words); `spec-driven.md` ให้ตรง §19.18 + ประโยค `SPEC_NOT_SYNCED` แบบ V2.1 |
+| R1 | Audit residue | `git-flow.mjs#snapshotDirty`, `classifyPaths` | path ใน allowlist audit (`logs/**`, `memory/recent/**`, `reports/**`, `decisions/**`) **ไม่ถูกนับเป็น preexisting** และถูก classify เป็น `own` ใน delivery ถัดไปเสมอ (audit เป็น append-only จึงรวมได้ปลอดภัย); `memory/current/**`, `runtime/**`, `cache/**`, `local/**`, `prompts/**`, `tasks/**` คงถูกตัด |
+| R2 | glab | `git-flow.mjs` | ถ้าเครื่องที่ทำมี `glab` ให้ตรวจ flag กับ `glab mr <cmd> --help` แล้วแก้ให้ตรง; ไม่มี → คง stub และคง warning `GLAB_UNVERIFIED` ใน PR |
+| 11 | Fixture | `tests/fixtures/spec-pack-morynth/` | สังเคราะห์: `06-agent/CONTEXT-INDEX.yaml` (มี `read_order`, `canonical_files`, `project.id/version`), `06-agent/TASKS.yaml` (3 task: `planned`, `delivered`, และหนึ่ง block ไม่มีบรรทัด status), `06-agent/REQUIREMENTS.yaml`, `06-agent/OPEN-QUESTIONS.yaml` (อ้าง FE-002), `00-source-of-truth/TRACEABILITY.md`, `CHANGELOG.md`, `manifest.sha256`, `goals/login/README.md` — ห้ามคัดลอกเนื้อหาจริงของ pack |
+| 12 | Docs/version | `package.json`, `CHANGELOG.md`, `docs/WORKFLOWS.md`, `docs/USAGE.md` | bump 4.7.0 ก่อน sync; เอกสารผู้ใช้เรื่อง spec sync และ warning |
+
+#### 20.2.1 `yaml-lines.mjs` — contract
+
+ไม่ใช่ YAML parser เต็ม — รองรับเฉพาะรูปแบบที่ spec pack ใช้; ส่วนที่ไม่รองรับคืน `{ ok:false, code:"ADAPTER_PARSE_FAILED", line }` เฉพาะ construct นั้น
+
+| API | พฤติกรรม |
+| --- | --- |
+| `topLevelScalar(text, key)` | ค่า scalar ของ `key:` ที่ indent 0 |
+| `mappingUnder(text, key)` | mapping ระดับถัดไป (indent 2) ของ key → `{k: v}` เฉพาะ scalar |
+| `listUnder(text, key)` | list ของ scalar (`- x`) หรือ inline `[a, b]` |
+| `listItemBlocks(text, listKey, idKey = "id")` | block ของ item `- id: X` ใต้ `listKey` → `[{ id, startLine, endLine, fieldIndent, fields: { <name>: { line, value } } }]`; block จบเมื่อเจอ `- id:` ถัดไปที่ indent เท่ากันหรือ key ที่ indent น้อยกว่า |
+| `setBlockScalar(text, block, field, value)` | แทนเฉพาะค่าหลัง `field: ` (คง comment ท้ายบรรทัด) คืน `{ text, edit: {line, before, after} }` |
+| `insertBlockScalar(text, block, field, value)` | แทรก `field: value` ถัดจากบรรทัด `- id:` ด้วย `fieldIndent` |
+
+กติกา: indent เป็นช่องว่างเท่านั้น (tab → parse fail), รองรับ quote `'..'`/`".."`, comment `#` นอก quote, CRLF อ่านได้และเขียนกลับด้วย line ending เดิมของไฟล์
+
+#### 20.2.2 Tests P2 (เพิ่มจาก §19.19)
+
+| ไฟล์ | กรณี |
+| --- | --- |
+| `tests/unit/yaml-lines.test.mjs` | ทุก API ข้างบน, comment ท้ายบรรทัด, quote, CRLF round-trip, tab → fail เฉพาะ construct |
+| `tests/unit/spec-sync.test.mjs` | §19.19 ข้อ 1–8 + `SPEC_FORMAT_FALLBACK` + `chooseStatusValue` ครบ 5 semantic + `STATUS_VALUE_UNKNOWN` |
+| `tests/unit/git-flow.test.mjs` (เพิ่ม) | `SPEC_NOT_SYNCED` → self-fix → warn; `enforcement:"block"` → stop; spec repo แยก = สอง commit ใน summary; `SPEC_SOURCE_NOT_GIT`; **R1**: หลัง integrate แล้วเริ่มงานใหม่ ไฟล์ audit ค้างถูกรวมใน delivery ถัดไป |
+| `tests/unit/project-profile.test.mjs` (เพิ่ม) | `specStandingCard` → ตอบ 1 แล้ว `project.json` เป็น hybrid + `sync:"auto"` + decision |
+
+เพิ่มไฟล์ใหม่ใน `scripts.test:unit`
+
+#### 20.2.3 Acceptance P2
+
+AC18–AC21 (§19.20) และ:
+
+| ID | เกณฑ์ |
+| --- | --- |
+| AC23 | spec pack ที่เป็น Git repo แยก: งานเดียวได้สอง commit (repo code และ spec repo) push และ verify ทั้งคู่ |
+| AC24 | audit event หลัง delivery (`delivered`/`completed`/`integrated`) ถูก commit ใน delivery ถัดไป ไม่ค้างถาวร |
+| AC25 | `yaml-lines` แก้ status ของ task เดียวแล้ว `git diff` เปลี่ยนหนึ่งบรรทัด และคง comment/line ending |
+| AC26 | code-first + ผู้ใช้สั่ง "อัปเดต spec ด้วย" ครั้งเดียว → card หนึ่งครั้ง → งานถัดไปไม่ต้องสั่ง |
+
+### 20.3 P3 — 4.8.0: Decision memory (C7) + digest + instruction diet
+
+**Scope**: §10 ทั้งหมด, แถว P3 ของ §5.9 (`decide correction`, `decide list`, recall/calibration ใน `decide card`), `recall`, digest ใน hook (§10.7), instruction diet (§16.3), AC10–AC12 + AC27–AC29 ด้านล่าง
+**นอก scope**: guards/Stop hook (P4)
+
+| # | งาน | ไฟล์ | รายละเอียด |
+| --- | --- | --- | --- |
+| 1 | Frontmatter + index | `scripts/decision-memory.mjs` (ใหม่) | `parseFrontmatter` ต้องอ่านสิ่งที่ `decision-records.mjs#writeDecision` เขียนได้ครบ (เขียน round-trip test); index cache `.agrimap-agent/cache/decisions-index.json` rebuild ตาม `fileCount`/`maxMtimeMs` (§10.3); decision รุ่นเก่าใช้ default §10.2 |
+| 2 | Recall | `decision-memory.mjs` | scoring/threshold/glob/cap 2,000 chars ตาม §10.4; export `recall({ root, topic, paths, kind, limit })` |
+| 3 | Signals/learning | `decision-memory.mjs` | `recordSignal`, `promotable`, `calibration`, preference file `runtime/preferences/<identityKey(machine-osUser)>.json` (`alwaysAsk`, `declinedPromotion`) ตาม §10.6; ทุกไฟล์อยู่ใต้ `runtime/` (ไม่ commit) |
+| 4 | Card integration | `decision-card.mjs` | `storeCard` ก่อนเก็บ: recall → `suppressed` (score ≥ 7, topic ตรง, value ตรง option); calibration → `autoDecided` เฉพาะ R1 + medium + mode `decide-and-report` และไม่อยู่ใน `alwaysAsk`; `recordChoice` เขียน signal; ต้องอ่าน config `governance.decisionMemory` — false = พฤติกรรม 4.7.0 |
+| 5 | Commands | `governance-commands.mjs` | เพิ่ม `recall`; `decide correction --topic --from --to [--paths]`; `decide list [--status]` |
+| 6 | Audit fields | `agm-workspace.mjs` (`checkpoint`, `complete`, `normalizeAuditEvent`) | `--precedent <id,…>` → field `precedents`; `questionsAvoided` จาก session state ลง event `completed`; field ใหม่ผ่าน `auditEventIssues` ได้ |
+| 7 | Git decisions ใช้ precedent | `git-flow.mjs`, `workflow-policy.mjs` | DP4 (§10.5): ก่อนสร้าง card เรื่อง git ให้ recall topic `git/*` |
+| 8 | Digest | `hook-context.mjs` | หลัง `shortReplyContext()`; เงื่อนไข/เนื้อหา/hash ตาม §10.7 + บรรทัด mode/spec ของ §19.13; `digestHash` ใน session state; ≤ 600 chars; ห้าม git/network ใน hook (อ่านไฟล์ JSON/markdown ≤ 5 ไฟล์) |
+| 9 | Reference | `references/autonomy.md` | เพิ่ม recall/promotion/"ถามก่อนเสมอเรื่อง X" ภายใน ≤ 450 words |
+| 10 | Instruction diet | `assets/bootstrap/AGENTS.md`, `assets/bootstrap/AGENTS.release.md` (ใหม่), `assets/bootstrap/manifest.json`, `scripts/project-bootstrap.mjs`, `references/release-*.md` | ดู §20.3.1 |
+| 11 | Version/docs | `package.json` 4.8.0 ก่อน sync, `CHANGELOG.md`, `docs/WORKFLOWS.md`, `docs/USAGE.md` | |
+
+#### 20.3.1 Instruction diet — ขั้นตอน
+
+ขนาดปัจจุบันของ bootstrap `AGENTS.md` บน develop: 501 บรรทัด / 103,014 bytes (ภาษาไทยเป็น multi-byte) และถูก `CLAUDE.md` import ทุก session
+
+1. แยกไฟล์ (ย้ายข้อความทั้งก้อน ไม่เขียนใหม่ และ **คงเลข §** เดิม เพื่อไม่ให้ reference พัง):
+
+   | อยู่ใน `AGENTS.md` (core) | ย้ายไป `AGENTS.release.md` |
+   | --- | --- |
+   | §1, §3, §9, §10, Bootstrap contract freshness, Host recording example | §2 (ทั้งตารางและ §2.1–§2.3), §4, §5 (รวม §5.1–§5.2), §6 (รวม §6.1–§6.3), §7, §8 (รวม §8.1) |
+
+2. ใน core แทน §2 ด้วยหัวข้อสั้น `## 2. Intent routing` + ตาราง 2 แถว: (a) intent เรื่อง changelog/backfill/version/deploy/release/tag ทุกคำ → "อ่าน `AGENTS.release.md` ทั้งไฟล์ก่อนเริ่ม แล้วทำตาม §2 ในไฟล์นั้น" (b) แถว `integrate` (คงไว้ใน core) และบรรทัดว่า section ที่อ้าง §4–§8 อยู่ใน `AGENTS.release.md`
+3. `AGENTS.release.md` ขึ้นต้นด้วย marker `<!-- AGRIMAP BOOTSTRAP VERSION: … -->` แบบเดียวกัน และประโยคว่าใช้ร่วมกับ `AGENTS.md` core
+4. `manifest.json`: เพิ่ม entry `AGENTS.release.md` (source/target/sha256); `tools/sync-adapters.mjs` อัปเดต marker ของทั้งสองไฟล์ (ตอนนี้ทำเฉพาะ `AGENTS.md` — ต้องขยาย)
+5. `project-bootstrap.mjs`: plan/apply ติดตั้งไฟล์ใหม่ด้วย; โปรเจกต์ที่มี `AGENTS.md` 4.7.0 แบบไม่แก้ → auto update ทั้งคู่; แบบแก้แล้ว → scoped merge เดิม (ไฟล์ release ใหม่เป็น `create`)
+6. อัปเดต reference ที่อ้าง §2/§4–§8 ของ project AGENTS (`references/release-and-bootstrap.md`, `release-workflow.md`, `release-steps.md`, `release-flash.md`, `lifecycle-core.md`) ให้ระบุว่าอยู่ใน `AGENTS.release.md`
+7. Test ใหม่ใน `bootstrap-contract.test.mjs`: core ≤ 24,000 characters (≈ ≤ 8k tokens ที่ 3 chars/token); union ของ core + release มีทุกหัวข้อเดิม; upgrade จาก template 4.7.0 ทั้งแบบไม่แก้และแบบแก้; hash ที่ freeze ใน test ปรับโดยตั้งใจ
+8. ห้ามเปลี่ยนความหมายของกติกา release ใดๆ ในงานนี้ — เป็นการย้ายไฟล์ล้วน
+
+#### 20.3.2 Tests / Acceptance P3
+
+Tests: §15.3 (P3) + round-trip `writeDecision` → `parseFrontmatter` + digest test + diet tests (§20.3.1 ข้อ 7) + `governance.decisionMemory:false` = ไม่ recall
+
+| ID | เกณฑ์ |
+| --- | --- |
+| AC10–AC12 | ตาม §17 |
+| AC27 | precedent id อยู่ใน event `completed` (`precedents`) และ `questionsAvoided` นับตรง |
+| AC28 | core `AGENTS.md` ≤ 24,000 chars และทุก release intent ยังทำงานได้ (release tests ผ่าน) |
+| AC29 | "ถามก่อนเสมอเรื่อง convention" ทำให้ R1 convention card ไม่ถูก auto-decide แม้ acceptRate สูง |
+
+### 20.4 P4 — 4.9.0: Guards + Stop reminder (C8)
+
+**Scope**: §11.2, §11.3, แถว C8 ของ §19.13, แถว P4 ของ §11.1, AC13 + AC30–AC31
+
+**ขั้น 0 — ยืนยัน host ก่อนเขียนโค้ด** (บันทึกผลใน PR เป็นตาราง host × event × input/output format × แหล่งอ้างอิง):
+- Claude Code: `PreToolUse` (`hookSpecificOutput.permissionDecision: allow|deny|ask`, `permissionDecisionReason`) และ `Stop` (`decision: "block"`, `reason`, input `stop_hook_active`) — ตรวจกับเอกสาร Claude Code รุ่นที่ติดตั้ง
+- Codex: ตรวจว่ามี pre-tool hook และรูปแบบ output หรือไม่ (`codex --help`, เอกสารทางการ) — ไม่มี = ไม่ติดตั้ง
+- Antigravity/Gemini: ตรวจ `BeforeTool` และรูปแบบ output — ไม่แน่ใจ = ไม่ติดตั้ง
+- host ที่ไม่ยืนยัน: doctor รายงาน `guards: not-supported-on-host` และ enforcement ยังอยู่ใน script (deliver/integrate) ตามเดิม
+
+| # | งาน | ไฟล์ | รายละเอียด |
+| --- | --- | --- | --- |
+| 1 | Guard | `scripts/git-guard.mjs` (ใหม่) | parser แยก git invocation จาก Bash และ PowerShell (`;`, `&&`, `\|\|`, `\|`, newline, `&` ของ PowerShell call operator, backtick continuation); rule G1–G6 (§11.2) + G3 เพิ่ม `.agrimap-agent/local` และ `git add -f` ใต้ `local/`; release exception อ่าน active operation จาก `session-state.mjs`; protected list จาก `workflow-policy.mjs#loadPolicy` ของ `gitTop(tool cwd)`; fail-open; ต้องอ่าน `governance.guards` — false = no-op |
+| 2 | Stop reminder | `scripts/delivery-reminder.mjs` (ใหม่) | §11.3; marker `runtime/reminders/<executionId>` |
+| 3 | Hook generation | `tools/sync-adapters.mjs#providerHooks` | เพิ่ม `PreToolUse` (matcher `Bash\|PowerShell`) และ `Stop` ให้ claude; codex เฉพาะที่ยืนยันแล้ว; `hooks/hooks.json` (Gemini) เพิ่ม `BeforeTool` เฉพาะที่ยืนยัน |
+| 4 | Validator | `tools/validate-package.mjs` (~บรรทัด 310–317) | ตรวจ event ใหม่ + `--provider <host>` ทุก command |
+| 5 | Doctor | `references/doctor-workflow.md` | แถว `guards`: flag, host support, hook ที่ติดตั้ง |
+| 6 | Config default | `agm-workspace.mjs#ensureLayout` | `governance.guards` default true สำหรับ layout ใหม่; project เดิมคงค่าที่มี (ไม่มี key → true) |
+| 7 | Version/docs | `package.json` 4.9.0 ก่อน sync, `CHANGELOG.md`, `docs/TROUBLESHOOTING.md` (วิธีปิด guard ต่อ project) | |
+
+Tests: `tests/unit/git-guard.test.mjs` (ทุก rule ทั้ง Bash/PowerShell, release exception, fail-open, flag false), `tests/unit/delivery-reminder.test.mjs` (block ครั้งเดียว, `stop_hook_active`), `validate-package` กับ hook ชุดใหม่
+
+| ID | เกณฑ์ |
+| --- | --- |
+| AC13 | ตาม §17 |
+| AC30 | `governance.guards:false` → hook คืนค่าว่างทุกคำสั่ง |
+| AC31 | Stop reminder เตือนครั้งเดียวต่อ execution และไม่ loop |
+
+### 20.5 กติการ่วมทุก phase
+
+1. Branch `feature/acg-p<N>-<version>` จาก `origin/develop` (ใช้ B1: `git switch --no-track -c … origin/develop`); ห้าม stage ไฟล์ค้างที่ไม่เกี่ยว (`DEVELOPMENT.md`, `tests/unit/package-release.test.mjs`, `tools/check-package-pr.mjs` ถ้ายังค้าง)
+2. `package.json` version ใหม่ **ก่อน** `npm run sync` (§16.2) แล้วตรวจ `manifest.json` มี `previous` ของรุ่นก่อน
+3. ตรวจก่อน PR: `npm run sync` → ไม่มี drift → `npm test` → `npm run test:release` (บน Windows รันจาก PowerShell) → `npm run audit:tokens:strict` → `npm run package:build`
+4. Budget direct/required ห้ามเพิ่ม; scenario ใหม่ถ้าจำเป็นต้องมีเหตุผลใน description + CHANGELOG
+5. เจอ spec ขัดโค้ดจริง → ตัดสินตาม §2.4 และ **เพิ่มแถวในตาราง as-built ของ phase นั้น** (สร้าง §20.1-P<N> ใน spec) ใน PR เดียวกัน
+6. PR เข้า `develop` (ไม่ใช่ `main` — route check จะ fail) body: สรุปตาม component, AC → หลักฐาน, คำสั่ง+ผล, assumptions, ⚠️ open warnings, deferred
+7. Release หลัง merge: `release/<version>` → PR เข้า `main` → `package-release.yml` (`version`, `promote_latest=true`) → reviewer approve — ไม่อยู่ในงาน implement
+8. Phase ต้องทำตามลำดับ P2 → P3 → P4 เพราะแก้ไฟล์ร่วมกัน (`decision-card.mjs`, `hook-context.mjs`, `governance-commands.mjs`, `sync-adapters.mjs`)
 
 ---
 
