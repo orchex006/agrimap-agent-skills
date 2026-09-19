@@ -4,7 +4,7 @@ import {mkdir,readFile,writeFile,readdir} from 'node:fs/promises';
 import path from 'node:path';
 import {createHarness} from '../helpers/harness.mjs';
 import {createGitFixture,gitIn} from '../helpers/git-fixture.mjs';
-import {inferProject,validateProject,projectDefaults,PROJECT_PATH} from '../../skills/agrimap-agent-skills/scripts/project-profile.mjs';
+import {inferProject,validateProject,projectDefaults,PROJECT_PATH,initProject,specStandingCard} from '../../skills/agrimap-agent-skills/scripts/project-profile.mjs';
 import {storeCard,recordChoice} from '../../skills/agrimap-agent-skills/scripts/decision-card.mjs';
 
 async function fixture(t){const h=await createHarness('agm-project-');t.after(()=>h.cleanup());return h;}
@@ -57,4 +57,19 @@ test('decide record with project:developmentMode writes project.json and a decis
   assert.equal(profile.developmentMode,'code-first');assert.equal(profile.status,'confirmed');
   const period=(await readdir(path.join(state,'decisions')))[0];
   assert.ok((await readdir(path.join(state,'decisions',period))).some(f=>f.endsWith('-development-mode.md')));
+});
+
+test('specStandingCard option 1 makes a code-first project hybrid with sync auto and a decision (AC26)',async t=>{
+  const h=await fixture(t);const {repo}=await createGitFixture(h,{name:'legacy-api'});
+  const state=path.join(repo,'.agrimap-agent');
+  assert.equal((await initProject(repo,'code-first',{specs:{sources:[{id:'ops-spec',kind:'repo',path:'docs/specs'}]}},'owner')).ok,true);
+  const card=specStandingCard({profile:JSON.parse(await readFile(path.join(repo,PROJECT_PATH),'utf8')),paths:['src/billing/expiry.ts','src/billing/rules.ts']});
+  assert.equal(card.risk,'R1');assert.equal(card.recordAs,'project:specs.sync');
+  const stored=await storeCard(state,'s',card);assert.equal(stored.ok,true,JSON.stringify(stored));
+  const result=await recordChoice(state,{session:'s',cardId:stored.cardId,choice:'1',requestedBy:'owner'});
+  assert.equal(result.ok,true,JSON.stringify(result));
+  const profile=JSON.parse(await readFile(path.join(repo,PROJECT_PATH),'utf8'));
+  assert.equal(profile.developmentMode,'hybrid');assert.equal(profile.specs.sync,'auto');
+  assert.deepEqual(profile.specs.scopes,[{source:'ops-spec',covers:['src/billing/**']}]);
+  assert.ok(result.written.some(f=>/-development-mode(-\d+)?\.md$/.test(f)),JSON.stringify(result.written));
 });

@@ -5,7 +5,7 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 import { readJsonFile, readSessionState, updateSessionState, writeJsonFile, writeSessionPointer, safeSession } from "./session-state.mjs";
 import { initPolicy, loadPolicy, profilePolicy, setPolicyValue } from "./workflow-policy.mjs";
-import { initProject, loadProject, projectDefaults, setProjectValue, verifySpecPath } from "./project-profile.mjs";
+import { applyProjectPatch, initProject, loadProject, projectDefaults, setProjectValue, verifySpecPath } from "./project-profile.mjs";
 import { setLocalPath } from "./local-memory.mjs";
 import { bangkokParts, writeDecision } from "./decision-records.mjs";
 
@@ -141,9 +141,12 @@ async function applyRecordAs(root, card, option, freeText, { requestedBy, now })
   if (recordAs.startsWith("project:")) {
     const key = recordAs.slice(8);
     const current = await loadProject(root);
-    const result = !current.exists && key === "developmentMode"
-      ? await initProject(root, value, {}, requestedBy, { now, cardId: card.cardId })
-      : await setProjectValue(root, key, value, requestedBy, { now, cardId: card.cardId, confirm: true });
+    const patch = value && typeof value === "object" && !Array.isArray(value) && (key === "specs.sync" || key === "developmentMode") ? value : null;
+    const result = patch
+      ? await applyProjectPatch(root, patch, requestedBy, { now, cardId: card.cardId })
+      : !current.exists && key === "developmentMode"
+        ? await initProject(root, value, {}, requestedBy, { now, cardId: card.cardId })
+        : await setProjectValue(root, key, value, requestedBy, { now, cardId: card.cardId, confirm: true });
     return result.ok ? { applied: recordAs, written: result.written } : { error: result };
   }
   const id = recordAs.slice(11);
