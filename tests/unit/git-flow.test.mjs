@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {mkdir,readFile,writeFile,stat} from 'node:fs/promises';
+import {cp,mkdir,readFile,writeFile,stat} from 'node:fs/promises';
 import path from 'node:path';
 import {createHarness,projectRoot} from '../helpers/harness.mjs';
 import {createGitFixture,cloneRemote,gitIn} from '../helpers/git-fixture.mjs';
@@ -200,6 +200,25 @@ test('short reply "1" then local merge: merge commit on origin/develop, branch t
   assert.equal(result.card?.card?.topic||result.card?.topic,'git/delete-branch');
 });
 
+test('audit written after delivery rides with the next delivery instead of becoming preexisting (R1, AC24)',async t=>{
+  const h=await fixture(t);const p=await project(h,{method:'local-merge'});
+  const first=await deliveredBranch(p,{session:'s1',slug:'residue',file:'one.js'});
+  const plan=p.cli(['integrate','plan','--session','s1','--intent','integrate']);
+  assert.equal(p.cli(['integrate','apply','--session','s1','--intent','integrate','--plan-hash',plan.planHash]).ok,true);
+  const residue=p.git(['status','--porcelain','--untracked-files=all']).match(/\.agrimap-agent\/logs\/\S+/g)||[];
+  assert.ok(residue.length,'integrate/complete leave audit dirty');
+  p.ack('s2');
+  const started=p.cli(['start','--operation','execute','--session','s2','--requested-by','Tester','--title','Second change']);
+  assert.ok(!started.activeTask.preexistingDirty.some(e=>e.path.startsWith('.agrimap-agent/logs/')));
+  const bplan=p.cli(['branch','plan','--session','s2','--type','feature','--slug','residue','--mode','current']);
+  p.cli(['branch','apply','--session','s2','--type','feature','--slug','residue','--mode','current','--plan-hash',bplan.planHash]);
+  await writeFile(path.join(p.repo,'two.js'),'y'+String.fromCharCode(10));verify(p,'s2',started.activeTask.executionId);
+  const {applied}=deliver(p,'s2');
+  assert.equal(applied.ok,true,JSON.stringify(applied));assert.notEqual(applied.commit,first.commit);
+  const committed=p.git(['show','--name-only','--format=','HEAD']).split(String.fromCharCode(10));
+  for(const file of residue)assert.ok(committed.includes(file),`${file} committed`);
+});
+
 test('two branches delivered the same day merge into develop without .agrimap-agent conflicts (AC7, git-flow 13)',async t=>{
   const h=await fixture(t);const p=await project(h,{method:'local-merge'});
   // Second developer works in another clone on the same day.
@@ -284,11 +303,203 @@ test('stubbed gh: CLEAN merges, BLOCKED stops, pending asks, never --admin (git-
 });
 
 test('scripts never force push, add all, stash, reset, clone or check out (AC8)',async()=>{
-  for(const file of ['git-flow.mjs','governance-commands.mjs','workflow-policy.mjs','instruction-chain.mjs','project-profile.mjs']){
+  for(const file of ['git-flow.mjs','governance-commands.mjs','workflow-policy.mjs','instruction-chain.mjs','project-profile.mjs','spec-sync.mjs','spec-adapters.mjs','yaml-lines.mjs']){
     const source=await readFile(path.join(projectRoot,'skills/agrimap-agent-skills/scripts',file),'utf8');
     for(const forbidden of ['"--force"','"-f"','"--force-with-lease"','"--mirror"','"-A"','"--all"','"stash"','"reset"','"clone"','"checkout"','"worktree", "add"','"--admin"','execSync(','shell: true']){
       assert.ok(!source.includes(forbidden),`${file} contains ${forbidden}`);
     }
     assert.ok(!/"add", "\."/.test(source),`${file} stages everything`);
   }
+});
+
+// ------------------------------------------------------------ spec sync gate (P2)
+
+const PACK_FIXTURE=path.join(projectRoot,'tests','fixtures','spec-pack-morynth');
+async function writeProfile(repo,profile){
+  await mkdir(path.join(repo,'.agrimap-agent','policy'),{recursive:true});
+  await writeFile(path.join(repo,'.agrimap-agent','policy','project.json'),JSON.stringify({schemaVersion:1,status:'confirmed',confirmedBy:'owner',confirmedAt:'2026-09-19',decisionRef:null,inference:null,hybrid:{newWork:'spec-first'},...profile},null,2));
+}
+// Spec-first product repo whose pack lives in specs/pack (kind repo).
+async function specFirst(h,{enforcement='warn',mode='spec-first',sync='auto',tasksEdit=null}={}){
+  const p=await project(h,{name:`web-${mode}-${enforcement}`});
+  await cp(PACK_FIXTURE,path.join(p.repo,'specs','pack'),{recursive:true});
+  if(tasksEdit){const f=path.join(p.repo,'specs/pack/06-agent/TASKS.yaml');await writeFile(f,tasksEdit(await readFile(f,'utf8')));}
+  await writeProfile(p.repo,{developmentMode:mode,specs:{sources:[{id:'demo-console',kind:'repo',path:'specs/pack',format:'morynth-context-index@1'}],scopes:[{source:'demo-console',covers:['src/**']}],sync,enforcement}});
+  p.git(['add','--','specs','.agrimap-agent']);p.git(['commit','-q','-m','docs: spec pack']);p.git(['push','-q','origin','develop']);
+  return p;
+}
+
+test('spec-first delivery self-fixes SPEC_NOT_SYNCED, then commits code and spec together (AC18, 19.19 #7)',async t=>{
+  const h=await fixture(t);const p=await specFirst(h);
+  const {executionId}=await startWork(p,{slug:'registry-summary'});
+  const context=p.cli(['spec','context','--session','s1','--tasks','FE-002']);
+  assert.equal(context.ok,true);assert.ok(context.readFirst.length<=8);
+  await mkdir(path.join(p.repo,'src'),{recursive:true});await writeFile(path.join(p.repo,'src','summary.js'),'export const total = 1;\n');
+  verify(p,'s1',executionId);
+  const gate=p.cli(['deliver','plan','--session','s1']);
+  assert.equal(gate.code,'SPEC_NOT_SYNCED');assert.equal(gate.severity,'self-fix');assert.match(gate.next.command,/spec sync plan/);
+  const plan=p.cli(['spec','sync','plan','--session','s1','--evidence','AC-REG-001=src/summary.js']);
+  assert.equal(plan.ok,true,JSON.stringify(plan));
+  const applied=p.cli(['spec','sync','apply','--session','s1','--evidence','AC-REG-001=src/summary.js','--plan-hash',plan.planHash]);
+  assert.equal(applied.ok,true,JSON.stringify(applied));
+  const {applied:delivered}=deliver(p,'s1');
+  assert.equal(delivered.ok,true,JSON.stringify(delivered));
+  assert.equal(delivered.specLine,'- Spec: FE-002 → delivered · evidence 1 · manifest updated');
+  const committed=p.git(['show','--name-only','--format=','HEAD']).split('\n');
+  for(const file of ['src/summary.js','specs/pack/06-agent/TASKS.yaml','specs/pack/00-source-of-truth/TRACEABILITY.md','specs/pack/CHANGELOG.md','specs/pack/manifest.sha256'])assert.ok(committed.includes(file),file);
+  assert.match(p.git(['show','HEAD','--','.agrimap-agent/logs']),/"milestone":"spec-sync"/);
+});
+
+test('spec-na passes, enforcement block stops, code-first is not checked (19.19 #7)',async t=>{
+  const h=await fixture(t);
+  const warn=await specFirst(h);
+  const w=await startWork(warn,{slug:'na'});
+  await mkdir(path.join(warn.repo,'src'),{recursive:true});await writeFile(path.join(warn.repo,'src','a.js'),'x\n');verify(warn,'s1',w.executionId);
+  const na=warn.cli(['deliver','plan','--session','s1','--spec-na','formatting only']);
+  assert.equal(na.ok,true,JSON.stringify(na));assert.equal(na.specLine,'- Spec: ไม่เกี่ยว (formatting only)');
+  const block=await specFirst(h,{enforcement:'block'});
+  const b=await startWork(block,{slug:'block'});
+  await mkdir(path.join(block.repo,'src'),{recursive:true});await writeFile(path.join(block.repo,'src','b.js'),'x\n');verify(block,'s1',b.executionId);
+  const stopped=block.cli(['deliver','plan','--session','s1']);
+  assert.equal(stopped.code,'SPEC_SYNC_REQUIRED');assert.equal(stopped.severity,'stop');
+  const code=await specFirst(h,{mode:'code-first',sync:'off'});
+  const c=await startWork(code,{slug:'legacy'});
+  await mkdir(path.join(code.repo,'src'),{recursive:true});await writeFile(path.join(code.repo,'src','c.js'),'x\n');verify(code,'s1',c.executionId);
+  const free=code.cli(['deliver','plan','--session','s1']);
+  assert.equal(free.ok,true,JSON.stringify(free));assert.equal(free.specLine,'- Spec: ไม่เกี่ยว (code-first)');
+  const refused=code.cli(['spec','sync','plan','--session','s1','--tasks','FE-002']);
+  assert.equal(refused.code,'SPEC_SYNC_OFF');
+  assert.equal(await readFile(path.join(code.repo,'specs/pack/06-agent/TASKS.yaml'),'utf8'),await readFile(path.join(PACK_FIXTURE,'06-agent/TASKS.yaml'),'utf8'));
+});
+
+test('an unparseable TASKS.yaml still delivers with warnings under the warning contract (AC21, 19.19 #8)',async t=>{
+  const h=await fixture(t);const p=await specFirst(h,{tasksEdit:text=>text.replace('    title: Export registry to CSV','\ttitle: Export registry to CSV')});
+  const {executionId}=await startWork(p,{slug:'broken-yaml'});
+  p.cli(['spec','context','--session','s1','--tasks','FE-002']);
+  await mkdir(path.join(p.repo,'src'),{recursive:true});await writeFile(path.join(p.repo,'src','d.js'),'x\n');verify(p,'s1',executionId);
+  assert.equal(p.cli(['deliver','plan','--session','s1']).code,'SPEC_NOT_SYNCED');
+  const attempt=p.cli(['spec','sync','plan','--session','s1']);
+  assert.ok(attempt.warnings.some(w=>w.code==='ADAPTER_PARSE_FAILED'));
+  const {plan,applied}=deliver(p,'s1');
+  assert.equal(applied?.ok,true,JSON.stringify(plan));
+  assert.ok(applied.warnings.some(w=>w.code==='SPEC_NOT_SYNCED'));assert.ok(applied.warnings.some(w=>w.code==='ADAPTER_PARSE_FAILED'));
+  assert.ok(applied.warnings.every(w=>w.code&&w.fix),'each warning has code and fix');
+  assert.equal(applied.remoteVerified,true);
+});
+
+test('a separate spec repository gets its own commit; two commits are reported (AC23)',async t=>{
+  const h=await fixture(t);
+  const spec=await createGitFixture(h,{name:'demo-console-spec',files:{}});
+  await cp(PACK_FIXTURE,spec.repo,{recursive:true});
+  spec.git(['add','--','.']);spec.git(['commit','-q','-m','docs: import pack']);spec.git(['push','-q','origin','main']);
+  spec.git(['switch','-q','-c','docs/sync-fe-002']);
+  const p=await project(h,{name:'demo-console-web'});
+  await writeProfile(p.repo,{developmentMode:'spec-first',specs:{sources:[{id:'demo-console',kind:'external',format:'morynth-context-index@1',fingerprint:{file:'06-agent/CONTEXT-INDEX.yaml',contains:'id: demo-console'}}],scopes:[{source:'demo-console',covers:['src/**']}],sync:'auto',enforcement:'warn'}});
+  p.git(['add','--','.agrimap-agent']);p.git(['commit','-q','-m','docs: project profile']);p.git(['push','-q','origin','develop']);
+  const {executionId}=await startWork(p,{slug:'external-spec'});
+  const set=p.cli(['local','set-path','--kind','spec','--id','demo-console','--path',spec.repo]);
+  assert.equal(set.ok,true,JSON.stringify(set));
+  p.cli(['spec','context','--session','s1','--tasks','FE-002']);
+  await mkdir(path.join(p.repo,'src'),{recursive:true});await writeFile(path.join(p.repo,'src','e.js'),'x\n');verify(p,'s1',executionId);
+  const plan=p.cli(['spec','sync','plan','--session','s1']);
+  const applied=p.cli(['spec','sync','apply','--session','s1','--plan-hash',plan.planHash]);
+  assert.equal(applied.ok,true,JSON.stringify(applied));assert.equal(applied.linkedRoots.length,1);
+  const s=bind(h,spec.repo,spec.remote);
+  const message=await messageFile(h);
+  const splan=s.cli(['deliver','plan','--session','s1','--explicit','push','--input',message]);
+  assert.equal(splan.ok,true,JSON.stringify(splan));
+  const sapplied=s.cli(['deliver','apply','--session','s1','--explicit','push','--input',message,'--plan-hash',splan.planHash]);
+  assert.equal(sapplied.ok,true,JSON.stringify(sapplied));assert.equal(sapplied.remoteVerified,true);
+  assert.ok(spec.git(['show','--name-only','--format=','HEAD']).split('\n').includes('06-agent/TASKS.yaml'));
+  const {applied:code}=deliver(p,'s1');
+  assert.equal(code.ok,true,JSON.stringify(code));
+  assert.deepEqual(code.commits.map(c=>c.root),['code','spec:demo-console']);
+  assert.ok(code.commits.every(c=>c.remoteVerified));
+  assert.ok(!p.git(['show','HEAD']).includes(spec.repo.replaceAll('\\','/')),'no absolute spec path committed');
+});
+
+test('a non-Git external spec pack is updated locally with SPEC_SOURCE_NOT_GIT on delivery',async t=>{
+  const h=await fixture(t);
+  const pack=path.join(h.temp,'demo-console-spec-v1.0.0');await cp(PACK_FIXTURE,pack,{recursive:true});
+  const p=await project(h,{name:'demo-console-app'});
+  await writeProfile(p.repo,{developmentMode:'spec-first',specs:{sources:[{id:'demo-console',kind:'external',format:'morynth-context-index@1',fingerprint:{file:'06-agent/CONTEXT-INDEX.yaml',contains:'id: demo-console'}}],scopes:[],sync:'auto',enforcement:'warn'}});
+  p.git(['add','--','.agrimap-agent']);p.git(['commit','-q','-m','docs: project profile']);p.git(['push','-q','origin','develop']);
+  const {executionId}=await startWork(p,{slug:'local-pack'});
+  p.cli(['local','set-path','--kind','spec','--id','demo-console','--path',pack]);
+  p.cli(['spec','context','--session','s1','--tasks','FE-002']);
+  await writeFile(path.join(p.repo,'f.js'),'x\n');verify(p,'s1',executionId);
+  const plan=p.cli(['spec','sync','plan','--session','s1']);
+  const applied=p.cli(['spec','sync','apply','--session','s1','--plan-hash',plan.planHash]);
+  assert.equal(applied.ok,true,JSON.stringify(applied));assert.match(applied.specLine,/local only/);
+  assert.match(await readFile(path.join(pack,'06-agent','TASKS.yaml'),'utf8'),/id: FE-002\n.*\n {4}status: delivered/);
+  const {applied:delivered}=deliver(p,'s1');
+  assert.equal(delivered.ok,true,JSON.stringify(delivered));
+  assert.ok(delivered.warnings.some(w=>w.code==='SPEC_SOURCE_NOT_GIT'));
+});
+
+test('code-first "update the spec too" becomes a standing rule without a card (AC19, AC26; owner answer Q-4.7.0-03)',async t=>{
+  const h=await fixture(t);const p=await specFirst(h,{mode:'code-first',sync:'off'});
+  const {executionId}=await startWork(p,{slug:'expiry-fix',type:'fix'});
+  await mkdir(path.join(p.repo,'src','license'),{recursive:true});await writeFile(path.join(p.repo,'src','license','expiry.js'),'x\n');verify(p,'s1',executionId);
+  const once=p.cli(['spec','sync','plan','--session','s1','--once','--tasks','FE-002']);
+  assert.equal(once.ok,true,JSON.stringify(once));
+  const standing=p.cli(['spec','standing','--session','s1','--paths','src/license/expiry.js','--requested-by','owner']);
+  assert.equal(standing.ok,true,JSON.stringify(standing));assert.equal(standing.card,undefined);
+  assert.match(standing.decidedForYou,/ทุกงาน/);
+  const profile=JSON.parse(await readFile(path.join(p.repo,'.agrimap-agent','policy','project.json'),'utf8'));
+  assert.equal(profile.developmentMode,'hybrid');assert.equal(profile.specs.sync,'auto');
+  assert.ok(profile.specs.scopes.some(scope=>scope.covers.includes('src/license/**')));
+  assert.match(profile.decisionRef,/development-mode\.md$/);
+  const next=p.cli(['spec','sync','plan','--session','s1','--tasks','FE-002']);
+  assert.equal(next.ok,true,'no --once needed afterwards');
+});
+
+test('first context of a session in spec-first scope reports open spec drift once (warning contract 4)',async t=>{
+  const h=await fixture(t);const p=await specFirst(h);
+  const first=p.cli(['context','--session','s9']);
+  assert.ok(first.openWarnings.count>=1);assert.ok(first.openWarnings.lines.length<=5);
+  assert.ok(first.openWarnings.lines.some(line=>/DONE_WITHOUT_EVIDENCE: demo-console: FE-001/.test(line)));
+  p.cli(['context','--session','s9','--ack',first.chain.filter(e=>first.readRequired.includes(e.relative)).map(e=>e.sha12).join(',')]);
+  assert.equal(p.cli(['context','--session','s9']).openWarnings,undefined);
+});
+
+test('4.6.0 configs with the unused specSync:false default are switched on once; a later explicit false stays (Q-4.7.0-01)',async t=>{
+  const h=await fixture(t);const p=await project(h,{name:'migrated'});
+  const file=path.join(p.repo,'.agrimap-agent','config.json');
+  await writeFile(file,JSON.stringify({governance:{workflowPolicy:true,delivery:true,decisionMemory:false,guards:false,projectMode:true,specSync:false}},null,2));
+  p.cli(['init']);
+  let after=JSON.parse(await readFile(file,'utf8')).governance;
+  assert.equal(after.specSync,true);assert.equal(after.specSyncDefault,'4.7.0');
+  await writeFile(file,JSON.stringify({...JSON.parse(await readFile(file,'utf8')),governance:{...after,specSync:false}},null,2));
+  p.cli(['init']);
+  after=JSON.parse(await readFile(file,'utf8')).governance;
+  assert.equal(after.specSync,false);
+});
+
+test('stubbed glab uses flags verified against glab 1.115 --help (R2)',async t=>{
+  const h=await fixture(t);const p=await project(h);
+  await deliveredBranch(p,{session:'s1',slug:'mr-flow',file:'g.js'});
+  const delivery=JSON.parse(await readFile(path.join(p.repo,'.agrimap-agent/runtime/sessions/s1.json'),'utf8')).lastDelivery;
+  const policy=(await loadPolicy(p.repo)).policy;
+  const calls=[];let created=false;
+  const run=(command,args,options)=>{
+    if(command==='glab'){
+      calls.push(args);
+      if(args[0]==='auth')return {ok:true,stdout:'',stderr:''};
+      if(args[1]==='list')return {ok:true,stdout:JSON.stringify(created?[{iid:3,web_url:'https://gitlab.example.com/g/r/-/merge_requests/3'}]:[]),stderr:''};
+      if(args[1]==='create'){created=true;return {ok:true,stdout:'https://gitlab.example.com/g/r/-/merge_requests/3\n',stderr:''};}
+      if(args[1]==='view')return {ok:true,stdout:JSON.stringify({web_url:'u',detailed_merge_status:'mergeable',head_pipeline:{status:'success'}}),stderr:''};
+      if(args[1]==='merge')return {ok:true,stdout:'',stderr:''};
+    }
+    if(command==='git'&&args.join(' ')==='remote get-url origin')return {ok:true,stdout:'git@gitlab.example.com:g/r.git\n',stderr:''};
+    return defaultRun(command,args,options);
+  };
+  const base={root:p.repo,state:path.join(p.repo,'.agrimap-agent'),policy,delivery,intent:'integrate',ackRequired:[],fetch:false,run};
+  const plan=await planIntegration(base);
+  const result=await applyIntegration({...base,planHash:plan.planHash});
+  assert.equal(result.ok,true,JSON.stringify(result));
+  const create=calls.find(a=>a[1]==='create');
+  for(const flag of ['--source-branch','--target-branch','--title','--description-file','--yes'])assert.ok(create.includes(flag),flag);
+  assert.ok(calls.find(a=>a[1]==='list').includes('-F'));
+  assert.deepEqual(calls.find(a=>a[1]==='merge'),['mr','merge','3','--yes','--auto-merge=false']);
 });

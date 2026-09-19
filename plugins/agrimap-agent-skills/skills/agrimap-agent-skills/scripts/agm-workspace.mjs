@@ -346,8 +346,11 @@ async function ensureLayout(root, bootstrap = false) {
         decisionMemory: false,
         guards: false,
         projectMode: true,
-        specSync: false,
+        specSync: true,
         ...(existingConfig.governance || {}),
+        // 4.6.0 wrote specSync:false as an unused default; 4.7.0 turns it on once.
+        ...(existingConfig.governance?.specSync === false && !existingConfig.governance?.specSyncDefault ? { specSync: true } : {}),
+        specSyncDefault: "4.7.0",
       },
       tasks: {
         activePath: ".agrimap-agent/tasks/YYYY-MM/<task-id>",
@@ -2194,6 +2197,8 @@ const command = process.argv[2];
 const subcommand = process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : null;
 // Redact before objective slugs and checkpoint truncation can expose fragments.
 const args = redactValue(parseCliArgs(process.argv.slice(3)));
+// Third word of two-level commands such as `spec sync plan`.
+if (subcommand && process.argv[4] && !process.argv[4].startsWith("--")) args._action = process.argv[4];
 const root = workspaceRoot(args.cwd || process.cwd());
 let result;
 

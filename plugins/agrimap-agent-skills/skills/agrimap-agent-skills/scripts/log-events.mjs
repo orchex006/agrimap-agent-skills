@@ -1,5 +1,5 @@
 export const QA_FAILED_EVENT = "qa-failed";
-export const MILESTONE_TYPES = Object.freeze(["scope-decision", "acceptance-slice", "integration", "verification-gate", "work-branch", "delivery"]);
+export const MILESTONE_TYPES = Object.freeze(["scope-decision", "acceptance-slice", "integration", "verification-gate", "work-branch", "delivery", "spec-sync"]);
 
 export const LOG_EVENTS = Object.freeze([
   "created",

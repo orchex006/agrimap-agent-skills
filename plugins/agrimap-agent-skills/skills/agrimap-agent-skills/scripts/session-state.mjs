@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { writeRecord as writeFile } from "./sensitive-recording.mjs";
 
-export const GOVERNANCE_SESSION_FIELDS = Object.freeze(["instructionsAck", "lastCard", "lastDelivery"]);
+export const GOVERNANCE_SESSION_FIELDS = Object.freeze(["instructionsAck", "lastCard", "lastDelivery", "specCheckedAt", "linkedExecution", "activeByRoot", "specDeliveries"]);
 
 export function safeSession(value) {
   return String(value || "").trim().replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120);

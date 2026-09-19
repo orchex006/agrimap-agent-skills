@@ -1,5 +1,5 @@
 // CLI handlers for the ACG commands dispatched by agm-workspace.mjs:
-// context, policy, decide, branch, deliver, integrate, project and local.
+// context, policy, decide, branch, deliver, integrate, project, local and spec.
 // Audit logging stays in agm-workspace (passed in as ctx.appendLog).
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -7,28 +7,17 @@ import { defaultRun } from "./run-command.mjs";
 import { acknowledge, instructionChain, readRequired, resolveTargetRoots, scanBelow, worktreeFacts } from "./instruction-chain.mjs";
 import { inferPolicy, initPolicy, loadPolicy, setPolicyValue } from "./workflow-policy.mjs";
 import { recordChoice, renderCard, normalizeOptions, storeCard, validateCard } from "./decision-card.mjs";
-import { applyBranch, applyDelivery, applyIntegration, integrationOptions, planBranch, planDelivery, planIntegration } from "./git-flow.mjs";
-import { inferProject, initProject, loadProject, resolveSpecSources, setProjectValue, verifySpecPath } from "./project-profile.mjs";
+import { applyBranch, applyDelivery, applyIntegration, dirtyInventory, integrationOptions, planBranch, planDelivery, planIntegration, snapshotDirty } from "./git-flow.mjs";
+import { applyProjectPatch, inferProject, initProject, loadProject, resolveSpecSources, setProjectValue, specStandingCard, verifySpecPath } from "./project-profile.mjs";
+import { applySpecSync, coveredBy, planSpecSync, specCheck, specContext, specSemanticCard } from "./spec-sync.mjs";
 import { addWorkingNote, loadLocalMemory, localPathsForLeakCheck, setLocalPath } from "./local-memory.mjs";
-import { readJsonFile, readSessionState, safeSession, updateSessionState, writeJsonFile } from "./session-state.mjs";
+import { readJsonFile, readSessionState, safeSession, updateSessionState, writeJsonFile, writeSessionPointer } from "./session-state.mjs";
 import { bangkokParts } from "./decision-records.mjs";
 
 const toSlash = value => String(value || "").replaceAll("\\", "/");
 const list = value => String(value === true ? "" : value || "").split(",").map(item => item.trim()).filter(Boolean);
-const GOVERNANCE_DEFAULTS = Object.freeze({ workflowPolicy: true, delivery: true, decisionMemory: false, guards: false, projectMode: true, specSync: false });
-
-function globRegex(glob) {
-  let source = "";
-  const value = toSlash(glob);
-  for (let index = 0; index < value.length; index += 1) {
-    if (value.startsWith("**/", index)) { source += "(?:.*/)?"; index += 2; }
-    else if (value.startsWith("**", index)) { source += ".*"; index += 1; }
-    else if (value[index] === "*") source += "[^/]*";
-    else if (value[index] === "?") source += "[^/]";
-    else source += value[index].replace(/[.+^${}()|[\]\\]/g, "\\$&");
-  }
-  return new RegExp(`^${source}$`);
-}
+const GOVERNANCE_DEFAULTS = Object.freeze({ workflowPolicy: true, delivery: true, decisionMemory: false, guards: false, projectMode: true, specSync: true });
+const text = value => (value && value !== true ? String(value) : null);
 
 async function governanceFlags(root) {
   const config = await readJsonFile(path.join(root, ".agrimap-agent", "config.json"));
@@ -51,10 +40,25 @@ async function storeAndRender(state, session, card, executionId) {
   return stored.ok ? { card, cardId: stored.cardId, render: stored.render, stored: true } : { card, ...stored };
 }
 
+// A spec repository written by spec sync has no execution of its own: it
+// borrows the code repository's execution as `linkedExecution` in its session.
 async function activeFor(ctx, state, session) {
-  if (!session) return { active: null, activePath: null };
+  if (!session) return { active: null, activePath: null, save: null, linked: false };
   const activePath = ctx.activeTaskPath(state, session);
-  return { active: await readJsonFile(activePath), activePath };
+  const active = await readJsonFile(activePath);
+  if (active) return { active, activePath, save: value => writeJsonFile(activePath, value), linked: false };
+  const linked = (await readSessionState(state, session)).linkedExecution || null;
+  return { active: linked, activePath: null, save: linked ? value => updateSessionState(state, session, { linkedExecution: value }) : null, linked: Boolean(linked) };
+}
+
+function dedupe(warnings) {
+  const seen = new Set();
+  return warnings.filter(item => {
+    const key = `${item.code || item}|${item.subject || ""}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 async function logForActive(ctx, state, active, event) {
@@ -78,6 +82,18 @@ async function rootAck(root, session) {
 }
 
 // ------------------------------------------------------------------ context
+
+// First context of a session in spec-first scope reports open spec drift once
+// (bounded to 50 findings, 5 lines). Only `--ack` records that it ran.
+async function firstSpecCheck(root, session, sessionCwd, { flags, project, covers, persist }) {
+  const mode = project.profile?.developmentMode;
+  if (!flags.specSync || !session || !project.validation?.ok || !(mode === "spec-first" || (mode === "hybrid" && covers))) return null;
+  const state = path.join(root, ".agrimap-agent");
+  if ((await readSessionState(state, session)).specCheckedAt) return null;
+  const check = await specCheck({ root, sessionCwd, limit: 50 });
+  if (persist) await updateSessionState(state, session, { specCheckedAt: new Date().toISOString() });
+  return { count: check.findings.length, truncated: check.truncated, lines: check.lines };
+}
 
 async function contextCommand(ctx, args) {
   const sessionCwd = path.resolve(String(args.cwd || process.cwd()));
@@ -119,8 +135,9 @@ async function contextCommand(ctx, args) {
     const required = await readRequired(root, session, chain);
     const facts = await worktreeFacts(root);
     const scopes = project.profile?.specs?.scopes || [];
-    const covers = paths.length && scopes.length ? relativePaths.some(item => scopes.some(scope => (scope.covers || []).some(glob => globRegex(glob).test(toSlash(item))))) : null;
+    const covers = paths.length && scopes.length ? coveredBy(scopes, relativePaths).length > 0 : null;
     const policy = await loadPolicy(root);
+    const openWarnings = await firstSpecCheck(root, session, sessionCwd, { flags, project, covers, persist: Boolean(args.ack) });
     targets.push({
       targetRoot: toSlash(root), isLinkedWorktree: facts.isLinkedWorktree, branch: facts.branch, stateRoot: toSlash(path.join(root, ".agrimap-agent")),
       chain: chain.map(({ path: _absolute, ...entry }) => entry), readRequired: required, acknowledged,
@@ -131,6 +148,7 @@ async function contextCommand(ctx, args) {
       localMemory: { exists: localMemory.exists, path: localMemory.path, warnings: localMemory.warnings },
       warnings: [...localMemory.warnings, ...spec.warnings.map(item => item.code), ...(project.exists && !project.validation?.ok ? ["PROJECT_PROFILE_INVALID"] : [])],
       specWarnings: spec.warnings,
+      ...(openWarnings ? { openWarnings } : {}),
       cards: spec.cards.map(card => cardResult(card)),
       next: required.length
         ? { action: "read-and-ack", files: required, command: `context --target "${toSlash(root)}" --session ${session || "<id>"} --ack ${chain.filter(entry => required.includes(entry.relative)).map(entry => entry.sha12).join(",")}` }
@@ -198,7 +216,7 @@ async function branchCommand(ctx, sub, args, root) {
   if (!flags.workflowPolicy) return { ok: true, action: "skip", reason: "governance.workflowPolicy is false", commands: [] };
   const loaded = await loadPolicy(root);
   if (loaded.exists && !loaded.validation?.ok) return { ok: false, code: "POLICY_INVALID", details: loaded.validation?.details || [] };
-  const { active, activePath } = await activeFor(ctx, state, session);
+  const { active, save } = await activeFor(ctx, state, session);
   const options = { root, policy: loaded.policy, active, type: String(args.type || "feature"), slug: args.slug, ticket: args.ticket && args.ticket !== true ? args.ticket : null, mode: args.mode && args.mode !== true ? String(args.mode) : null };
   if (sub === "plan") {
     const plan = await planBranch(options);
@@ -209,9 +227,9 @@ async function branchCommand(ctx, sub, args, root) {
     const result = await applyBranch({ ...options, planHash: args["plan-hash"] });
     if (!result.ok) return result;
     const warnings = [...(result.warnings || [])];
-    if (active && activePath) {
+    if (active && save) {
       Object.assign(active, result.record);
-      await writeJsonFile(activePath, active);
+      await save(active);
       await logForActive(ctx, state, active, { event: "changed", milestone: "work-branch", summary: `Work branch ${result.record.branch} ready from ${result.record.base}@${String(result.record.baseSha).slice(0, 7)}`, reason: `branch action ${result.record.branchAction}` });
     } else warnings.push({ code: "NO_ACTIVE_EXECUTION", subject: "branch", fix: "start the execution so delivery can find this branch" });
     return { ...result, warnings };
@@ -221,35 +239,81 @@ async function branchCommand(ctx, sub, args, root) {
 
 // ------------------------------------------------------------------ deliver
 
+// Precondition 7 input: whether this delivery is under a spec (spec-first, or
+// hybrid/standing-sync with changed files in scope or spec items read).
+function specGate(project, active, dirtyPaths, specNa) {
+  if (!project.exists || !project.validation?.ok) return null;
+  const profile = project.profile;
+  const mode = profile.developmentMode;
+  const sync = profile.specs?.sync || (mode === "code-first" ? "off" : "auto");
+  if (sync === "off") return { required: false, line: mode === "code-first" ? "- Spec: ไม่เกี่ยว (code-first)" : "- Spec: ไม่เกี่ยว (specs.sync off)" };
+  const covered = coveredBy(profile.specs?.scopes, dirtyPaths).length > 0;
+  if (!(mode === "spec-first" || covered || active?.spec?.items?.length)) return { required: false, line: "- Spec: ไม่เกี่ยว (นอก scope ของ spec)" };
+  const synced = Boolean(active?.specSync?.appliedAt);
+  return {
+    required: true, synced, specNa, enforcement: profile.specs?.enforcement || "warn", attempted: Boolean(active?.specSyncAttempt), items: active?.spec?.items || [],
+    line: synced ? active.specSync.specLine : specNa ? `- Spec: ไม่เกี่ยว (${specNa})` : "- Spec: ยังไม่ sync (SPEC_NOT_SYNCED)",
+    warnings: (synced ? active.specSync.warnings : active?.specSyncAttempt?.warnings) || [],
+  };
+}
+
+function notGitWarnings(project, localMemory) {
+  const warnings = [];
+  for (const source of project.profile?.specs?.sources || []) {
+    if (source.kind !== "external") continue;
+    const remembered = localMemory?.specs?.find(item => item.id === source.id);
+    if (remembered && !defaultRun("git", ["rev-parse", "--show-toplevel"], { cwd: path.resolve(remembered.path) }).ok) {
+      warnings.push({ code: "SPEC_SOURCE_NOT_GIT", subject: source.id, fix: "spec edits stay on this machine until the pack moves into its own Git repository (spec §19.21)" });
+    }
+  }
+  return warnings;
+}
+
 async function deliverCommand(ctx, sub, args, root) {
   const gitError = requireGit(ctx, root);
   if (gitError) return gitError;
   const state = path.join(root, ".agrimap-agent");
   const session = safeSession(args.session);
-  const { active, activePath } = await activeFor(ctx, state, session);
+  const { active, save, linked } = await activeFor(ctx, state, session);
   const loaded = await loadPolicy(root);
   const flags = await governanceFlags(root);
-  const localPaths = localPathsForLeakCheck(await loadLocalMemory(root));
-  const bodyFallback = active ? await ctx.executionSummaries(state, active.executionId) : [];
+  const localMemory = await loadLocalMemory(root);
+  const localPaths = localPathsForLeakCheck(localMemory);
+  const bodyFallback = active && !linked ? await ctx.executionSummaries(state, active.executionId) : [];
+  const project = flags.projectMode && flags.specSync && !linked ? await loadProject(root) : { exists: false };
+  const specNa = text(args["spec-na"]);
   const options = {
     root, policy: loaded.validation?.ok ? loaded.policy : null, active, ackRequired: await rootAck(root, session),
-    explicit: args.explicit && args.explicit !== true ? String(args.explicit) : null, input: await readInput(args.input),
-    changelogNa: args["changelog-na"] && args["changelog-na"] !== true ? String(args["changelog-na"]) : null,
-    mixed: args.mixed && args.mixed !== true ? String(args.mixed) : null, allowSecretPaths: list(args["allow-secret-paths"]), excludePaths: list(args["exclude-paths"]),
-    localPaths, bodyFallback, governance: flags,
+    explicit: text(args.explicit), input: await readInput(args.input), changelogNa: text(args["changelog-na"]),
+    mixed: text(args.mixed), allowSecretPaths: list(args["allow-secret-paths"]), excludePaths: list(args["exclude-paths"]),
+    localPaths, bodyFallback, governance: flags, spec: specGate(project, active, dirtyInventory(root).map(entry => entry.path), specNa),
   };
   const policyWarnings = loaded.exists && !loaded.validation?.ok ? [{ code: "POLICY_INVALID", subject: "workflow.json", fix: "fix the policy; delivery is not automatic meanwhile" }] : [];
+  policyWarnings.push(...notGitWarnings(project, localMemory));
+  const sessionState = await readSessionState(state, session);
+  const commits = result => [
+    ...(result?.commit ? [{ root: linked ? `spec:${active.sourceId}` : "code", commit: result.commit, remoteVerified: Boolean(result.remoteVerified) }] : []),
+    ...Object.values(sessionState.specDeliveries || {}).filter(item => item.executionId === active?.executionId).map(item => ({ root: `spec:${item.sourceId}`, commit: item.commit, remoteVerified: item.remoteVerified })),
+  ];
   if (sub === "plan") {
     const plan = await planDelivery(options);
-    const withWarnings = { ...plan, warnings: [...policyWarnings, ...(plan.warnings || [])] };
+    const withWarnings = { ...plan, warnings: dedupe([...policyWarnings, ...(plan.warnings || [])]) };
+    if (!plan.ok && !loaded.exists && linked) withWarnings.next = { action: "run", command: `policy infer --cwd "${toSlash(root)}" (spec repository has no workflow policy), or deliver with --explicit commit|push` };
     return plan.card ? { ...withWarnings, ...(await storeAndRender(state, session, plan.card, active?.executionId)) } : withWarnings;
   }
   if (sub === "apply") {
-    const result = await applyDelivery({ ...options, planHash: args["plan-hash"], pushOnly: Boolean(args["push-only"]) });
-    if (!result.ok) return result;
+    const applied = await applyDelivery({ ...options, planHash: args["plan-hash"], pushOnly: Boolean(args["push-only"]) });
+    if (!applied.ok) return applied;
+    const result = { ...applied, warnings: dedupe([...policyWarnings, ...(applied.warnings || [])]) };
     const delivery = { commit: result.commit, remoteSha: result.remoteSha, pushedAt: result.pushed ? new Date().toISOString() : null };
     Object.assign(active, { delivery });
-    await writeJsonFile(activePath, active);
+    await save(active);
+    if (linked && active.sourceRoot) {
+      const sourceState = path.join(active.sourceRoot, ".agrimap-agent");
+      const current = (await readSessionState(sourceState, session)).specDeliveries || {};
+      await updateSessionState(sourceState, session, { specDeliveries: { ...current, [active.sourceId]: { executionId: active.executionId, sourceId: active.sourceId, commit: result.commit, remoteVerified: Boolean(result.remoteVerified), branch: result.branch } } });
+    }
+    result.commits = commits(result);
     const lastDelivery = {
       executionId: active.executionId, taskId: active.taskId ?? null, objective: active.objective, branch: result.branch, remoteBranch: result.remoteBranch,
       base: active.base || null, workType: active.workType || null, commit: result.commit, remoteSha: result.remoteSha, remoteVerified: result.remoteVerified,
@@ -263,7 +327,7 @@ async function deliverCommand(ctx, sub, args, root) {
       reason: `branch=${result.branch}; remoteBranch=${result.remoteBranch}; commit=${result.commit}; remoteVerified=${result.remoteVerified}`,
       files: result.files, warnings: result.warnings,
     });
-    await ctx.appendRecent(state, active, "delivered", `${result.branch} @${String(result.commit).slice(0, 7)}`);
+    if (!linked) await ctx.appendRecent(state, active, "delivered", `${result.branch} @${String(result.commit).slice(0, 7)}`);
     return result;
   }
   return { ok: false, message: "Use deliver plan|apply." };
@@ -377,12 +441,121 @@ async function localCommand(ctx, sub, args, root) {
   return { ok: false, message: "Use local show|set-path|note." };
 }
 
-export const GOVERNANCE_COMMANDS = Object.freeze(["context", "policy", "decide", "branch", "deliver", "integrate", "project", "local"]);
+// --------------------------------------------------------------------- spec
+
+async function pendingSemanticCards(state, active) {
+  const pending = [];
+  for (const cardId of active?.specPendingCards || []) {
+    const card = await readJsonFile(path.join(state, "runtime", "cards", `${safeSession(cardId)}.json`));
+    if (card && card.status !== "closed") pending.push({ cardId });
+  }
+  return pending;
+}
+
+// The first write of spec sync into a separate spec repository links this
+// execution there, with that repository's dirty files snapshotted first.
+async function linkSpecRoots(ctx, root, session, active, sources) {
+  const linkedRoots = [];
+  for (const source of sources.filter(item => item.kind === "external" && item.git)) {
+    const top = defaultRun("git", ["rev-parse", "--show-toplevel"], { cwd: path.resolve(source.dir) });
+    if (!top.ok) continue;
+    const specRoot = path.resolve(top.stdout.trim());
+    const specState = path.join(specRoot, ".agrimap-agent");
+    const current = (await readSessionState(specState, session)).linkedExecution;
+    if (current?.executionId !== active.executionId) {
+      const { delivery: _delivery, branch: _branch, remoteBranch: _remote, base: _base, baseSha: _sha, spec: _spec, specSync: _sync, specSyncAttempt: _attempt, preexistingDirty: _pre, ...identity } = active;
+      await updateSessionState(specState, session, {
+        linkedExecution: { ...identity, workType: "docs", sourceRoot: root, sourceId: source.id, preexistingDirty: await snapshotDirty(specRoot), linkedAt: new Date().toISOString() },
+      });
+      await writeSessionPointer(session, [root, specRoot]);
+    }
+    linkedRoots.push({ id: source.id, root: toSlash(specRoot) });
+  }
+  if (linkedRoots.length) {
+    const state = path.join(root, ".agrimap-agent");
+    const byRoot = (await readSessionState(state, session)).activeByRoot || {};
+    for (const item of linkedRoots) byRoot[item.root] = { executionId: active.executionId, sourceId: item.id };
+    await updateSessionState(state, session, { activeByRoot: byRoot });
+  }
+  return linkedRoots;
+}
+
+async function specCommand(ctx, sub, args, root) {
+  const gitError = requireGit(ctx, root);
+  if (gitError) return gitError;
+  const flags = await governanceFlags(root);
+  if (!flags.specSync) return { ok: true, skipped: true, reason: "governance.specSync is false: no spec read/sync gate" };
+  const state = path.join(root, ".agrimap-agent");
+  const session = safeSession(args.session);
+  const sessionCwd = text(args["session-cwd"]) || root;
+  const { active, save } = await activeFor(ctx, state, session);
+  if (sub === "context") {
+    const result = await specContext({ root, sessionCwd, tasks: list(args.tasks), query: text(args.query) || "", paths: list(args.paths) });
+    if (result.ok && active && save) { active.spec = result.record; await save(active); }
+    return result;
+  }
+  if (sub === "check") return specCheck({ root, sessionCwd, source: text(args.source), limit: Math.min(200, Number(args.limit) || 50) });
+  // Owner answer Q-4.7.0-03: no card. A one-off spec instruction in code-first
+  // becomes the standing rule at once and is reported as decided for you.
+  if (sub === "standing") {
+    const project = await loadProject(root);
+    const card = specStandingCard({ profile: project.profile, paths: list(args.paths) });
+    const every = card.options.find(option => option.id === "1");
+    const result = await applyProjectPatch(root, every.value, await ctx.resolveRequester(state, args));
+    if (!result.ok) return result;
+    return { ok: true, applied: every.value, written: result.written, decidedForYou: `อัปเดต spec ให้ทุกงานแล้ว (${every.effect}) — เปลี่ยนได้โดยบอก "ไม่ต้องแตะ spec" (project set specs.sync off)` };
+  }
+  if (sub === "semantic") {
+    const card = specSemanticCard({ ids: list(args.tasks), finding: text(args.finding) || "", evidence: list(args.evidence) });
+    const stored = await storeAndRender(state, session, card, active?.executionId);
+    if (active && save && stored.cardId) { active.specPendingCards = [...new Set([...(active.specPendingCards || []), stored.cardId])]; await save(active); }
+    return { ok: true, ...stored };
+  }
+  if (sub !== "sync") return { ok: false, message: "Use spec context|sync plan|sync apply|check|standing|semantic." };
+  const action = text(args._action) || (args["plan-hash"] ? "apply" : "plan");
+  const project = await loadProject(root);
+  const sync = project.profile?.specs?.sync || (project.profile?.developmentMode === "code-first" ? "off" : "auto");
+  if (sync === "off" && !args.once) {
+    return { ok: false, code: "SPEC_SYNC_OFF", message: "This project does not edit specs unless asked. When the requester asked this time, pass --once and ask `spec standing` once.", next: { action: "run", command: "spec sync plan --once …, then spec standing" } };
+  }
+  const options = {
+    root, sessionCwd, active, tasks: list(args.tasks), status: text(args.status), evidence: [].concat(args.evidence && args.evidence !== true ? String(args.evidence).split(/,(?=[A-Z][A-Z0-9-]*\d=)/) : []),
+    deviation: text(args.deviation), date: bangkokParts().date, pendingCards: await pendingSemanticCards(state, active),
+  };
+  if (action === "plan") {
+    const plan = await planSpecSync(options);
+    const parseProblem = !plan.ok ? plan.code !== "EVIDENCE_PATH_INVALID" && plan.code !== "STATUS_SEMANTIC_INVALID" : !plan.files.length && plan.warnings.some(item => /PARSE_FAILED|FILE_MISSING|NOT_FOUND/.test(item.code));
+    if (parseProblem && active && save) {
+      active.specSyncAttempt = { at: new Date().toISOString(), code: plan.code || "SPEC_SYNC_INCOMPLETE", warnings: dedupe([...(plan.warnings || []), { code: "SPEC_NOT_SYNCED", subject: plan.code || "spec", fix: "fix the warning, then spec sync plan again" }]) };
+      await save(active);
+    }
+    return plan.ok ? { ...plan, warnings: dedupe(plan.warnings) } : plan;
+  }
+  if (action !== "apply") return { ok: false, message: "Use spec sync plan|apply." };
+  if (!active?.executionId) return { ok: false, code: "NO_ACTIVE_EXECUTION", message: "Start the execution first so the sync is attributed.", next: { action: "run", command: "start" } };
+  const preview = await planSpecSync(options);
+  if (!preview.ok) return preview;
+  const writesExternal = preview.files.some(file => file.kind === "external");
+  const linkedRoots = writesExternal && preview.planHash === args["plan-hash"] ? await linkSpecRoots(ctx, root, session, active, preview.sources) : [];
+  const result = await applySpecSync({ ...options, planHash: text(args["plan-hash"]) });
+  if (!result.ok) return result;
+  active.specSync = { appliedAt: result.appliedAt, files: result.files.map(file => `${file.source}:${file.file}`), items: result.updated.map(item => item.id), specLine: result.specLine, warnings: dedupe(result.warnings) };
+  delete active.specSyncAttempt;
+  await save(active);
+  await logForActive(ctx, state, active, {
+    event: "changed", milestone: "spec-sync", summary: `Spec sync: ${result.specLine.replace(/^- Spec: /, "")}`.slice(0, 240),
+    reason: `sources=${[...new Set(result.files.map(file => file.source))].join(",") || "none"}; files=${result.files.length}`, files: [...result.files.map(file => (file.kind === "repo" ? file.path : `spec:${file.source}/${file.file}`)), ...(result.decisionRef ? [result.decisionRef] : [])],
+    warnings: active.specSync.warnings,
+  });
+  return { ...result, warnings: dedupe(result.warnings), linkedRoots, next: linkedRoots.length ? { action: "run", command: `deliver plan --cwd <each linked root> --session ${session}, then deliver the code repository` } : { action: "run", command: "deliver plan" } };
+}
+
+export const GOVERNANCE_COMMANDS = Object.freeze(["context", "policy", "decide", "branch", "deliver", "integrate", "project", "local", "spec"]);
 
 export async function runGovernanceCommand(command, sub, args, root, ctx) {
   try {
     if (command === "context") return await contextCommand(ctx, args);
-    const handlers = { policy: policyCommand, decide: decideCommand, branch: branchCommand, deliver: deliverCommand, integrate: integrateCommand, project: projectCommand, local: localCommand };
+    const handlers = { policy: policyCommand, decide: decideCommand, branch: branchCommand, deliver: deliverCommand, integrate: integrateCommand, project: projectCommand, local: localCommand, spec: specCommand };
     return await handlers[command](ctx, sub, args, root);
   } catch (error) {
     return { ok: false, code: error.code || "COMMAND_FAILED", message: String(error.message || error) };

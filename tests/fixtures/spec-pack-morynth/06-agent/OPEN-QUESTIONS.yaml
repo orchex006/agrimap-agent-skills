@@ -1,0 +1,5 @@
+schema: open-questions@1
+questions:
+  - id: OQ-001
+    text: Should FE-002 totals include archived registrations?
+    blocks: [FE-002]

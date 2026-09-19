@@ -408,3 +408,39 @@ export async function setProjectValue(root, key, value, requestedBy, { now = new
   await writeProjectFile(root, profile);
   return { ok: true, written: [PROJECT_PATH, `.agrimap-agent/${profile.decisionRef}`], profile };
 }
+
+// §19.10: a one-time "update the spec too" in a code-first project becomes a
+// standing rule only after this R1 card; option 1 switches to hybrid with
+// sync auto for the directories this work touched.
+export function specStandingCard({ profile = null, paths = [] } = {}) {
+  const source = profile?.specs?.sources?.[0]?.id || null;
+  const covers = [...new Set(paths.map(item => toSlash(item)).filter(item => item && !item.startsWith(".agrimap-agent/")).map(item => (item.includes("/") ? `${item.slice(0, item.lastIndexOf("/"))}/**` : item)))].slice(0, 5);
+  const every = { developmentMode: "hybrid", specs: { sync: "auto", ...(source && covers.length ? { scopes: [...(profile?.specs?.scopes || []), { source, covers }] } : {}) } };
+  return {
+    kind: "project", topic: "project/spec-sync-standing", risk: "R1", confidence: "medium",
+    question: "อัปเดต spec แบบนี้ให้ทุกงานไหม",
+    impact: "ตอบครั้งเดียว งานถัดไปไม่ต้องสั่งอัปเดต spec ซ้ำ",
+    checked: [`โหมดปัจจุบัน ${MODE_LABEL[profile?.developmentMode] || MODE_LABEL["code-first"]}`, covers.length ? `ไฟล์ที่งานนี้แตะ: ${covers.join(", ")}` : "ยังไม่มีไฟล์ที่แตะ", source ? `spec source ${source}` : "ยังไม่มี spec source — จะถามตำแหน่งครั้งเดียว"],
+    options: [
+      { id: "1", label: "ทำแบบนี้ทุกงาน", effect: `เปลี่ยนเป็น hybrid + sync auto${covers.length && source ? ` สำหรับ ${covers.join(", ")}` : ""}`, value: every },
+      { id: "2", label: "เฉพาะครั้งนี้", effect: "คง sync ปิด งานหน้าไม่แตะ spec ถ้าไม่สั่ง", value: "off" },
+    ],
+    recommended: "1", recommendedReason: "ผู้ใช้ขอให้อัปเดต spec แล้ว ไม่ควรต้องสั่งซ้ำ",
+    blocking: false, default: "2", recordAs: "project:specs.sync", paths: covers, expiresHours: 72,
+  };
+}
+
+// Applies a card answer that sets several project fields at once (one decision).
+export async function applyProjectPatch(root, patch, requestedBy, { now = new Date(), cardId = null } = {}) {
+  const current = await loadProject(root);
+  if (!current.exists || !current.profile) return initProject(root, patch.developmentMode || "code-first", patch, requestedBy, { now, cardId });
+  if (!String(requestedBy || "").trim()) return { ok: false, code: "REQUESTER_REQUIRED", message: "Changing the team project profile requires --requested-by." };
+  const profile = deepMerge(clone(current.profile), patch);
+  if (patch.specs?.scopes) profile.specs.scopes = patch.specs.scopes;
+  Object.assign(profile, { status: "confirmed", confirmedBy: requestedBy, confirmedAt: bangkokParts(now).date, inference: null, decisionRef: "pending" });
+  const validation = validateProject(profile);
+  if (!validation.ok) return { ok: false, code: "PROJECT_PROFILE_INVALID", details: validation.details };
+  profile.decisionRef = await modeDecision(root, profile, requestedBy, { now, cardId, supersedes: current.profile.decisionRef || null });
+  await writeProjectFile(root, profile);
+  return { ok: true, written: [PROJECT_PATH, `.agrimap-agent/${profile.decisionRef}`], profile };
+}

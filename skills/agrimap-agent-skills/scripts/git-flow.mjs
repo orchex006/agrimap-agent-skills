@@ -1,5 +1,6 @@
 // Work branch, delivery and integration mechanics (ACG C4-C6).
-// Every function takes { run } so tests can stub gh/glab; git is always an argv
+// Every function takes { run } so tests can stub gh/glab (glab flags checked
+// against glab 1.115 --help); git is always an argv
 // array through run(). Plans are pure reads; apply() recomputes the plan and
 // refuses a different planHash. No force push, stash, reset, worktree or clone.
 import { createHash } from "node:crypto";
@@ -15,6 +16,10 @@ const TYPE_BY_WORK = { feature: "feat", fix: "fix", hotfix: "fix", refactor: "re
 const HEADER = /^(feat|fix|refactor|docs|chore|test|perf|build|ci)(\([a-z0-9._/-]+\))?: \S.*$/;
 const SLUG = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 const toSlash = value => String(value || "").replaceAll("\\", "/");
+// Append-only audit written after a delivery (delivered/completed/integrated,
+// recent memory) rides with the next delivery instead of becoming preexisting.
+const CARRIED_AUDIT = /^\.agrimap-agent\/(?:logs|memory\/recent|reports|decisions)\//;
+export const isCarriedAudit = relative => CARRIED_AUDIT.test(toSlash(relative));
 const exists = file => stat(file).then(() => true, () => false);
 
 export function planHashOf(value) {
@@ -70,7 +75,7 @@ async function hashPath(root, relative, run) {
 // files that were already dirty when the execution began.
 export async function snapshotDirty(root, { run = defaultRun } = {}) {
   // The state ignore file is created by the runtime itself (context --ack), not pre-existing work.
-  const entries = dirtyInventory(root, { run }).filter(entry => entry.path !== ".agrimap-agent/.gitignore");
+  const entries = dirtyInventory(root, { run }).filter(entry => entry.path !== ".agrimap-agent/.gitignore" && !isCarriedAudit(entry.path));
   const snapshot = [];
   for (const entry of entries.slice(0, 5000)) snapshot.push({ path: entry.path, status: entry.status, hash: await hashPath(root, entry.path, run) });
   return snapshot;
@@ -302,7 +307,7 @@ export async function classifyPaths(root, { preexisting = [], includeAudit = tru
   for (const entry of inventory) {
     const relative = entry.path;
     if (relative.startsWith(".agrimap-agent/local/")) { groups.excluded.push({ ...entry, reason: "local-memory" }); continue; }
-    if (pre.has(relative)) {
+    if (pre.has(relative) && !isCarriedAudit(relative)) {
       const hash = await hashPath(root, relative, run);
       (hash === pre.get(relative).hash ? groups.foreign : groups.mixed).push(entry);
       continue;
@@ -354,7 +359,7 @@ function findChangelog(entries, target) {
 
 export async function planDelivery({
   root, policy, active, ackRequired = [], explicit = null, input = null, changelogNa = null, mixed = null,
-  allowSecretPaths = [], excludePaths = [], localPaths = [], bodyFallback = [], governance = {}, run = defaultRun, pushOnly = false,
+  allowSecretPaths = [], excludePaths = [], localPaths = [], bodyFallback = [], governance = {}, run = defaultRun, pushOnly = false, spec = null,
 }) {
   if (!active) return stop("NO_ACTIVE_EXECUTION", "Start the execution first (start --objective <same objective>).", { next: { action: "run", command: "start" } });
   if (ackRequired.length) return stop("INSTRUCTIONS_NOT_ACKNOWLEDGED", "Read and ack the AGENTS chain first.", { next: { action: "read-and-ack", files: ackRequired, command: "context --ack <sha12,...>" } });
@@ -439,6 +444,16 @@ export async function planDelivery({
       return stop("CHANGELOG_REQUIRED", `${file || policy.delivery.changelog.path} needs an entry for this change.`, { next: { action: "run", command: "add the changelog entry per project AGENTS §5, then deliver plan (or --changelog-na \"<reason>\")" } });
     }
   }
+  // Precondition 7 (spec §8.2/§19.9): spec sync is a self-fix first; when it
+  // could not be done the work still delivers with the warning, unless the
+  // team opted into enforcement "block".
+  if (spec?.required && !spec.synced && !spec.specNa) {
+    const next = { action: "run", command: "spec sync plan --session <id> [--tasks <ids>] [--evidence ID=<path>], then spec sync apply and deliver plan (or --spec-na \"<reason>\")" };
+    if (spec.enforcement === "block") return stop("SPEC_SYNC_REQUIRED", "The project enforces spec sync before delivery.", { severity: "stop", next });
+    if (!spec.attempted) return stop("SPEC_NOT_SYNCED", "Sync the spec for this work, then plan delivery again.", { severity: "self-fix", next });
+    warnings.push(warning("SPEC_NOT_SYNCED", (spec.items || []).join(", ") || "spec", "spec sync plan, fix the reported warning, spec sync apply; the spec was not updated by this delivery"));
+  }
+  for (const item of spec?.warnings || []) if (!warnings.some(existing => existing.code === item.code && existing.subject === item.subject)) warnings.push(item);
   const verification = active.verificationStatus;
   const verified = ["passed", "not-applicable"].includes(verification);
   if (!verified) warnings.push(warning("DELIVERED_UNVERIFIED", active.executionId, "run the tests, fix them, deliver again; merge is not offered until verification passes"));
@@ -474,7 +489,7 @@ export async function planDelivery({
     ok: true, authorized: true, branch, remoteBranch, counts, paths,
     message: { header: message.header, trailers: message.trailers, text: message.text },
     commit: Boolean(commit), alreadyCommitted, push, commands, warnings, card: null,
-    verification: verified ? verification : verification || "not-run",
+    verification: verified ? verification : verification || "not-run", specLine: spec?.line || null,
   };
   plan.planHash = planHashOf({ branch, head, own: ownHashes, message: message.text, push, commands });
   plan.next = { action: "run", command: `deliver apply --plan-hash ${plan.planHash}` };
@@ -524,7 +539,7 @@ export async function applyDelivery(options) {
     ok: true, branch: plan.branch, remoteBranch: plan.remoteBranch, commit, remoteSha, pushed,
     remoteVerified: plan.push.enabled ? remoteSha === commit : false,
     committed: plan.commit, files: plan.paths.own, excluded: plan.paths.excluded, foreign: plan.paths.foreign,
-    header: plan.message.header, verification: plan.verification, warnings: plan.warnings,
+    header: plan.message.header, verification: plan.verification, warnings: plan.warnings, specLine: plan.specLine,
     next: { action: "run", command: "integrate options" }, card: null,
   };
 }
@@ -620,7 +635,9 @@ function mergeFlags(context, policy, { auto = false } = {}) {
     if (auto) flags.push("--auto");
     return { flags, warnings };
   }
-  const flags = ["--yes", ...(strategy === "squash" ? ["--squash"] : []), ...(policy?.integration?.deleteBranchAfterMerge === "always" ? ["--remove-source-branch"] : []), ...(auto ? ["--auto-merge"] : [])];
+  // glab 1.115 flags (verified with --help): --auto-merge defaults to true, so a
+  // plain merge passes --auto-merge=false explicitly.
+  const flags = ["--yes", ...(strategy === "squash" ? ["--squash"] : []), ...(policy?.integration?.deleteBranchAfterMerge === "always" ? ["--remove-source-branch"] : []), auto ? "--auto-merge" : "--auto-merge=false"];
   return { flags, warnings };
 }
 
@@ -933,7 +950,7 @@ export async function applyIntegration(options) {
       const bodyFile = await writePrBody(state, { ...(options.delivery || {}), header });
       const created = context.forge === "github"
         ? run("gh", ["pr", "create", "--base", plan.target, "--head", plan.remoteBranch, "--title", header, "--body-file", bodyFile, ...(plan.draft ? ["--draft"] : [])], { cwd: root })
-        : run("glab", ["mr", "create", "--source-branch", plan.remoteBranch, "--target-branch", plan.target, "--title", header, "--description", await readFile(bodyFile, "utf8"), "--yes", ...(plan.draft ? ["--draft"] : [])], { cwd: root });
+        : run("glab", ["mr", "create", "--source-branch", plan.remoteBranch, "--target-branch", plan.target, "--title", header, "--description-file", bodyFile, "--yes", ...(plan.draft ? ["--draft"] : [])], { cwd: root });
       if (!created.ok) return stop("PR_CREATE_FAILED", `${context.cli} could not create the PR.`, { stderr: trimStderr(created.stderr) });
       pr = findOpenPr(root, context, plan.remoteBranch, plan.target, run) || { number: null, url: created.stdout.trim().split(/\s+/).find(item => /^https?:\/\//.test(item)) || null };
       if (plan.intent !== "integrate") return { ok: true, intent: plan.intent, pr, created: true, warnings: [] };
