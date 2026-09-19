@@ -5,8 +5,8 @@
 | Phase | Version | Status | Branch | Head | Draft PR | Tests | Questions (decided/skipped/deferred) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | P2 | 4.7.0 | done (CI ubuntu/windows pass) | feature/acg-p2-4.7.0 | f227cea | #24 | 152/152, release 4/4, tokens 61/61 strict ok, package:build ok | 3/0/0 |
-| P3 | 4.8.0 | done (CI pass) | feature/acg-p3-4.8.0 | f14c02a | #25 (base #24) | 163/163, release 4/4, tokens 61/61 strict ok, package:build ok; core AGENTS 61,058 → 20,752 chars | 3/0/0 |
-| P4 | 4.9.0 | done | feature/acg-p4-4.9.0 | 284cf0c | #26 (base #25) | 171/171, release 4/4, tokens 61/61 strict ok, package:build ok | 3/0/0 |
+| P3 | 4.8.0 | done (CI pass) | feature/acg-p3-4.8.0 | b629e58 | #25 (base #24) | 163/163, release 4/4, tokens 61/61 strict ok, package:build ok; core AGENTS 61,058 → 20,752 chars | 3/0/0 |
+| P4 | 4.9.0 | done (CI pass) | feature/acg-p4-4.9.0 | 8dd9672 | #26 (base #25) | 171/171, release 4/4, tokens 61/61 strict ok, package:build ok | 3/0/0 |
 
 Head คือ commit ของงานก่อน commit ที่อัปเดตไฟล์นี้ · queue จบแล้ว (P2–P4 done)
 
@@ -19,7 +19,7 @@ Head คือ commit ของงานก่อน commit ที่อัป�
 
 ## ⚠️ Warnings ที่ยังเปิด
 
-- CI ubuntu ของ #25 fail หนึ่งครั้งใน test "two branches delivered the same day…" (merge ถูกปฏิเสธ 0 conflict); หลังแก้ให้คืน `MERGE_FAILED` + stderr แล้ว run ใหม่ผ่าน และไม่เคย fail บน Windows — น่าจะขึ้นกับจังหวะเวลา ต้องเฝ้าดู
+- CI ubuntu ของ #25/#26 fail ระหว่างทางสองสาเหตุ แก้แล้วทั้งคู่ (test ไม่ใช่ runtime): execution id ของ 2 developer จำลองชนกันในวินาทีเดียว และ git gc --auto แย่ง cleanup — ความเสี่ยงจริงที่เหลือ: execution id ความละเอียดวินาที อาจชนกันได้ถ้าสองคนเริ่มงานวินาทีเดียวกันแล้ว local-merge (จะได้ MERGE_FAILED พร้อม stderr ไม่ใช่ข้อมูลเสีย)
 - Guard ยังไม่ติดตั้งบน Codex, Gemini/Antigravity (`not-supported-on-host`)
 
 - `GLAB_UNVERIFIED` (บางส่วน): flag ตรวจกับ glab 1.115 แล้ว; ฟิลด์ JSON ของ GitLab ยังทดสอบด้วย stub (ไม่มี GitLab login ในเครื่อง)
