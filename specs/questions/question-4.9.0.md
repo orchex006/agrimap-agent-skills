@@ -6,13 +6,13 @@
 
 | ID | หัวข้อ | Status | Chosen | Rewrite cost |
 | --- | --- | --- | --- | --- |
-| Q-4.9.0-01 | เปิด `governance.guards` ให้ config เดิมที่เขียน `false` ไว้ | decided | 1 — เปิดครั้งเดียวพร้อม marker | ต่ำ |
-| Q-4.9.0-02 | ขอบเขตของ G5 เรื่อง tag และการลบ branch | decided | 1 — deny ทุกการลบ tag; ลบ branch ปกติได้ | ต่ำ |
-| Q-4.9.0-03 | Stop reminder ใช้ flag เดียวกับ guard | decided | 1 — `governance.guards` คุมทั้งสอง hook | ต่ำ |
+| Q-4.9.0-01 | เปิด `governance.guards` ให้ config เดิมที่เขียน `false` ไว้ | answered | 1 — เปิดครั้งเดียวพร้อม marker | ต่ำ |
+| Q-4.9.0-02 | ขอบเขตของ G5 เรื่อง tag และการลบ branch | answered | 1 — deny ทุกการลบ tag; ลบ branch ปกติได้ | ต่ำ |
+| Q-4.9.0-03 | Stop reminder ใช้ flag เดียวกับ guard | answered | 1 — `governance.guards` คุมทั้งสอง hook | ต่ำ |
 
 ## Q-4.9.0-01 — เปิด `governance.guards` ให้ config เดิมที่เขียน `false` ไว้
 
-- Status: decided
+- Status: answered
 - Risk: R2 · Confidence: medium
 - Context: roadmap §7.3 กำหนด default `true` "สำหรับ layout ใหม่และ project ที่ไม่มี key" แต่ `ensureLayout` ตั้งแต่ 4.6.0 เขียน `guards: false` ลง config ทุก project — ปัญหาเดียวกับ Q-4.7.0-01 / Q-4.8.0-01
 - Options:
@@ -21,11 +21,11 @@
 - Chosen: 1 — สอดคล้องกับสองข้อก่อน; ค่า `false` เดิมเป็นค่าที่ script เขียน
 - Affected: `agm-workspace.mjs#ensureLayout`, `governance-commands.mjs` (`GOVERNANCE_DEFAULTS.guards`); commit 0665f23 (trailer `AGM-Question: Q-4.9.0-01`)
 - Rewrite cost: ต่ำ — `git revert 0665f23`; ไม่มี phase ถัดไป
-- Owner answer: _(ว่างไว้ให้ owner)_
+- Owner answer: 1 (2026-09-19)
 
 ## Q-4.9.0-02 — ขอบเขตของ G5 เรื่อง tag และการลบ branch
 
-- Status: decided
+- Status: answered
 - Risk: R2 · Confidence: medium
 - Context: D§11.2 G5 ระบุ `git branch -D <protected>`, `git push … --delete <protected>`, `git tag -d`, `git push … --delete` ที่เป็น tag แต่ไม่ได้บอกว่า branch ที่ไม่ protected ลบได้ไหม และจะรู้ได้อย่างไรว่า ref ที่ลบเป็น tag (ไม่รัน git ต่อ ref)
 - Options:
@@ -34,11 +34,11 @@
 - Chosen: 1 — ตรงตาราง G5 (deny) และตรวจได้โดยไม่รัน git; ref ชื่อแปลกที่ไม่เข้า pattern จะผ่าน (ยอมรับได้เพราะ fail-open เป็นหลักของ guard)
 - Affected: `git-guard.mjs#evaluate` (`isTag`); commit e6296f6
 - Rewrite cost: ต่ำ — เปลี่ยน `DENY` → `ASK` หรือ pattern ของ `isTag` + test
-- Owner answer: _(ว่างไว้ให้ owner)_
+- Owner answer: 1 (2026-09-19)
 
 ## Q-4.9.0-03 — Stop reminder ใช้ flag เดียวกับ guard
 
-- Status: decided
+- Status: answered
 - Risk: R1 · Confidence: high
 - Context: AC30 กำหนดว่า `governance.guards:false` ทำให้ hook คืนค่าว่างทุกคำสั่ง แต่ไม่มี flag แยกของ Stop reminder
 - Options:
@@ -47,4 +47,4 @@
 - Chosen: 1 — ไม่เพิ่ม config ใหม่; ทั้งสองเป็น hook ของ C8
 - Affected: `delivery-reminder.mjs#reminderFor`; commit e6296f6
 - Rewrite cost: ต่ำ
-- Owner answer: _(ว่างไว้ให้ owner)_
+- Owner answer: 1 (2026-09-19)
