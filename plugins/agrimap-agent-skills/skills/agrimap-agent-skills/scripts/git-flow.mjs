@@ -720,6 +720,8 @@ function stageAMerge(run, root, source, target) {
   if (!merged.ok) {
     const conflicts = lines(git(run, root, ["diff", "--name-only", "--diff-filter=U"]).stdout);
     git(run, root, ["merge", "--abort"]);
+    // Refused before merging (e.g. local files would be overwritten): no conflict card.
+    if (!conflicts.length) return stop("MERGE_FAILED", `git merge origin/${target} failed without conflicts; nothing was merged into ${target}.`, { stderr: trimStderr(merged.stderr) });
     return stop("MERGE_CONFLICT", `origin/${target} conflicts with ${source}; nothing was merged into ${target}.`, {
       conflicts, next: { action: "ask" },
       card: {
