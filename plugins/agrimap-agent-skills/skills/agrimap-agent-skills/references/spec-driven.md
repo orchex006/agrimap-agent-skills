@@ -26,4 +26,4 @@ Run `spec sync plan --session <id>` (task IDs default to the `spec context` item
 
 ## Standing instructions
 
-An instruction about specs given once becomes the project rule: `project set specs.sync auto|off`. In code-first, a one-off "update the spec too" runs `spec sync plan --once`, then `spec standing --paths <changed>` asks once whether it applies to every task. Never require the requester to repeat it.
+An instruction about specs given once becomes the project rule: `project set specs.sync auto|off`. In code-first, a one-off "update the spec too" runs `spec sync plan --once`, then `spec standing --paths <changed>` makes it the rule for every task (report it as decided for you). Never require the requester to repeat it.

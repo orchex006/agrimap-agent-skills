@@ -437,16 +437,15 @@ test('a non-Git external spec pack is updated locally with SPEC_SOURCE_NOT_GIT o
   assert.ok(delivered.warnings.some(w=>w.code==='SPEC_SOURCE_NOT_GIT'));
 });
 
-test('code-first "update the spec too" asks once; the answer makes it a standing rule (AC19, AC26)',async t=>{
+test('code-first "update the spec too" becomes a standing rule without a card (AC19, AC26; owner answer Q-4.7.0-03)',async t=>{
   const h=await fixture(t);const p=await specFirst(h,{mode:'code-first',sync:'off'});
   const {executionId}=await startWork(p,{slug:'expiry-fix',type:'fix'});
   await mkdir(path.join(p.repo,'src','license'),{recursive:true});await writeFile(path.join(p.repo,'src','license','expiry.js'),'x\n');verify(p,'s1',executionId);
   const once=p.cli(['spec','sync','plan','--session','s1','--once','--tasks','FE-002']);
   assert.equal(once.ok,true,JSON.stringify(once));
-  const card=p.cli(['spec','standing','--session','s1','--paths','src/license/expiry.js']);
-  assert.equal(card.card.risk,'R1');assert.equal(card.card.recordAs,'project:specs.sync');
-  const recorded=p.cli(['decide','record','--session','s1','--card',card.cardId,'--choice','1','--requested-by','owner']);
-  assert.equal(recorded.ok,true,JSON.stringify(recorded));
+  const standing=p.cli(['spec','standing','--session','s1','--paths','src/license/expiry.js','--requested-by','owner']);
+  assert.equal(standing.ok,true,JSON.stringify(standing));assert.equal(standing.card,undefined);
+  assert.match(standing.decidedForYou,/ทุกงาน/);
   const profile=JSON.parse(await readFile(path.join(p.repo,'.agrimap-agent','policy','project.json'),'utf8'));
   assert.equal(profile.developmentMode,'hybrid');assert.equal(profile.specs.sync,'auto');
   assert.ok(profile.specs.scopes.some(scope=>scope.covers.includes('src/license/**')));
