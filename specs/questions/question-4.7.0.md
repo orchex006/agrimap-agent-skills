@@ -1,12 +1,12 @@
- rewritten | answered | answered |# Questions — 4.7.0 (P2)
+# Questions — 4.7.0 (P2)
 
 การตัดสินใจที่ Agent ทำแทน owner ระหว่าง unattended run ของ P2 (roadmap §2.3) — ตอบ/สั่ง rewrite ได้ตาม §2.4
 
 | ID | หัวข้อ | Status | Chosen | Rewrite cost |
 | --- | --- | --- | --- | --- |
-| Q-4.7.0-01 | เปิด `governance.specSync` ให้ project เดิมที่ 4.6.0 เขียน `false` ไว้ | decided | 1 — เปิดครั้งเดียวพร้อม marker | ต่ำ |
-| Q-4.7.0-02 | Audit ของ spec repo แยกถูกเขียนลง `.agrimap-agent/` ของ spec repo | decided | 1 — เขียน log `delivered` ใน spec repo | กลาง |
-| Q-4.7.0-03 | ค่าของตัวเลือก "เฉพาะครั้งนี้" และ default ของ standing card | decided | 1 — value `off`, non-blocking default ข้อ 2 | ต่ำ |
+| Q-4.7.0-01 | เปิด `governance.specSync` ให้ project เดิมที่ 4.6.0 เขียน `false` ไว้ | answered | 1 — เปิดครั้งเดียวพร้อม marker | ต่ำ |
+| Q-4.7.0-02 | Audit ของ spec repo แยกถูกเขียนลง `.agrimap-agent/` ของ spec repo | answered | 1 — เขียน log `delivered` ใน spec repo | กลาง |
+| Q-4.7.0-03 | ค่าของตัวเลือก "เฉพาะครั้งนี้" และ default ของ standing card | rewritten | ไม่มี card: ตั้งกติกาทุกงานทันที (ce85715) | ต่ำ |
 
 ## Q-4.7.0-01 — เปิด `governance.specSync` ให้ project เดิมที่ 4.6.0 เขียน `false` ไว้
 
@@ -45,4 +45,5 @@
 - Chosen: 1 — ผู้ใช้สั่งงานนี้แล้ว ไม่ควร block งาน; ไม่ตอบ = ทางที่เปลี่ยนน้อยที่สุด
 - Affected: `project-profile.mjs#specStandingCard`, `decision-card.mjs` (object value → `applyProjectPatch`); commit bcf3d68 และแก้ default ใน f7dbda3
 - Rewrite cost: ต่ำ — แก้ `blocking/default` ใน `specStandingCard`; ไม่มี phase ถัดไปพึ่ง (P3 recall จะอ่าน decision ที่ card นี้สร้าง ไม่ขึ้นกับ default)
+- Rewrite: commit ce85715 (trailer `AGM-Question: Q-4.7.0-03`, `AGM-Rewrite: owner-answer`)
 - Owner answer: ไม่ต้องมี card — ไม่ถามบ่อย เน้นให้เหมือนกันทุกงาน: `spec standing` ตั้งกติกาทุกงานทันทีและรายงานใน ตัดสินใจแทนไว้ (2026-09-19)
