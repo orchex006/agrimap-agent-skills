@@ -12,9 +12,11 @@ test('bootstrap preserves the complete owner-submitted canonical contract',async
   // same-directory branch freshness / confirmed requester reuse revision 2026-09-10. Updating this hash
   // requires an intentional new canonical contract, not a formatting repair.
   // 4.6.0: Agent Collaboration Governance §10 team workflow, policy/local allowlist, per-execution logs (spec ACG v2.1 §13, §19.16).
+  // 4.8.0: instruction diet — §2 (full), §4–§8 moved verbatim to AGENTS.release.md; core keeps a short §2
+  // plus the owner-answered precedence sentence (Q-4.8.0-02).
   // Package bumps only change the generated version marker; freeze every other byte.
   const sourceBytes=Buffer.from(bytes.toString('utf8').replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/,'<!-- AGRIMAP BOOTSTRAP VERSION: 3.6.1 -->'));
-  assert.equal(createHash('sha256').update(sourceBytes).digest('hex'),'9d9f511ebaa63781a05058123a061afc1e654d936f0bff5d474f839b4b3914da');
+  assert.equal(createHash('sha256').update(sourceBytes).digest('hex'),'99c9aca77d09b52b029f770bbd9a65b77ab615fc358b73f592299ef60da97c4c');
   const manifest=JSON.parse(await readFile(path.join(bundle,'manifest.json'),'utf8'));
   assert.ok(bytes.toString('utf8').includes(`<!-- AGRIMAP BOOTSTRAP VERSION: ${manifest.version} -->`));
   assert.equal(manifest.files.find(f=>f.source==='AGENTS.md').sha256,createHash('sha256').update(bytes).digest('hex'));
@@ -78,8 +80,43 @@ test('4.6.0 template adds team workflow, policy allowlist, per-execution logs an
   assert.match(text,/`\.agrimap-agent\/policy\/\*\*`/);
   assert.match(text,/`\.agrimap-agent\/local\/\*\*` เป็นความจำเฉพาะเครื่อง/);
   assert.match(text,/logs\/YYYY-MM\/YYYY-MM-DD\/<RUN_ID>\.jsonl/);
-  assert.match(text,/\| `integrate` \|/);
+  assert.match(text,/^\| `integrate`: /m);
+  assert.match(await readFile(path.join(bundle,'AGENTS.release.md'),'utf8'),/\| `integrate` \|/);
   const manifest=JSON.parse(await readFile(path.join(bundle,'manifest.json'),'utf8'));
   const previous=manifest.files.find(f=>f.source==='AGENTS.md').previous;
   assert.deepEqual(previous.find(p=>p.version==='4.5.5'),{version:'4.5.5',sha256:'195f3134fc9e6eb1c0ae707b6f7762f87b3508a8046cdb8722da373d3742d5f6'});
+});
+
+test('instruction diet: core AGENTS.md at most 24,000 chars; core + release keep every heading; release file frozen (AC28)',async()=>{
+  const bundle=path.join(projectRoot,'skills/agrimap-agent-skills/assets/bootstrap');
+  const core=await readFile(path.join(bundle,'AGENTS.md'),'utf8');
+  const release=await readFile(path.join(bundle,'AGENTS.release.md'),'utf8');
+  assert.ok(core.length<=24000,String(core.length));
+  const manifest=JSON.parse(await readFile(path.join(bundle,'manifest.json'),'utf8'));
+  assert.ok(release.includes(`<!-- AGRIMAP BOOTSTRAP VERSION: ${manifest.version} -->`));
+  const entry=manifest.files.find(f=>f.source==='AGENTS.release.md');
+  assert.equal(entry.target,'AGENTS.release.md');assert.equal(entry.sha256,createHash('sha256').update(release).digest('hex'));
+  const frozen=release.replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/,'<!-- AGRIMAP BOOTSTRAP VERSION: 3.6.1 -->');
+  assert.equal(createHash('sha256').update(frozen).digest('hex'),'804c0fb5421fc0184920cd0eeb14b69e7f3c111d8ea0c0a13f510e77467ad1f5');
+  const headings=['## 1.','## 2.','### 2.1','### 2.2','### 2.3','## 3.','## 4.','## 5.','### 5.1','### 5.2','## 6.','### 6.1','### 6.2','### 6.3','## 7.','## 8.','### 8.1','## 9.','### 9.1','### 9.5','## 10.','### 10.5','## Bootstrap contract freshness'];
+  const all=(core+'\n'+release).split('\n');
+  for(const h of headings)assert.ok(all.some(line=>line.startsWith(h)),h);
+  assert.match(core,/อ่าน `AGENTS\.release\.md` ทั้งไฟล์ก่อนเริ่ม/);
+  for(const moved of ['## 4.','## 5.','## 6.','## 7.','## 8.'])assert.ok(!core.split('\n').some(line=>line.startsWith(moved)),moved);
+});
+
+test('upgrade from the 4.7.0 template: unmodified AGENTS.md updates, edited one needs a scoped merge, release file is created',async t=>{
+  const {createHarness}=await import('../helpers/harness.mjs');
+  const {planBootstrap}=await import('../../skills/agrimap-agent-skills/scripts/project-bootstrap.mjs');
+  const {writeFile}=await import('node:fs/promises');
+  const h=await createHarness('agm-diet-');t.after(()=>h.cleanup());
+  const old=await readFile(path.join(projectRoot,'tests/fixtures/bootstrap-4.7.0/AGENTS.md'));
+  await writeFile(path.join(h.temp,'AGENTS.md'),old);
+  let plan=await planBootstrap({target:h.temp,kind:'be-main'});
+  const status=target=>plan.entries.find(e=>e.target===target).status;
+  assert.equal(status('AGENTS.md'),'update');assert.equal(status('AGENTS.release.md'),'create');
+  assert.equal(plan.entries.find(e=>e.target==='AGENTS.md').previousVersion,'4.7.0');
+  await writeFile(path.join(h.temp,'AGENTS.md'),Buffer.concat([old,Buffer.from('\nProject rule: keep custom naming.\n')]));
+  plan=await planBootstrap({target:h.temp,kind:'be-main'});
+  assert.equal(status('AGENTS.md'),'conflict');assert.equal(status('AGENTS.release.md'),'create');
 });

@@ -327,6 +327,13 @@ AC13, AC30, AC31 มีหลักฐาน, ตาราง host ใน PR, �
 | P2 | 8 | `openWarnings` คำนวณทุกครั้งที่ยังไม่มี `specCheckedAt`; บันทึก `specCheckedAt` เฉพาะ `context --ack` | B2: `context` read-only นอกจาก `--ack` | — |
 | P2 | 9 | standing card non-blocking default ข้อ 2 (value `off`); ข้อ 1 เป็น object patch ผ่าน `applyProjectPatch` | `validateCard` บังคับ default ของ card ที่ไม่ block | Q-4.7.0-03 |
 | P2 | R2 | ตรวจกับ glab 1.115: `mr create --description-file`, `mr merge --auto-merge=false` เมื่อไม่ใช่ auto-merge (default ของ glab คือ true); ฟิลด์ JSON ของ GitLab ยังทดสอบด้วย stub | มี `glab` ในเครื่อง | — |
+| P3 | 4 | recall/calibration อยู่ใน `storeCard({memory})` และ governance เรียกผ่าน `storeAndRender` ทุกจุด → card git ของ branch/deliver/integrate ก็ถูก recall ด้วย (DP4 สำเร็จโดยไม่แก้ `git-flow.mjs`/`workflow-policy.mjs`) | จุดเดียว ไม่ซ้ำโค้ด | — |
+| P3 | 4 | จับ precedent กับ option ด้วยฟิลด์ใหม่ `value` ใน frontmatter ของ decision (`writeDecision` รับ `value`, `scopePaths`); decision รุ่นเก่าที่ไม่มี `value` จับด้วย label ใน summary | §10.4 ต้องการ "value ของ precedent ตรง option" แต่ decision v1 ไม่เก็บค่า | — |
+| P3 | 5 | เพิ่ม `decide promote` (ออก promotion card หนึ่งครั้งต่อ session) และ `decide always-ask --kind` | §10.6 ต้องมีทางสร้าง card/ตั้ง `alwaysAsk` ผ่าน CLI | Q-4.8.0-03 |
+| P3 | 6 | `questionsAvoided` เก็บใน session state (`runtime/sessions/<S>.json`) แล้ว `complete` เขียน `questions_avoided` + รวม precedent ลง `precedents` | active state ของ execution อาจไม่มีตอน card ถูก suppress (card นอก execution) | — |
+| P3 | 8 | digest อ่าน branch จาก `.git/HEAD` (ห้ามรัน git ใน hook); linked worktree ที่ `.git` เป็นไฟล์จะแสดง `detached` | §20.3 ข้อ 8 ห้าม git ใน hook | — |
+| P3 | 10 | ขนาดก่อน diet 61,058 chars (103,014 bytes) → core 20,752 chars; commit bba6508 เขียน "~66k" ผิด ตัวเลขที่ถูกคือ 61,058 | บันทึกแก้ข้อความ commit (ไม่ rewrite history) | Q-4.8.0-02 |
+| P3 | 10 | `AGENTS.release.md` ไม่อยู่ใน instruction chain (`INSTRUCTION_FILES`) — อ่านเมื่อเป็น release intent เท่านั้น | เป้าของ diet คือไม่โหลดทุก session | — |
 | P2 | 12 | ไม่แก้ `goal-rules.md` แบบเพิ่มคำ: ข้อ 9 (14 words) + ย่อย่อหน้า item 6 → required ลดลง 3 words | §4 ข้อ 6 budget direct/required ห้ามเพิ่ม | — |
 
 ---
