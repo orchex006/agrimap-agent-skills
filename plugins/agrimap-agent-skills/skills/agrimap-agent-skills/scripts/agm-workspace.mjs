@@ -344,7 +344,7 @@ async function ensureLayout(root, bootstrap = false) {
         workflowPolicy: true,
         delivery: true,
         decisionMemory: true,
-        guards: false,
+        guards: true,
         projectMode: true,
         specSync: true,
         ...(existingConfig.governance || {}),
@@ -354,6 +354,9 @@ async function ensureLayout(root, bootstrap = false) {
         // Same for the decisionMemory:false default written before 4.8.0.
         ...(existingConfig.governance?.decisionMemory === false && !existingConfig.governance?.decisionMemoryDefault ? { decisionMemory: true } : {}),
         decisionMemoryDefault: "4.8.0",
+        // Same for the guards:false default written before 4.9.0.
+        ...(existingConfig.governance?.guards === false && !existingConfig.governance?.guardsDefault ? { guards: true } : {}),
+        guardsDefault: "4.9.0",
       },
       tasks: {
         activePath: ".agrimap-agent/tasks/YYYY-MM/<task-id>",
