@@ -42,11 +42,9 @@ Before a product write, be able to state every item:
 5. observable acceptance and verification method;
 6. the golden checklist loaded for the detected target kind, the entries actually opened, and every `MUST` row that conflicts with current project code, with the reason;
 7. AGENTS chain acknowledged (path + sha12);
-8. policy work branch, or why skipped.
+8. policy work branch, or why skipped;
+9. spec-first/hybrid in scope: spec IDs and files read, or why no spec applies.
 
 If a material item is unresolved, stop before writing.
 
-Item 6 is evidence, not testimony: name files opened in this invocation, never a remembered
-convention. Tiers `MUST` verify, `SHOULD` justify, `FREE` decide are defined in
-[patterns/checklists/README.md](patterns/checklists/README.md); a `FREE` choice never justifies
-blocking or an owner question.
+Item 6 names files opened now, not remembered convention. Tiers (`MUST` verify, `SHOULD` justify, `FREE` decide): [patterns/checklists/README.md](patterns/checklists/README.md); `FREE` never blocks.
