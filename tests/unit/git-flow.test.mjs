@@ -225,6 +225,9 @@ test('two branches delivered the same day merge into develop without .agrimap-ag
   const clone=await cloneRemote(h,p.remote,'dev-two');gitIn(clone,['switch','-q','develop']);
   const q=bind(h,clone,p.remote);
   await deliveredBranch(p,{session:'s1',slug:'first',file:'one.js'});
+  // Execution ids are second-resolution run ids; two real developers do not
+  // start in the same second, fast CI runners can.
+  await new Promise(resolve=>setTimeout(resolve,1100));
   await deliveredBranch(q,{session:'s2',slug:'second',file:'two.js'});
   let plan=p.cli(['integrate','plan','--session','s1','--intent','integrate']);
   assert.equal(p.cli(['integrate','apply','--session','s1','--intent','integrate','--plan-hash',plan.planHash]).ok,true);
@@ -502,4 +505,24 @@ test('stubbed glab uses flags verified against glab 1.115 --help (R2)',async t=>
   for(const flag of ['--source-branch','--target-branch','--title','--description-file','--yes'])assert.ok(create.includes(flag),flag);
   assert.ok(calls.find(a=>a[1]==='list').includes('-F'));
   assert.deepEqual(calls.find(a=>a[1]==='merge'),['mr','merge','3','--yes','--auto-merge=false']);
+});
+
+test('a merge git refuses before conflicts (local file would be overwritten) is MERGE_FAILED with stderr and a clean state',async t=>{
+  const h=await fixture(t);const p=await project(h,{method:'local-merge'});
+  await deliveredBranch(p,{session:'s1',slug:'refused',file:'r.js'});
+  const other=await cloneRemote(h,p.remote,'other');
+  gitIn(other,['switch','-q','develop']);
+  await mkdir(path.join(other,'.agrimap-agent','reports'),{recursive:true});
+  await writeFile(path.join(other,'.agrimap-agent','reports','shared.md'),'theirs\n');
+  gitIn(other,['add','--','.agrimap-agent/reports/shared.md']);gitIn(other,['commit','-q','-m','docs: report']);gitIn(other,['push','-q','origin','develop']);
+  await mkdir(path.join(p.repo,'.agrimap-agent','reports'),{recursive:true});
+  await writeFile(path.join(p.repo,'.agrimap-agent','reports','shared.md'),'mine, not committed\n');
+  const before=p.git(['rev-parse','HEAD']);
+  const plan=p.cli(['integrate','plan','--session','s1','--intent','integrate']);
+  const result=p.cli(['integrate','apply','--session','s1','--intent','integrate','--plan-hash',plan.planHash]);
+  assert.equal(result.code,'MERGE_FAILED',JSON.stringify(result));assert.equal(result.card,null);
+  assert.match(result.stderr,/would be overwritten/);
+  assert.equal(await present(path.join(p.repo,'.git','MERGE_HEAD')),false);
+  assert.equal(p.git(['rev-parse','HEAD']),before);
+  assert.equal(await readFile(path.join(p.repo,'.agrimap-agent','reports','shared.md'),'utf8'),'mine, not committed\n');
 });

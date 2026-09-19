@@ -482,7 +482,7 @@ const generic = {
 function sectionStatus(lines, index) {
   for (let cursor = index; cursor < Math.min(lines.length, index + 12); cursor += 1) {
     if (cursor > index && (/^#{1,6}\s/.test(lines[cursor]) || ONE_ID.test(lines[cursor]))) break;
-    const match = lines[cursor].match(/Status:\s*([A-Za-z_-]+)/i);
+    const match = lines[cursor].match(/\bStatus:\s*([A-Za-z_-]+)/i);
     if (match) return { line: cursor + 1, value: match[1] };
   }
   return null;
