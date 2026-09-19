@@ -200,6 +200,21 @@ function providerHooks(provider, pluginRootToken) {
           ],
         },
       ],
+      // Guards (ACG C8) only where the host's hook input/output was confirmed:
+      // Claude Code PreToolUse permissionDecision and Stop decision/stop_hook_active.
+      ...(provider === "claude" ? {
+        PreToolUse: [
+          {
+            matcher: "Bash|PowerShell",
+            hooks: [{ type: "command", command: `node \"${pluginRootToken}/skills/agrimap-agent-skills/scripts/git-guard.mjs\" --provider ${provider}` }],
+          },
+        ],
+        Stop: [
+          {
+            hooks: [{ type: "command", command: `node \"${pluginRootToken}/skills/agrimap-agent-skills/scripts/delivery-reminder.mjs\" --provider ${provider}` }],
+          },
+        ],
+      } : {}),
     },
   };
 }

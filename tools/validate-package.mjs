@@ -309,6 +309,10 @@ if (claudePlugin?.hooks !== "./hooks/claude-hooks.json") errors.push("Claude man
 if (await exists(path.join(root, "plugins", "agrimap-agent-skills", "hooks", "hooks.json"))) errors.push("Ambiguous default plugin hooks/hooks.json must not exist.");
 if (!codexHooks?.hooks?.SessionStart || !codexHooks?.hooks?.UserPromptSubmit || !codexHooks?.hooks?.SubagentStart) errors.push("Codex context hooks are incomplete.");
 if (!claudeHooks?.hooks?.SessionStart || !claudeHooks?.hooks?.UserPromptSubmit || !claudeHooks?.hooks?.SubagentStart) errors.push("Claude context hooks are incomplete.");
+if (!claudeHooks?.hooks?.PreToolUse?.some((entry) => entry.matcher === "Bash|PowerShell" && JSON.stringify(entry).includes("git-guard.mjs")) || !JSON.stringify(claudeHooks?.hooks?.Stop || []).includes("delivery-reminder.mjs")) errors.push("Claude guard hooks (PreToolUse Bash|PowerShell git-guard, Stop delivery-reminder) are missing.");
+// Guards stay off hosts whose pre-tool format is unconfirmed (spec §20.4 step 0).
+if (codexHooks?.hooks?.PreToolUse || codexHooks?.hooks?.Stop) errors.push("Codex guard hooks are not confirmed for this host; do not install them.");
+if (geminiHooks?.hooks?.BeforeTool) errors.push("Gemini BeforeTool guard is not confirmed for this host; do not install it.");
 const codexHookCommands = hookCommands(codexHooks);
 if (!codexHookCommands.length || codexHookCommands.some((command) => !command.includes("--provider codex") || !command.includes("${PLUGIN_ROOT}"))) errors.push("Codex hooks must pass an explicit codex provider and use PLUGIN_ROOT.");
 const claudeHookCommands = hookCommands(claudeHooks);

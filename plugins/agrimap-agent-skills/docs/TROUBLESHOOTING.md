@@ -59,6 +59,15 @@ BOOTSTRAP_BUNDLE_HASH_MISMATCH หมายถึง source bundle ไม่ต�
 
 ตรวจว่า external sql-context-pack/service พร้อมและ conversation นี้มี connected profile หากไม่มีให้ส่ง sanitized schema หรือ local file ที่มี authority แทน ไม่สร้าง connection เอง ไม่เรียก EXEC เพื่อทดสอบ และไม่ sync metadata เพื่อแก้ปัญหา read access
 
+## คำสั่ง git ถูก deny ด้วย "AGM guard G…" (4.9.0)
+
+Claude Code มี hook `PreToolUse` ที่ตรวจคำสั่ง git ที่ Agent พิมพ์เอง: force push (G1), push เข้า protected branch นอก release (G2), `git add -A/.` หรือ `.agrimap-agent/local` (G3), ลบ protected branch/tag (G5) ถูก deny; `reset --hard`, `clean -f`, `checkout -- .`, `restore .` (G4) และ `stash` (G6) ถามก่อน งาน release (active operation `release`) push develop/jenkins ได้ตาม `AGENTS.release.md`
+
+- ใช้ `deliver`/`integrate` ของ AGM แทน (script ไม่ผ่าน guard)
+- Hook `Stop` เตือนครั้งเดียวเมื่อ test ผ่านแล้วแต่ยังไม่ deliver ตาม policy
+- ปิดต่อ project: ตั้ง `"governance": { "guards": false }` ใน `.agrimap-agent/config.json` (ทั้ง guard และ Stop reminder เป็น no-op)
+- Codex, Gemini/Antigravity: ยังไม่ติดตั้ง guard (host ยังยืนยันรูปแบบ hook ไม่ได้) — doctor รายงาน `guards: not-supported-on-host`
+
 ## Push สำเร็จแต่ไม่รู้ว่า deploy ผ่านไหม
 
 ดู pipeline/run ของ environment ที่ push ไป: jenkins=Inhouse, jenkins-release=Production Remote SHA ยืนยัน Git publication เท่านั้น หากไม่มีสิทธิ์ดู Jenkins ให้รายงาน deployment unverified ไม่อ้าง success ดู [Release](RELEASE.md)
