@@ -178,11 +178,11 @@ $agm-release bootstrap upgrade
 
 Agent ตรวจชนิดโครงการและ diff ก่อนใช้ normal plan/apply มี backup สำหรับไฟล์ที่ถูกเปลี่ยน ส่วน custom rules จะ merge อย่างเจาะจงและตรวจ hash/receipt หลัง review หากกฎขัดแย้งจนตัดสินไม่ได้จึงถามเฉพาะประเด็นนั้น ไม่เขียนทับ custom rules เงียบ ๆ คำสั่งเดิม `$agm-release upgrade` ยังเป็นโหมดแทนที่ contract อย่างชัดเจนพร้อม backup
 
-ขอบเขตไฟล์คือ AGENTS.md, GEMINI.md, CLAUDE.md, CURSOR.md, release-notes/README.md และ managed Deployment block ใน README เท่านั้น ไม่เปลี่ยน Jenkinsfiles, product versions, changelog หรือ notes รุ่นเก่า และไม่ commit/push/tag หากต้องการอัปเดตแพ็กเกจ AGM ของ host ให้ใช้ [agm-doctor update](DOCTOR.md) แทน
+ขอบเขตไฟล์คือ AGENTS.md, AGENTS.release.md, GEMINI.md, CLAUDE.md, CURSOR.md, release-notes/README.md และ managed Deployment block ใน README เท่านั้น ไม่เปลี่ยน Jenkinsfiles, product versions, changelog หรือ notes รุ่นเก่า และไม่ commit/push/tag หากต้องการอัปเดตแพ็กเกจ AGM ของ host ให้ใช้ [agm-doctor update](DOCTOR.md) แทน
 
 ติดตั้งเมื่อ explicit init/adopt หรือเป็น prerequisite ที่ตรงขอบเขตคำสั่ง agm-release ของ product target ไม่ทำเมื่อ identify หรือเปิด session:
 
-- Copy byte-exact: AGENTS.md, GEMINI.md, CLAUDE.md, CURSOR.md, release-notes/README.md
+- Copy byte-exact: AGENTS.md, AGENTS.release.md, GEMINI.md, CLAUDE.md, CURSOR.md, release-notes/README.md
 - Pointer files ชี้ AGENTS เท่านั้น ไม่คัดกฎซ้ำ
 - README แทรกเฉพาะ Deployment block; ไม่ copy ทั้งไฟล์
 - ไม่ copy .gitignore/Jenkinsfiles/changelog/notes ราย version ไม่ reset version หรือสร้าง branches

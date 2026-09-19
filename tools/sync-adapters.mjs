@@ -41,10 +41,13 @@ if (typeof packageVersion !== "string" || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9
 const bootstrapRoot = path.join(canonicalSkill, 'assets/bootstrap');
 const bootstrapManifestPath = path.join(bootstrapRoot, 'manifest.json');
 const bootstrapManifest = JSON.parse(await readFile(bootstrapManifestPath, 'utf8'));
-const bootstrapAgentsPath = path.join(bootstrapRoot, 'AGENTS.md');
-const bootstrapAgents = await readFile(bootstrapAgentsPath, 'utf8');
-if (!/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/.test(bootstrapAgents)) throw new Error('BOOTSTRAP_VERSION_MARKER_MISSING');
-await writeFile(bootstrapAgentsPath, bootstrapAgents.replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/, `<!-- AGRIMAP BOOTSTRAP VERSION: ${packageVersion} -->`).replaceAll('\r\n', '\n'), 'utf8');
+// Core AGENTS.md and its release companion carry the same version marker.
+for (const name of ['AGENTS.md', 'AGENTS.release.md']) {
+  const bootstrapAgentsPath = path.join(bootstrapRoot, name);
+  const bootstrapAgents = await readFile(bootstrapAgentsPath, 'utf8');
+  if (!/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/.test(bootstrapAgents)) throw new Error(`BOOTSTRAP_VERSION_MARKER_MISSING: ${name}`);
+  await writeFile(bootstrapAgentsPath, bootstrapAgents.replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/, `<!-- AGRIMAP BOOTSTRAP VERSION: ${packageVersion} -->`).replaceAll('\r\n', '\n'), 'utf8');
+}
 for (const item of bootstrapManifest.files) {
   const nextHash = createHash('sha256').update(await readFile(path.join(bootstrapRoot, item.source))).digest('hex');
   if (bootstrapManifest.version !== packageVersion && item.sha256 !== nextHash) {
