@@ -331,7 +331,7 @@ AC13, AC30, AC31 มีหลักฐาน, ตาราง host ใน PR, �
 
 ```text
 Unattended mode: owner ไม่อยู่ ทำต่อจนจบโดยไม่ถาม
-Repo: D:\Projects\46_ArgiMap\Projects\AgriMapPlatform\skills\agrimap-agent-skills (พัฒนา skill package นี้โดยตรง ทำตาม AGENTS.md และ DEVELOPMENT.md)
+Repo: current checkout of this skill package (run from its root; follow AGENTS.md and DEVELOPMENT.md)
 อ่าน specs/acg-roadmap-4.7-4.9.md ทั้งไฟล์ (ถ้ายังไม่มีใน working tree: git fetch แล้ว git checkout origin/feature/acg-phase-specs-4.7-4.9 -- specs/) และทำตามนั้นอย่างเคร่งครัด
 ทำ P2 (4.7.0) ตาม §4 และ §5 ใช้ unattended protocol §2: ห้ามรอคำตอบ — เลือกเอง/ข้าม แล้วบันทึกใน specs/questions/question-4.7.0.md; ห้ามทำรายการใน §2.5
 จบด้วย queue-status และสรุปสั้นภาษาไทย
