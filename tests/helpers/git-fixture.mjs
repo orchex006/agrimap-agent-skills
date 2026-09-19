@@ -10,7 +10,7 @@ export function gitIn(cwd, args, options = {}) {
 export async function initRepo(dir) {
   await mkdir(dir, { recursive: true });
   gitIn(dir, ["init", "-q", "-b", "main"]);
-  for (const [key, value] of [["user.name", "AGM Test"], ["user.email", "agm@test.local"], ["commit.gpgsign", "false"], ["core.autocrlf", "false"]]) gitIn(dir, ["config", key, value]);
+  for (const [key, value] of [["user.name", "AGM Test"], ["user.email", "agm@test.local"], ["commit.gpgsign", "false"], ["core.autocrlf", "false"], ["gc.auto", "0"], ["maintenance.auto", "false"]]) gitIn(dir, ["config", key, value]);
   return dir;
 }
 
