@@ -12,10 +12,11 @@ test('bootstrap preserves the complete owner-submitted canonical contract',async
   // same-directory branch freshness / confirmed requester reuse revision 2026-09-10. Updating this hash
   // requires an intentional new canonical contract, not a formatting repair.
   // 4.6.0: Agent Collaboration Governance §10 team workflow, policy/local allowlist, per-execution logs (spec ACG v2.1 §13, §19.16).
-  // 4.8.0: instruction diet — §2 (full), §4–§8 moved verbatim to AGENTS.release.md; core keeps a short §2.
+  // 4.8.0: instruction diet — §2 (full), §4–§8 moved verbatim to AGENTS.release.md; core keeps a short §2
+  // plus the owner-answered precedence sentence (Q-4.8.0-02).
   // Package bumps only change the generated version marker; freeze every other byte.
   const sourceBytes=Buffer.from(bytes.toString('utf8').replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/,'<!-- AGRIMAP BOOTSTRAP VERSION: 3.6.1 -->'));
-  assert.equal(createHash('sha256').update(sourceBytes).digest('hex'),'588a70dd8eb273b1ace7c1898aa450c7b3ec82b5c14e0df45c050d7118c03621');
+  assert.equal(createHash('sha256').update(sourceBytes).digest('hex'),'99c9aca77d09b52b029f770bbd9a65b77ab615fc358b73f592299ef60da97c4c');
   const manifest=JSON.parse(await readFile(path.join(bundle,'manifest.json'),'utf8'));
   assert.ok(bytes.toString('utf8').includes(`<!-- AGRIMAP BOOTSTRAP VERSION: ${manifest.version} -->`));
   assert.equal(manifest.files.find(f=>f.source==='AGENTS.md').sha256,createHash('sha256').update(bytes).digest('hex'));

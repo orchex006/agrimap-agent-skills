@@ -20,7 +20,7 @@ Agent Collaboration Governance, phase P3 (spec §20.3; runbook `specs/acg-roadma
 - Learning under `runtime/` (never committed): `decide record` and `decide correction` write signals; the same value chosen twice becomes `promotable` (`decide promote`, one card per session; "not needed" is never offered again); per-kind R1 calibration (10 signals, n ≥ 5, 0.8 / 0.5); `decide always-ask --kind`; `decide list`.
 - `complete` records `precedents` and `questions_avoided`.
 - Hook session digest: at most three lines / 600 characters (target, branch, policy, mode, decisions, open execution), only when its hash changes; no git or network.
-- Instruction diet: the bootstrap `AGENTS.md` core keeps §1, §3, §9, §10 and a short §2 (20,752 characters, from 61,058); §2 in full and §4–§8 moved verbatim to the new `AGENTS.release.md` with unchanged section numbers. Bootstrap installs it; an unmodified 4.7.0 template updates automatically.
+- Instruction diet: the bootstrap `AGENTS.md` core keeps §1, §3, §9, §10 and a short §2 (21,074 characters, from 61,058; includes the owner rule that explicit human instructions such as a chosen version take precedence over defaults but never over §3 safety invariants); §2 in full and §4–§8 moved verbatim to the new `AGENTS.release.md` with unchanged section numbers. Bootstrap installs it; an unmodified 4.7.0 template updates automatically.
 - `governance.decisionMemory` defaults to true (one-time switch of the earlier `false` default, `decisionMemoryDefault`).
 
 ## 4.7.0 — 2026-09-19
@@ -32,7 +32,7 @@ Agent Collaboration Governance, phase P2 (spec `specs/agent-collaboration-govern
 - `deliver plan` precondition 7: covered work returns `SPEC_NOT_SYNCED` as a self-fix; after a failed sync attempt the work still delivers with the warning. `--spec-na "<reason>"` skips it; `specs.enforcement: "block"` stops with `SPEC_SYNC_REQUIRED`. Delivery returns `specLine` for the summary and `SPEC_SOURCE_NOT_GIT` for a non-Git spec pack.
 - A spec pack in its own Git repository is a second target root: sync links the execution there, it is delivered with that repository's policy (or `--explicit`), and the code delivery reports both commits.
 - `spec check` reports manifest mismatches, missing evidence, done tasks without evidence and executions that touched spec scopes without a sync; the first `context` of a session in spec-first scope shows up to five of them (`openWarnings`).
-- `spec semantic` stores the R2 card for a spec gap the work revealed; while it is open, sync warns `SPEC_DECISION_PENDING` and keeps the mechanical updates. `spec standing` asks once, after a one-off "update the spec too" in a code-first project, whether to make it a rule (hybrid + sync auto for the touched directories).
+- `spec semantic` stores the R2 card for a spec gap the work revealed; while it is open, sync warns `SPEC_DECISION_PENDING` and keeps the mechanical updates. `spec standing` turns a one-off "update the spec too" in a code-first project into the rule for every task (hybrid + sync auto for the touched directories) without asking, reported as decided for you.
 - `governance.specSync` defaults to true; a 4.6.0 config still holding the unused `false` default is switched on once (`specSyncDefault`).
 - Fix: audit written after a delivery (`logs/`, `memory/recent/`, `reports/`, `decisions/`) is no longer snapshotted as pre-existing work and is committed by the next delivery.
 - `glab` merge request flags checked against glab 1.115: `--description-file`, and `--auto-merge=false` for a plain merge.

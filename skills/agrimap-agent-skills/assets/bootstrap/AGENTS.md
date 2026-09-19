@@ -28,6 +28,8 @@
 
 งานอื่นที่ไม่ใช่ release ใช้ §1, §3, §9 และ §10 ของไฟล์นี้; การยก keyword เป็นตัวอย่างในคำขอตรวจ/แก้เอกสารไม่ใช่คำสั่ง release
 
+ทำตาม governance ของไฟล์นี้และ `AGENTS.release.md` เป็นค่าเริ่มต้นทุกงาน; คำสั่งเฉพาะเจาะจงของมนุษย์ในคำขอปัจจุบัน (เช่น ระบุเลข version เอง ข้าม patch หรือข้ามขั้นที่เป็นค่าเริ่มต้น) มีลำดับเหนือค่าเริ่มต้นนั้นโดยไม่ต้องขออนุมัติซ้ำ แต่ไม่ยกเว้น safety invariants ใน §3 และบันทึกไว้ในรายงานว่าข้ามค่าเริ่มต้นใดตามคำสั่ง
+
 ## 3. Preflight และ safety invariants
 
 - อ่าน `.agrimap-agent/memory/project.md` เป็น canonical project memory/index; หากไม่มี ในงาน indexing/prepare/release ที่ได้รับอนุญาตให้ทำ indexing ตามปกติและสร้าง `.agrimap-agent/memory/` พร้อม `project.md` จาก source, Git history และ dirty coverage ในขอบเขตงานก่อน gate ที่ต้องใช้ memory แล้วทำต่อใน invocation เดิม ไม่หยุดเพื่อขอ `Project Backfill` หรือ bootstrap แยก สร้างโฟลเดอร์บันทึกอื่นใต้ `.agrimap-agent/` ตาม §9 เมื่อจำเป็น รักษาไฟล์และประวัติเดิม ระบุ facts/capabilities, evidence, owner versions, coverage limits และ checkpoints จริง ไม่สร้าง placeholder เปล่าหรืออ้างว่าทำ full-history backfill แล้ว; `agm-release indexing` ถือเป็นคำสั่ง Project Backfill ตาม §5 โดยตรง รวม I step ภายใน composite release; standalone prepare ใช้ scoped indexing เท่าที่จำเป็น สำหรับ standalone pipeline/promote ให้ reconstruct memory จาก candidate ที่เตรียมแล้วและพิสูจน์ด้วย notes/diffs/Git ได้ ห้ามสร้าง candidate หรือ bump เพิ่มและห้ามแก้ frozen candidate หาก provenance ไม่ชัดให้หยุดเฉพาะขั้นที่พึ่งหลักฐานนั้น ห้ามสร้าง root `project.md`
