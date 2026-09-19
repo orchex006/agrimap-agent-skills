@@ -148,3 +148,17 @@ test('spec-kit, kiro and openspec layouts fall back to generic markdown with a w
   const found=await adapter.findItems(dir,{ids:['FE-010']});
   assert.equal(found.items[0].status,'planned');
 });
+
+test('generic markdown: a Status line in the item section is read and updated',async t=>{
+  const h=await createHarness('agm-spec-generic-');t.after(()=>h.cleanup());
+  const dir=path.join(h.temp,'pack');await mkdir(dir,{recursive:true});
+  await writeFile(path.join(dir,'README.md'),'# Pack\n\n## REQ-010 Export\n\nStatus: planned\n\n## REQ-011 Import\n\nStatus: done\n');
+  const {Overlay}=await import('../../skills/agrimap-agent-skills/scripts/spec-adapters.mjs');
+  const {adapter}=await adapterFor(dir,'generic-markdown');
+  const found=await adapter.findItems(dir,{ids:['REQ-010']});
+  assert.equal(found.items[0].status,'planned');assert.equal(found.items[0].kind,'task');
+  const overlay=new Overlay(dir);
+  const result=await adapter.planStatus(overlay,'REQ-010','done');
+  assert.equal(result.value,'done');
+  assert.deepEqual(overlay.plan()[0].edits,[{line:5,before:'Status: planned',after:'Status: done'}]);
+});
