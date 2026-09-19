@@ -30,7 +30,7 @@ async function unusedPath(file) {
 // scope_paths, applies_when, origin, card_id).
 export async function writeDecision(root, {
   slug, topic, kind = "convention", title, summary, problem, options, decision, requestedBy,
-  origin = "explicit", cardId = null, supersedes = null, now = new Date(),
+  origin = "explicit", cardId = null, supersedes = null, now = new Date(), value = undefined, scopePaths = [], appliesWhen = "",
 }) {
   const local = bangkokParts(now);
   const directory = path.join(root, ".agrimap-agent", "decisions", local.period);
@@ -52,8 +52,9 @@ export async function writeDecision(root, {
     `authority_evidence: ${yamlValue(origin === "card" ? `decision card ${cardId}` : "explicit requester instruction")}`,
     `kind: ${kind}`,
     `summary: ${yamlValue(String(summary).slice(0, 140))}`,
-    "scope_paths: []",
-    'applies_when: ""',
+    `scope_paths: [${scopePaths.map(item => JSON.stringify(String(item))).join(", ")}]`,
+    `applies_when: ${JSON.stringify(String(appliesWhen || ""))}`,
+    ...(value === undefined || value === null || typeof value === "object" ? [] : [`value: ${yamlValue(value)}`]),
     `origin: ${origin}`,
     `card_id: ${cardId ? yamlValue(cardId) : "null"}`,
     "---",

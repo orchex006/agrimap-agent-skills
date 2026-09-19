@@ -1,6 +1,7 @@
 // Decision Cards (ACG C2): one structured requester question, validated and
 // rendered by script, stored as the session's lastCard so a short reply can
-// answer it. P1 has no recall/calibration; recordAs applies the answer once.
+// answer it. With decision memory (P3) a card is first checked against
+// precedents and calibration; recordAs applies the answer once.
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 import { readJsonFile, readSessionState, updateSessionState, writeJsonFile, writeSessionPointer, safeSession } from "./session-state.mjs";
@@ -8,6 +9,7 @@ import { initPolicy, loadPolicy, profilePolicy, setPolicyValue } from "./workflo
 import { applyProjectPatch, initProject, loadProject, projectDefaults, setProjectValue, verifySpecPath } from "./project-profile.mjs";
 import { setLocalPath } from "./local-memory.mjs";
 import { bangkokParts, writeDecision } from "./decision-records.mjs";
+import { preflightCard, recordSignal, savePreferences, loadPreferences } from "./decision-memory.mjs";
 
 export const CARD_KINDS = Object.freeze(["workflow", "scope", "contract", "root", "integration", "convention", "preference", "project"]);
 const RISKS = new Set(["R0", "R1", "R2", "R3"]);
@@ -82,18 +84,29 @@ export function renderCard(card) {
   };
 }
 
-export async function storeCard(state, session, card, { executionId = null, now = Date.now() } = {}) {
+export async function storeCard(state, session, card, { executionId = null, now = Date.now(), memory = false } = {}) {
   const validation = validateCard(card);
   if (!validation.ok) return { ok: false, ...validation };
   const id = safeSession(session);
   if (!id) return { ok: false, code: "SESSION_REQUIRED", message: "--session is required to store a card." };
+  let calibrationMode = null;
+  if (memory) {
+    const preflight = await preflightCard(path.dirname(state), card, { now });
+    if (preflight.suppressed) {
+      const current = (await readSessionState(state, id)).questionsAvoided || [];
+      await updateSessionState(state, id, { questionsAvoided: [...current, { executionId, topic: card.topic, precedent: preflight.suppressed.precedent, at: new Date(now).toISOString() }] });
+      return { ok: true, suppressed: preflight.suppressed, render: null };
+    }
+    if (preflight.autoDecided) return { ok: true, autoDecided: preflight.autoDecided, render: null };
+    calibrationMode = preflight.calibrationMode;
+  }
   const options = normalizeOptions(card);
   const prefix = `${safeSession(executionId) || id.slice(0, 8)}-${card.kind}-`;
   const existing = (await readdir(path.join(state, "runtime", "cards")).catch(() => [])).filter(name => name.startsWith(prefix)).length;
   const cardId = `${prefix}${existing + 1}`;
   const createdAt = new Date(now).toISOString();
   const expiresAt = new Date(now + Number(card.expiresHours ?? 24) * 3_600_000).toISOString();
-  const stored = { ...card, options, recommended: "1", recommendedOriginal: String(card.recommended), cardId, session: id, executionId, createdAt, expiresAt, status: "open" };
+  const stored = { ...card, options, recommended: "1", recommendedOriginal: String(card.recommended), cardId, session: id, executionId, createdAt, expiresAt, status: "open", memory };
   await writeJsonFile(path.join(state, "runtime", "cards", `${cardId}.json`), stored);
   const lastCard = {
     cardId, kind: card.kind, topic: card.topic, risk: card.risk,
@@ -102,7 +115,7 @@ export async function storeCard(state, session, card, { executionId = null, now 
   };
   await updateSessionState(state, id, { lastCard });
   await writeSessionPointer(id, [path.dirname(state)]);
-  return { ok: true, cardId, render: renderCard(stored), lastCard };
+  return { ok: true, cardId, render: renderCard(stored), lastCard, ...(calibrationMode ? { calibrationMode } : {}) };
 }
 
 export async function loadLastCard(state, session, { now = Date.now() } = {}) {
@@ -113,6 +126,7 @@ export async function loadLastCard(state, session, { now = Date.now() } = {}) {
 async function applyRecordAs(root, card, option, freeText, { requestedBy, now }) {
   const recordAs = String(card.recordAs || "none");
   const value = option ? option.value : freeText;
+  if (recordAs === "preference" && value && typeof value === "object" && value.promotion) return applyPromotion(root, value, card, { requestedBy, now });
   if (recordAs === "none" || recordAs === "preference") return { applied: recordAs, written: [] };
   if (recordAs === "decision") {
     const decisionRef = await writeDecision(root, {
@@ -121,7 +135,7 @@ async function applyRecordAs(root, card, option, freeText, { requestedBy, now })
       title: card.question, summary: `${card.question}: ${option ? option.label : freeText}`, requestedBy, origin: "card", cardId: card.cardId, now,
       problem: `${card.impact}\n\nChecked: ${card.checked.join("; ")}`,
       options: card.options.map(item => `${item.id}. ${item.label} — ${item.effect}`).join("\n"),
-      decision: option ? `${option.label} — ${option.effect}` : freeText,
+      decision: option ? `${option.label} — ${option.effect}` : freeText, value: option?.value, scopePaths: card.paths || [],
     });
     return { applied: "decision", written: [`.agrimap-agent/${decisionRef}`] };
   }
@@ -172,6 +186,7 @@ export async function recordChoice(state, { session, cardId, choice, note = null
   if (effect.error) return { ...effect.error, ok: false, cardId };
   const closed = { choice: option ? option.id : `free:${freeText}`, label: option?.label || freeText, recommendedChosen: option?.id === "1", note, requestedBy, at: new Date(now).toISOString() };
   await writeJsonFile(file, { ...card, status: "closed", closed });
+  if (card.memory) await recordSignal(root, { cardId: card.cardId, kind: card.kind, topic: card.topic, risk: card.risk, confidence: card.confidence, recommended: "1", chosen: closed.choice, chosenValue: option && typeof option.value !== "object" ? option.value ?? null : null, recommendedChosen: closed.recommendedChosen, source: "card" });
   const sessionState = await readSessionState(state, session || card.session);
   if (sessionState.lastCard?.cardId === card.cardId) await updateSessionState(state, session || card.session, { lastCard: undefined });
   return {
@@ -180,4 +195,20 @@ export async function recordChoice(state, { session, cardId, choice, note = null
     ...(effect.needsAgent ? { needsAgent: true, message: effect.message } : {}),
     log: { kind: card.kind, topic: card.topic, risk: card.risk, executionId: card.executionId },
   };
+}
+
+
+// Promotion card answers: team → decision with the value; me → local
+// preference; decline → never offered again for that topic.
+async function applyPromotion(root, value, card, { requestedBy, now }) {
+  const prefs = await loadPreferences(root);
+  if (value.scope === "decline") { await savePreferences(root, { declinedPromotion: [...prefs.declinedPromotion, value.promotion] }); return { applied: "preference", written: [] }; }
+  if (value.scope === "me") { await savePreferences(root, { values: { ...prefs.values, [value.promotion]: value.value } }); return { applied: "preference", written: [] }; }
+  const ref = await writeDecision(root, {
+    slug: String(value.promotion).replace(/[^a-z0-9]+/gi, "-").toLowerCase().replace(/^-|-$/g, "").slice(0, 40) || "promoted",
+    topic: value.promotion, kind: value.kind || "convention", title: `Default for ${value.promotion}`, summary: `${value.promotion} = ${value.value}`,
+    requestedBy, origin: "promoted", cardId: card.cardId, now, value: value.value,
+    problem: card.impact, options: card.options.map(item => `${item.id}. ${item.label} — ${item.effect}`).join("\n"), decision: `Use ${value.value} for ${value.promotion}.`,
+  });
+  return { applied: "decision", written: [`.agrimap-agent/${ref}`] };
 }

@@ -30,7 +30,7 @@ import { ensureStateIgnore } from './local-memory.mjs';
 import { snapshotDirty } from './git-flow.mjs';
 import { instructionChain, readRequired } from './instruction-chain.mjs';
 import { GOVERNANCE_COMMANDS, runGovernanceCommand } from './governance-commands.mjs';
-import { GOVERNANCE_SESSION_FIELDS } from './session-state.mjs';
+import { GOVERNANCE_SESSION_FIELDS, readSessionState } from './session-state.mjs';
 
 const AUDIT_SCHEMA_VERSION = 4;
 const SUPPORTED_AUDIT_SCHEMA_VERSIONS = new Set([1, 2, 3, AUDIT_SCHEMA_VERSION]);
@@ -343,7 +343,7 @@ async function ensureLayout(root, bootstrap = false) {
       governance: {
         workflowPolicy: true,
         delivery: true,
-        decisionMemory: false,
+        decisionMemory: true,
         guards: false,
         projectMode: true,
         specSync: true,
@@ -351,6 +351,9 @@ async function ensureLayout(root, bootstrap = false) {
         // 4.6.0 wrote specSync:false as an unused default; 4.7.0 turns it on once.
         ...(existingConfig.governance?.specSync === false && !existingConfig.governance?.specSyncDefault ? { specSync: true } : {}),
         specSyncDefault: "4.7.0",
+        // Same for the decisionMemory:false default written before 4.8.0.
+        ...(existingConfig.governance?.decisionMemory === false && !existingConfig.governance?.decisionMemoryDefault ? { decisionMemory: true } : {}),
+        decisionMemoryDefault: "4.8.0",
       },
       tasks: {
         activePath: ".agrimap-agent/tasks/YYYY-MM/<task-id>",
@@ -563,6 +566,8 @@ function normalizeAuditEvent(event = {}) {
       verification: event.verification,
       gitHead: event.git_head ?? null,
       gitDirty: event.git_dirty ?? null,
+      precedents: event.precedents ?? [],
+      questionsAvoided: event.questions_avoided ?? 0,
     };
   }
   return { ...event, executionId: event.executionId || event.taskId, logType: event.logType || null };
@@ -671,6 +676,7 @@ async function appendLog(state, event) {
     verification: trackableEvent.verification || [],
     ...(Array.isArray(trackableEvent.warnings) && trackableEvent.warnings.length ? { warnings: trackableEvent.warnings.map((item) => typeof item === "string" ? { code: item } : item) } : {}),
     ...(Array.isArray(trackableEvent.precedents) && trackableEvent.precedents.length ? { precedents: trackableEvent.precedents } : {}),
+    ...(Number(trackableEvent.questionsAvoided) > 0 ? { questions_avoided: Number(trackableEvent.questionsAvoided) } : {}),
     git_head: gitSnapshot.gitHead,
     git_dirty: gitSnapshot.gitDirty,
   };
@@ -1763,6 +1769,8 @@ async function complete(root, args) {
   const files = await recordedTaskFiles(state, executionId);
   const verification = (await auditEvidenceForExecution(state, executionId)).events.filter(e => e.event === 'verified').flatMap(e => e.verification || []);
   const priorTerminal = (await auditEvidenceForExecution(state, executionId)).events.some((event) => event.event === "completed");
+  // Cards suppressed by a precedent in this execution (decision memory, P3).
+  const avoided = ((await readSessionState(state, safeSessionId(args.session) || activeMatch.session || '')).questionsAvoided || []).filter((item) => item.executionId === executionId);
   if (!priorTerminal) await appendLog(state, {
     executionId,
     taskId: active.taskId,
@@ -1780,7 +1788,8 @@ async function complete(root, args) {
         : "Artifactless light execution has memory and audit evidence.",
     files,
     verification,
-    precedents: listValue(args.precedent),
+    precedents: [...new Set([...listValue(args.precedent), ...avoided.map((item) => item.precedent)])],
+    questionsAvoided: avoided.length,
   });
   const memoryPaths = await appendRecentTerminal(state, active, "completed", "Completion gate passed.");
   const reportPath = await writeCanonicalExecutionReport(state, active, "completed", files, verification, taskPath);
