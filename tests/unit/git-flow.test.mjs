@@ -225,6 +225,9 @@ test('two branches delivered the same day merge into develop without .agrimap-ag
   const clone=await cloneRemote(h,p.remote,'dev-two');gitIn(clone,['switch','-q','develop']);
   const q=bind(h,clone,p.remote);
   await deliveredBranch(p,{session:'s1',slug:'first',file:'one.js'});
+  // Execution ids are second-resolution run ids; two real developers do not
+  // start in the same second, fast CI runners can.
+  await new Promise(resolve=>setTimeout(resolve,1100));
   await deliveredBranch(q,{session:'s2',slug:'second',file:'two.js'});
   let plan=p.cli(['integrate','plan','--session','s1','--intent','integrate']);
   assert.equal(p.cli(['integrate','apply','--session','s1','--intent','integrate','--plan-hash',plan.planHash]).ok,true);
