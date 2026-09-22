@@ -17,7 +17,7 @@ import { loadDecisionIndex, promotionCard, recall, recordSignal, savePreferences
 
 const toSlash = value => String(value || "").replaceAll("\\", "/");
 const list = value => String(value === true ? "" : value || "").split(",").map(item => item.trim()).filter(Boolean);
-const GOVERNANCE_DEFAULTS = Object.freeze({ workflowPolicy: true, delivery: true, decisionMemory: true, guards: false, projectMode: true, specSync: true });
+const GOVERNANCE_DEFAULTS = Object.freeze({ workflowPolicy: true, delivery: true, decisionMemory: true, guards: true, projectMode: true, specSync: true });
 const text = value => (value && value !== true ? String(value) : null);
 
 async function governanceFlags(root) {
