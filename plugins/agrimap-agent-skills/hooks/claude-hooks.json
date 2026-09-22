@@ -32,6 +32,27 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/agrimap-agent-skills/scripts/git-guard.mjs\" --provider claude"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/agrimap-agent-skills/scripts/delivery-reminder.mjs\" --provider claude"
+          }
+        ]
+      }
     ]
   }
 }

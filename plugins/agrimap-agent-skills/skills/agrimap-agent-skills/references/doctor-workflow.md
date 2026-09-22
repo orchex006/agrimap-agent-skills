@@ -21,6 +21,7 @@ Status gives a short local overview; check inspects applicable workflows. Use a 
 | Product release | Git, .NET SDK/runtime, exact global package AgriMap.ProjectDevKit.NetCore.Release and its executable | Follow release-tools.md during an authorized product release; not required for doctor/package updates |
 | Stray state roots | `strayStateRoots` from `agm-workspace.mjs context --cwd <session cwd>`: `.agrimap-agent/` outside any Git root; status recommended | Move wanted files into the target repository yourself; doctor never deletes or moves them |
 | Workflow policy | `policy show` in the target repository: exists, valid, confirmed | Answer the first-run policy card; fix listed validation details |
+| Guards | `governance.guards` in the target config; host: Claude `PreToolUse` (Bash|PowerShell) and `Stop` installed; Codex, Gemini/Antigravity `not-supported-on-host` (deliver/integrate scripts still enforce) | Set `governance.guards: false` only to switch the project off |
 | Project bootstrap | When a product target is in scope, compare its AGENTS marker/receipt with this bundle | Recommend agm-release bootstrap upgrade; do not apply it from doctor |
 
 Detect missing tools using read-only version/help/list commands with bounded timeouts. Do not run install-sqlfluff.mjs, audit a product through a mutating tool, execute tests, install dependencies or repair configuration during checks. A dependency's presence does not prove end-to-end host, database or deployment compatibility. No product FE/BE/SQL artifacts or task files for these reports.
