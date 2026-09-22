@@ -334,6 +334,11 @@ AC13, AC30, AC31 มีหลักฐาน, ตาราง host ใน PR, �
 | P3 | 8 | digest อ่าน branch จาก `.git/HEAD` (ห้ามรัน git ใน hook); linked worktree ที่ `.git` เป็นไฟล์จะแสดง `detached` | §20.3 ข้อ 8 ห้าม git ใน hook | — |
 | P3 | 10 | ขนาดก่อน diet 61,058 chars (103,014 bytes) → core 20,752 chars; commit bba6508 เขียน "~66k" ผิด ตัวเลขที่ถูกคือ 61,058 | บันทึกแก้ข้อความ commit (ไม่ rewrite history) | Q-4.8.0-02 |
 | P3 | 10 | `AGENTS.release.md` ไม่อยู่ใน instruction chain (`INSTRUCTION_FILES`) — อ่านเมื่อเป็น release intent เท่านั้น | เป้าของ diet คือไม่โหลดทุก session | — |
+| P4 | 0 | Claude Code 2.1.212: ติดตั้ง `PreToolUse` (Bash\|PowerShell) + `Stop`; Codex 0.155.1 มี feature `hooks` แต่ `plugin_hooks` ถูก remove และ `--help` ไม่ยืนยันรูปแบบ pre-tool output → ไม่ติดตั้ง; Gemini CLI 0.50.0 `gemini hooks` มีแค่ `migrate` → ไม่ติดตั้ง `BeforeTool`; agy ไม่มีในเครื่อง | §7.3 ค่าล่วงหน้า | — |
+| P4 | 1 | guard อ่าน protected list จาก `loadPolicy` ของ `git rev-parse --show-toplevel` ของ `cwd` ใน hook input (ไม่ใช่ `-C` ในคำสั่ง) | cwd ของ tool คือ repo ที่ทำงานอยู่ | — |
+| P4 | 2 | reminder ไม่ block เมื่อ `active.delivery.commit` มีแล้วหรือมี event `delivered`; อ่าน log เฉพาะไฟล์ `<executionId>.jsonl` (+ log รุ่นเก่า) | ไม่สแกน log ทั้งหมด | Q-4.9.0-03 |
+| P4 | 4 | validator ตรวจว่า Claude มี `PreToolUse` Bash\|PowerShell + `Stop` และ **ห้าม** Codex `PreToolUse/Stop` และ Gemini `BeforeTool` จนกว่าจะยืนยัน host | กันการติดตั้งผิด host โดยไม่ตั้งใจ | — |
+| P4 | 5 | doctor แถว `Guards` อยู่ใน `references/doctor-workflow.md` ตาราง capability (ไม่มี script doctor ใหม่) | doctor เป็น reference-driven | — |
 | P2 | 12 | ไม่แก้ `goal-rules.md` แบบเพิ่มคำ: ข้อ 9 (14 words) + ย่อย่อหน้า item 6 → required ลดลง 3 words | §4 ข้อ 6 budget direct/required ห้ามเพิ่ม | — |
 
 ---

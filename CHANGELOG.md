@@ -2,6 +2,15 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.9.0 — 2026-09-19
+
+Agent Collaboration Governance, phase P4 (spec §20.4; runbook `specs/acg-roadmap-4.7-4.9.md` §7).
+
+- `git-guard.mjs` (Claude `PreToolUse`, matcher `Bash|PowerShell`): parses Bash and PowerShell command lines (`;`, `&&`, `||`, `|`, `&`, newline, backslash/backtick continuation, `git -C`) and denies force/mirror pushes (G1), pushes to protected branches outside a release execution (G2), add-everything and `.agrimap-agent/local` (G3), deletion of protected branches and tags (G5); asks for `reset --hard`, `clean -f`, `checkout -- .`, `restore .` (G4) and `stash` (G6). Fail-open with one stderr line.
+- `delivery-reminder.mjs` (Claude `Stop`): blocks once per execution when verified work is not delivered under a policy that commits on completion; `stop_hook_active` never blocks.
+- Hooks are generated only for Claude Code; Codex and Gemini/Antigravity are `not-supported-on-host` until their pre-tool formats are confirmed. The validator enforces this.
+- `governance.guards` defaults to true (one-time switch of the earlier `false` default, `guardsDefault`); `false` makes both hooks no-ops.
+
 ## 4.8.0 — 2026-09-19
 
 Agent Collaboration Governance, phase P3 (spec §20.3; runbook `specs/acg-roadmap-4.7-4.9.md` §6).
