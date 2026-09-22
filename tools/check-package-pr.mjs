@@ -3,7 +3,7 @@ import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 
 export function checkPackagePr({base, head, sameRepository}) {
-  if (base === 'main') return sameRepository && /^(release|hotfix)\/[^\s]+$/.test(head);
+  if (base === 'main') return sameRepository && (head === 'develop' || /^(release|hotfix)\/[^\s]+$/.test(head));
   if (base === 'develop') return /^(feature|fix|release|hotfix)\/[^\s]+$/.test(head);
   return true;
 }
