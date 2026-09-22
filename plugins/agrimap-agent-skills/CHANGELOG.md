@@ -2,6 +2,15 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.9.1 — 2026-09-22
+
+agm-release fixes.
+
+- `--flash` is accepted on `prepare inhouse|production` and `pipeline inhouse|production` (previously rejected); still rejected on indexing, promote and bootstrap. Pipeline with flash never creates a missing candidate.
+- Single push per ref: develop, jenkins and jenkins-release are pushed at most once per invocation and the tag once, after all local commits are built. This stops the post-release develop audit push that started an extra pipeline per release.
+- The final audit (history added after D, e.g. at confirmation) is committed locally on develop and carried into the next release's develop push; push it now only on explicit request (`--push-audit`).
+- Local develop commits ahead of origin/develop and tracked agent recording (`.agrimap-agent/prompts/**/history.md`, logs, memory, reports) from earlier conversations are included in the release by default; only ignored/runtime state, secrets and requester exclusions are left out.
+
 ## 4.9.0 — 2026-09-19
 
 Agent Collaboration Governance, phase P4 (spec §20.4; runbook `specs/acg-roadmap-4.7-4.9.md` §7).
