@@ -62,6 +62,7 @@ Agent ตรวจ diff ก่อน โดยขอบเขต bootstrap ใ�
 | `CLAUDE.md` | อัปเดต pointer ไปยัง `AGENTS.md` สำหรับ Claude โดยรักษาข้อกำหนดเฉพาะที่มีอยู่ |
 | `GEMINI.md` | อัปเดต pointer ไปยัง `AGENTS.md`; ยังคงใช้ชื่อไฟล์นี้สำหรับ Antigravity |
 | `CURSOR.md` | อัปเดต pointer ไปยัง `AGENTS.md` สำหรับ Cursor |
+| `AGENTS.release.md` | กติกา release/version/changelog/deploy (§2, §4–§8) แยกจาก core `AGENTS.md` ตั้งแต่ 4.8.0; Agent อ่านเมื่องานเป็น release intent |
 | `README.md` | เพิ่มหรืออัปเดตเฉพาะ Deployment block ระหว่าง `<!-- BEGIN AGRIMAP DEPLOYMENT -->` และ `<!-- END AGRIMAP DEPLOYMENT -->` โดยรักษาเนื้อหาส่วนอื่น |
 | `release-notes/README.md` | อัปเดตคู่มือ release notes ไม่แก้ไฟล์ notes ของรุ่นที่เคยออกแล้ว |
 

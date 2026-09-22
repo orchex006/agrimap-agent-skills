@@ -318,6 +318,31 @@ async function shortReplyContext() {
   return null;
 }
 const shortReply = await shortReplyContext();
+
+// Session digest (ACG C7 §10.7): at most three lines / 600 chars, emitted when
+// its hash changes. Reads a handful of JSON files and .git/HEAD; no git, no scan.
+async function sessionDigest(active) {
+  if (!isRepo || !sessionId || config?.governance?.decisionMemory === false) return null;
+  const policy = await readJson(path.join(stateRoot, 'policy', 'workflow.json'));
+  const project = await readJson(path.join(stateRoot, 'policy', 'project.json'));
+  const index = await readJson(path.join(stateRoot, 'cache', 'decisions-index.json'));
+  const head = await readText(path.join(cwd, '.git', 'HEAD'), 200).catch(() => null);
+  const branch = String(head || '').match(/ref:\s*refs\/heads\/(\S+)/)?.[1] || 'detached';
+  const sessionFile = path.join(stateRoot, 'runtime', 'sessions', sessionId + '.json');
+  const sessionState = await readJson(sessionFile) || {};
+  const hash = fingerprint(JSON.stringify([policy?.status, policy?.profile, policy?.delivery, index?.fileCount, index?.maxMtimeMs, branch, active?.executionId, active?.verificationStatus, active?.delivery?.commit, project?.developmentMode]));
+  if (sessionState.digestHash === hash) return null;
+  const approved = (index?.entries || []).filter((entry) => entry.status === 'approved');
+  const topics = [...new Set(approved.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map((entry) => entry.topic).filter(Boolean))].slice(0, 3);
+  const lines = [
+    'AGM digest: target ' + path.basename(cwd) + ' · branch ' + branch + (policy ? ' · policy ' + (policy.profile || 'custom') + ' (' + (policy.status || 'draft') + '; commit+push on complete: ' + (policy.delivery?.commitOnComplete ? 'yes' : 'no') + ')' : ' · no workflow policy') + (project?.developmentMode ? ' · mode ' + project.developmentMode : ''),
+    'Decisions: ' + (index ? approved.length + ' approved' + (topics.length ? '; recent topics: ' + topics.join(', ') : '') : 'index not built') + '. Recall at decision points: agm-workspace.mjs recall --topic <t> --paths <p>.',
+    ...(active?.executionId ? ['Open execution: ' + active.executionId + ' "' + String(active.objective || '').slice(0, 60) + '" (' + (active.verificationStatus || 'not verified') + ', ' + (active.delivery?.commit ? 'delivered' : 'not delivered') + ')'] : []),
+  ];
+  const text = lines.join(String.fromCharCode(10)).slice(0, 600);
+  await writeJson(sessionFile, { ...sessionState, digestHash: hash });
+  return text;
+}
 // SessionStart is intentionally silent. Current-turn intent precedes identity,
 // old execution state and all persistence. Names/cwd alone are insufficient.
 if (selection.active || shortReply) {
@@ -336,6 +361,8 @@ if (selection.active || shortReply) {
     input.model ? 'Actual host model: ' + input.model + '; configurable labels are separate.' : 'Record actual host model when known; otherwise unknown.',
     sessionId ? 'Session: ' + sessionId : 'Use a stable session for durable work.'
   ];
+  const digest = selection.active ? await sessionDigest(active) : null;
+  if (digest) context.push(digest);
   if (active) context.push('Existing execution ' + (active.executionId || active.taskId) + ': resume only if this request concerns it; unrelated conversation does not replace it.');
   if (!isRepo) context.push('Session cwd is outside any Git repository. Before any write run `agm-workspace.mjs context --cwd "' + cwd.replaceAll('\\', '/') + '" --hint "<project>"`, then read and ack the target AGENTS.md chain. Repositories below: ' + (children.slice(0, 5).map((dir) => path.basename(dir)).join(', ') || 'none found') + '.');
   else {

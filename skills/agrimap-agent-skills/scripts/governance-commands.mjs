@@ -13,10 +13,11 @@ import { applySpecSync, coveredBy, planSpecSync, specCheck, specContext, specSem
 import { addWorkingNote, loadLocalMemory, localPathsForLeakCheck, setLocalPath } from "./local-memory.mjs";
 import { readJsonFile, readSessionState, safeSession, updateSessionState, writeJsonFile, writeSessionPointer } from "./session-state.mjs";
 import { bangkokParts } from "./decision-records.mjs";
+import { loadDecisionIndex, promotionCard, recall, recordSignal, savePreferences, loadPreferences } from "./decision-memory.mjs";
 
 const toSlash = value => String(value || "").replaceAll("\\", "/");
 const list = value => String(value === true ? "" : value || "").split(",").map(item => item.trim()).filter(Boolean);
-const GOVERNANCE_DEFAULTS = Object.freeze({ workflowPolicy: true, delivery: true, decisionMemory: false, guards: false, projectMode: true, specSync: true });
+const GOVERNANCE_DEFAULTS = Object.freeze({ workflowPolicy: true, delivery: true, decisionMemory: true, guards: false, projectMode: true, specSync: true });
 const text = value => (value && value !== true ? String(value) : null);
 
 async function governanceFlags(root) {
@@ -34,10 +35,14 @@ function cardResult(card) {
   return { card, render: renderCard(normalized) };
 }
 
+// DP2/DP4: every stored card (git cards included) goes through recall and
+// calibration first when governance.decisionMemory is on.
 async function storeAndRender(state, session, card, executionId) {
   if (!session) return { ...cardResult(card), stored: false };
-  const stored = await storeCard(state, session, card, { executionId });
-  return stored.ok ? { card, cardId: stored.cardId, render: stored.render, stored: true } : { card, ...stored };
+  const flags = await governanceFlags(path.dirname(state));
+  const stored = await storeCard(state, session, card, { executionId, memory: flags.decisionMemory });
+  if (stored.suppressed || stored.autoDecided) return { card, ...stored, stored: false, next: { action: "use-option", command: "apply the option and name the precedent or calibration under 'ตัดสินใจแทนไว้'" } };
+  return stored.ok ? { card, cardId: stored.cardId, render: stored.render, stored: true, ...(stored.calibrationMode ? { calibrationMode: stored.calibrationMode } : {}) } : { card, ...stored };
 }
 
 // A spec repository written by spec sync has no execution of its own: it
@@ -188,7 +193,8 @@ async function decideCommand(ctx, sub, args, root) {
     const validation = validateCard(card);
     if (!validation.ok) return { ok: false, ...validation };
     await ctx.ensureLayout(root, false);
-    const stored = await storeCard(state, session, card, { executionId: active?.executionId || null });
+    const flags = await governanceFlags(root);
+    const stored = await storeCard(state, session, card, { executionId: active?.executionId || null, memory: flags.decisionMemory });
     return stored;
   }
   if (sub === "record") {
@@ -202,7 +208,33 @@ async function decideCommand(ctx, sub, args, root) {
     }
     return result;
   }
-  return { ok: false, message: "Use decide card|record (recall/correction/list arrive in P3)." };
+  if (sub === "correction") {
+    const topic = text(args.topic);
+    if (!topic || !text(args.to)) return { ok: false, code: "CORRECTION_INVALID", message: "decide correction needs --topic and --to." };
+    const signal = await recordSignal(root, { kind: text(args.kind) || "convention", topic, risk: "R1", recommended: text(args.from), chosen: "correction", chosenValue: text(args.to), recommendedChosen: false, source: "correction", paths: list(args.paths) });
+    return { ok: true, signal };
+  }
+  if (sub === "list") {
+    const index = await loadDecisionIndex(root);
+    const status = text(args.status);
+    return { ok: true, decisions: index.entries.filter(entry => !status || entry.status === status).map(({ id, topic, kind, status: entryStatus, summary, date, file }) => ({ id, topic, kind, status: entryStatus, summary, date, file })) };
+  }
+  if (sub === "promote") {
+    if (!text(args.topic) || !text(args.value)) return { ok: false, code: "PROMOTION_INVALID", message: "decide promote needs --topic and --value." };
+    const sessionState = await readSessionState(state, session);
+    if (sessionState.promotionOffered) return { ok: true, skipped: true, reason: "one promotion card per session" };
+    const card = promotionCard({ topic: text(args.topic), value: text(args.value), count: Number(args.count) || 2, kind: text(args.kind) || "convention" });
+    const stored = await storeAndRender(state, session, card, active?.executionId);
+    if (stored.stored) await updateSessionState(state, session, { promotionOffered: stored.cardId });
+    return { ok: true, ...stored };
+  }
+  if (sub === "always-ask") {
+    const kinds = list(args.kind);
+    if (!kinds.length) return { ok: false, code: "KIND_REQUIRED", message: "--kind <workflow|convention|…> is required." };
+    const prefs = await loadPreferences(root);
+    return { ok: true, preferences: await savePreferences(root, { alwaysAsk: [...prefs.alwaysAsk, ...kinds] }) };
+  }
+  return { ok: false, message: "Use decide card|record|correction|list|promote|always-ask." };
 }
 
 // ------------------------------------------------------------------- branch
@@ -550,12 +582,21 @@ async function specCommand(ctx, sub, args, root) {
   return { ...result, warnings: dedupe(result.warnings), linkedRoots, next: linkedRoots.length ? { action: "run", command: `deliver plan --cwd <each linked root> --session ${session}, then deliver the code repository` } : { action: "run", command: "deliver plan" } };
 }
 
-export const GOVERNANCE_COMMANDS = Object.freeze(["context", "policy", "decide", "branch", "deliver", "integrate", "project", "local", "spec"]);
+// ------------------------------------------------------------------- recall
+
+async function recallCommand(ctx, sub, args, root) {
+  const flags = await governanceFlags(root);
+  if (!flags.decisionMemory) return { ok: true, skipped: true, reason: "governance.decisionMemory is false", matches: [] };
+  const config = await readJsonFile(path.join(root, ".agrimap-agent", "config.json"));
+  return recall({ root, topic: text(args.topic), paths: list(args.paths), kind: text(args.kind), limit: Number(args.limit) || 5, learning: config?.learning || {} });
+}
+
+export const GOVERNANCE_COMMANDS = Object.freeze(["context", "policy", "decide", "branch", "deliver", "integrate", "project", "local", "spec", "recall"]);
 
 export async function runGovernanceCommand(command, sub, args, root, ctx) {
   try {
     if (command === "context") return await contextCommand(ctx, args);
-    const handlers = { policy: policyCommand, decide: decideCommand, branch: branchCommand, deliver: deliverCommand, integrate: integrateCommand, project: projectCommand, local: localCommand, spec: specCommand };
+    const handlers = { policy: policyCommand, decide: decideCommand, branch: branchCommand, deliver: deliverCommand, integrate: integrateCommand, project: projectCommand, local: localCommand, spec: specCommand, recall: recallCommand };
     return await handlers[command](ctx, sub, args, root);
   } catch (error) {
     return { ok: false, code: error.code || "COMMAND_FAILED", message: String(error.message || error) };

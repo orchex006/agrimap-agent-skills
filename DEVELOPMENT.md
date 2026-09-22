@@ -9,7 +9,7 @@ Maintainer-only source documentation. Apply only to an explicitly assigned task 
 | Branch | Purpose | Integration |
 | --- | --- | --- |
 | feature/*, fix/* | Scoped development from develop | PR into develop |
-| develop | Next-version integration | Cut release/<base-version> when ready |
+| develop | Next-version integration | PR into main directly, or cut release/<base-version> for stabilization |
 | release/<base-version> | Stabilization, optional <base-version>-rc.N packages | PR into main, then reconcile into develop |
 | main | Reviewed stable source | Stable publication only at an explicitly selected, verified commit |
 | hotfix/* | Urgent fix from main | PR into main, patch release, then reconcile into develop |
@@ -18,7 +18,7 @@ Use this same working directory. Inspect status, branch/upstream and fetch when 
 
 An implementation request authorizes scoped local changes, not commits or external writes. A commit/push request covers its named development branch, not main, PR merge or publication. Explicit release approval can cover the complete named version/source/publication sequence without repeated questions. Never infer publication from a bump, successful tests or the word finish.
 
-PR into main must originate from release/* or hotfix/* in this repository; PR into develop accepts feature/*, fix/* and release/hotfix synchronization. Review scope and verification; no blind conflict resolutions or history rewrites. Main/develop protection and required checks must also be configured on the server: Markdown alone cannot enforce them.
+PR into main accepts develop, release/* or hotfix/* in this repository; PR into develop accepts feature/*, fix/* and release/hotfix synchronization. Direct develop-to-main integration still requires the normal PR checks and does not publish a release automatically. Review scope and verification; no blind conflict resolutions or history rewrites. Main/develop protection and required checks must also be configured on the server: Markdown alone cannot enforce them.
 
 ## Version lifecycle
 
