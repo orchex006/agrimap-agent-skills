@@ -28,7 +28,9 @@ test('PR routes distinguish development integration from stable publication', ()
   }
   assert.equal(checkPackagePr({base:'main',head:'release/4.1.0',sameRepository:true}),true);
   assert.equal(checkPackagePr({base:'main',head:'hotfix/bug',sameRepository:true}),true);
-  for (const head of ['develop','feature/change','fix/bug']) assert.equal(checkPackagePr({base:'main',head,sameRepository:true}),false);
+  assert.equal(checkPackagePr({base:'main',head:'develop',sameRepository:true}),true);
+  assert.equal(checkPackagePr({base:'main',head:'develop',sameRepository:false}),false);
+  for (const head of ['develop/other','feature/change','fix/bug']) assert.equal(checkPackagePr({base:'main',head,sameRepository:true}),false);
   assert.equal(checkPackagePr({base:'main',head:'release/4.1.0',sameRepository:false}),false);
 });
 
