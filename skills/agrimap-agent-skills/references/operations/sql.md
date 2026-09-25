@@ -5,7 +5,7 @@
 - Operation: `sql`
 - Workflow depth: default `light`; allowed `light`, `standard`, `regulated`
 - Mode: `action-routed`
-- Purpose: Analyze, design, create, edit, refactor, or explain SQL work through one domain façade.
+- Purpose: Analyze, design, create, edit, refactor, or explain AgriMap SQL work (tables, stored procedures/SP, views, .sql files) in golden format through one domain façade.
 - Deliverable: requested result with proportional evidence; no lifecycle for ordinary answers
 
 ## Action gate

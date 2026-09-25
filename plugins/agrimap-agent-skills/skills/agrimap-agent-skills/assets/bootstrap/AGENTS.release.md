@@ -1,6 +1,6 @@
 # กติกา Release, Version, Changelog และ Deployment
 
-<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.1 -->
+<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.3 -->
 
 ไฟล์นี้ใช้ร่วมกับ `AGENTS.md` (core) ของ repository เดียวกัน: เก็บ §2 Intent routing ฉบับเต็มและ §4–§8 โดยคงเลข § เดิม เพื่อให้การอ้างอิงข้ามไฟล์ไม่เปลี่ยน §1, §3, §9 และ §10 อยู่ใน `AGENTS.md` และยังบังคับใช้กับงาน release ทุกงาน
 
@@ -75,6 +75,8 @@ Normalize ได้เฉพาะ case/whitespace และ semantic phrase bou
 - `Version Inhouse`, `Version Both`, `Version Production` และ `Version + Tags` รวมการตรวจและ commit/push staged, unstaged, untracked และการลบไฟล์ทั้งหมดใน repository ตาม §6.3 โดยอัตโนมัติ ไม่จำกัดเฉพาะไฟล์ version/release
 - Exact intent กลุ่ม B ที่ owner สั่งเองเป็นการยืนยัน branch push ตลอด flow รวม final audit commit; tag push อนุญาตเฉพาะ `Version + Tags` ไม่ถามย้ำในแต่ละ checkpoint
 - การอ้าง keyword ในคำขอแก้เอกสารไม่ใช่คำสั่ง release; กลุ่ม A และ deploy aliases อื่นคงขอบเขตเดิม
+- คำสั่ง publish อื่นที่ไม่ใช่กลุ่ม B (เช่น `release inhouse|production|full`, `pipeline inhouse|production`) รวมงานค้างทั้งหมดโดยอัตโนมัติเหมือนกลุ่ม B: dirty path และ local `develop` commit ที่ยังไม่ขึ้น remote นอก candidate ถูกรวมเป็น content commit ตาม §6.3 ก่อน version commit โดยไม่ถาม เก็บไว้ local เฉพาะเมื่อ owner สั่งยกเว้นชัดเจน ข้อมูลลับ ignored/runtime state และ nested repository ถูกตัดออกอัตโนมัติพร้อมรายงาน
+- เมื่อจบ release ให้ commit audit ที่เหลือและ push `develop` หนึ่งครั้ง แล้วตรวจ remote SHA ให้ `develop` สะอาดและเท่ากับ origin (ไม่ promote audit commit ไป `jenkins`/`jenkins-release` และไม่ย้าย tag)
 
 ## 4. Shared CLI commands
 
@@ -334,4 +336,27 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 
 - เลือก mode และทำรายการ required checkpoints ก่อน mutation; บันทึกผลจริงต่อ checkpoint และขั้นถัดไป ถ้าขั้นที่จำเป็นยังไม่ทำและไม่มี blocker ให้ดำเนินการต่อ ไม่ตอบ final ว่าสำเร็จบางส่วน
 - `completed` ของ report/lifecycle ต้องเกิดหลัง gate ของงานจริง ไม่ใช่ใช้การมี report/checklist หรือ helper exit 0 มาแทน gate; หากหยุดเพราะ failure ให้รายงาน `blocked` พร้อม exact command/exit code, checkpoint ที่ผ่านแล้วและ next action
-- บันทึกหลักฐาน release ที่จำเป็นก่อน freeze candidate; กลุ่ม B ต้อง publish final audit/report ตาม §6.3 และ completion gate รวม final develop remote checkpoint ส่วน mode อื่นเก็บ final artifacts เป็น local follow-up ตามเดิม ห้ามให้ release SHA บันทึกตัวเอง
+- บันทึกหลักฐาน release ที่จำเป็นก่อน freeze candidate; กลุ่ม B ต้อง publish final audit/report ตาม §6.3 และ completion gate รวม final develop remote checkpoint ส่วน mode อื่นที่ publish ให้ commit `audit:` และ push `develop` หนึ่งครั้งโดยไม่ promote/tag, mode local เก็บ final artifacts เป็น local follow-up ห้ามให้ release SHA บันทึกตัวเอง
+
+### 8.2 Release Description และแจ้งเตือนทีม
+
+ใช้กับ `release production` และ `release full` (รวม `--flash`) หลัง Production branch/tag checkpoint ผ่านแล้วเท่านั้น; `release inhouse`, `pipeline`, `prepare`, `promote` และกลุ่ม A/B ไม่ส่ง
+
+- **Release Description** เป็นภาษาคนที่ BA copy ส่งลูกค้าได้ทันที เขียนไทย สั้น เรียบง่าย ไม่ใช้ชื่อ class/ไฟล์/route/SHA เป็นเนื้อหา:
+
+  ```markdown
+  # <ชื่อแอป> / <Production version>
+
+  - เพิ่ม...
+  - แก้...
+  - ปรับ... (ส่วนนี้มาจาก agmws-identity-netcore)
+  ```
+
+- ครอบคลุมทุกจุดที่เปลี่ยนใน version นั้นจาก release notes/diff ที่ตรวจแล้ว หนึ่งข้อต่อหนึ่งเรื่องที่ผู้ใช้สังเกตได้ รวมเรื่องเล็กที่เกี่ยวกันเป็นข้อเดียว ไม่ใส่ bump/audit/ci
+- การเปลี่ยนที่มาจาก project อื่น เช่น generated API client `agmws-*`, package `@agrimap/*`, NuGet `AgriMap.*` หรือ endpoint ของ service อื่น ให้ระบุชื่อ project ต้นทางในวงเล็บ `(ส่วนนี้มาจาก <project>)` โดยอธิบายผลที่ผู้ใช้เห็น ไม่อธิบายเทคนิค
+- บันทึกที่ `.agrimap-agent/reports/YYYY-MM/<RUN_ID>-release-description.md` (commit ไปกับ `audit:` commit) และแสดงข้อความเต็มในคำตอบสุดท้ายเสมอ รวมกรณี `--silent`
+- ส่งด้วย `node tools/agrimap/release-notify.mjs send --description <file> --commit <production-sha> --version <production-version>` ซึ่งตรวจ health ก่อน POST ทุกครั้ง URL มาจาก env `NOTIFY_WEBHOOK_URL`
+  - exit 2 (ไม่มี env): ถามผู้ใช้ครั้งเดียวขอ URL แล้วรัน `set-url <url>` บันทึก env ถาวรบนเครื่อง จากนั้นส่งต่อใน invocation เดิม
+  - exit 3/4 (health หรือ POST ล้มเหลว): release ยังถือว่าสำเร็จ รายงาน notify เป็น `pending` พร้อม HTTP status และคำสั่งส่งซ้ำ ห้าม retry วนหรือส่งซ้ำเมื่อ `sent: true` แล้ว
+- `--silent` (alias `--skip-noti`) ข้ามเฉพาะการส่ง ยังเขียนและแสดง Release Description; รายงาน notify เป็น `skipped (--silent)`
+- ไฟล์ `tools/agrimap/release-notify.mjs` เป็น managed bootstrap file ถูกแทนที่ทุกครั้งที่อัปเดต bootstrap (มี backup) ห้ามแก้ใน project

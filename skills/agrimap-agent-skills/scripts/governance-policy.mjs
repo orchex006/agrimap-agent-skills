@@ -39,7 +39,7 @@ export function classifyRequest({ prompt = '', explicit = false, recognized = fa
   // Require a relationship to the current software work, not a keyword alone.
   const projectAnchor = /\b(?:agrimap|agm(?:ws|wa|bo)-[\w-]+|(?:this|our|current)\s+(?:repo(?:sitory)?|project|code|file|service|pipeline|release|branch))\b|(?:ในโครงการ|ในโปรเจกต์|โครงการนี้|โปรเจกต์นี้|โค้ด.*นี้|ไฟล์.*นี้|งานเดิม)/i.test(text);
   const changeIntent = /\b(?:implement|fix|refactor|modify|update|build|deploy|merge|push|bump|migrate)\b|(?:แก้ไข|ปรับแก้|ปรับปรุง|เพิ่ม|สร้าง|อัปเดต)/i.test(text);
-  const softwareTarget = /\b(?:repo(?:sitory)?|project|code|skill|plugin|hook|pipeline|release|branch|changelog|sql|schema|api|test|component|service|version|bug)\b|(?:โครงการ|โปรเจกต์|โค้ด|สกิล|แพ็กเกจ|ฐานข้อมูล|เวอร์ชัน|ไฟล์|บั๊ก)/i.test(text);
+  const softwareTarget = /\b(?:repo(?:sitory)?|project|code|skill|plugin|hook|pipeline|release|branch|changelog|sql|schema|api|test|component|service|version|bug|table|procedure|sp|view|controller|endpoint|page)\b|(?:โครงการ|โปรเจกต์|โค้ด|สกิล|แพ็กเกจ|ฐานข้อมูล|เวอร์ชัน|ไฟล์|บั๊ก|ตาราง|โปรซีเยอร์|หน้าจอ)/i.test(text);
   const projectTerms = projectAnchor || (changeIntent && softwareTarget);
   return { active: explicit || (recognized && (relevant || projectTerms)), reason: explicit ? 'explicit-invocation' : recognized && (relevant || projectTerms) ? 'relevant-project-intent' : 'ordinary-conversation' };
 }

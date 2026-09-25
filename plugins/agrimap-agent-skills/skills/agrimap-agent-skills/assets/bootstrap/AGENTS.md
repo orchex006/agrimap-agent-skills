@@ -1,8 +1,29 @@
 # กติกากลาง Changelog, Release และ Deployment
 
-<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.1 -->
+<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.3 -->
 
 ไฟล์นี้เป็น canonical instruction ของ repository สำหรับ Codex, Claude Code, Gemini CLI, Cursor และผู้พัฒนา โดยไม่ต้องมี AgriMap skills หรือ local Git hook กติกา Markdown ช่วยกำกับพฤติกรรม; Agent ใช้ .NET Global Tool `agm-release` ตรวจ local gate และตรวจหลักฐาน Git ตามไฟล์นี้ ห้ามอนุมานว่า Jenkins บังคับ release gate อยู่ ส่วน GitLab Protected Branch/Tag ต้องตั้งค่าฝั่ง server แยกต่างหาก
+
+## 0. Skill-first routing (บังคับทุก model ก่อนงาน code/SQL)
+
+ใช้กับทุก Agent/model (GPT, Claude Opus/Sonnet, Gemini ฯลฯ) ไม่ขึ้นกับความมั่นใจหรือขนาดงาน คำขอไม่ต้องระบุชื่อ skill
+
+1. ก่อนตอบ วิเคราะห์ อธิบาย review สร้าง แก้ หรือ refactor code/SQL ใน repository นี้ ให้จับคู่หลักฐานกับตาราง (แถวแรกที่ตรง) แล้วโหลด skill ผ่านกลไก skill ของ host (เช่น `/agm-sql`, `$agm-sql`) และอ่าน reference ที่ skill กำหนดก่อนเขียนบรรทัดแรก ห้ามใช้ความรู้ทั่วไปแทน golden pattern ของ AgriMap
+2. งานหลาย lane ใช้ skill ของ lane นั้นกับไฟล์ของ lane นั้น (หนึ่งไฟล์มี skill เจ้าของเดียว)
+
+| หลักฐาน (ชื่อ repo / path / คำในคำขอ) | Skill | Target / golden |
+| --- | --- | --- |
+| `*.sql`, `sql/**`, table/ตาราง, stored procedure/SP, view, function, DDL, column, index, `LUT_*` | `agm-sql` | `sql-table`/`sql-procedure`, `golden/sql/` + `sql-contract-preflight` |
+| `agmws-*` หรือ ASP.NET Core host ที่มี Controllers | `agm-be` | `be-main` + `agmws`, `golden/backend-main/` |
+| `agmbo-*` หรือ Quartz `JobScheduler.cs` | `agm-be` | `be-main` + `agmbo`, `golden/backend-main/` |
+| .NET library (`*.csproj` ไม่มี web host, `AgriMap.Platform.*`, `libraries/netcore/**`) | `agm-be` | `be-library`, `golden/backend-libraries/` |
+| `agmwa-*` หรือ Angular app (`src/app/` + `angular.json`) | `agm-fe` | `fe-main`, `golden/frontend-main/` |
+| Angular library workspace (`projects/<lib>/ng-package.json`, `@agrimap/*`, `libraries/angular/**`) | `agm-fe` | `fe-library`, `golden/frontend-libraries/` |
+| ไม่แน่ใจ | `agrimap-agent-skills` | router เลือก skill เดียว |
+
+3. Golden format เป็นค่าเริ่มต้นตั้งแต่ร่างแรก: Table/SP/View ใช้ schema `[agrimap_app]`, header, column grouping, audit baseline, `CREATE OR ALTER PROCEDURE`, `GO` และ SQLFluff; BE/FE ตรงโครงสร้าง golden collection ที่เลือก ผู้ใช้ไม่ต้องสั่ง "ใช้ agm-sql" หรือ "ปรับตาม Golden Pattern" ซ้ำ
+4. ก่อนเขียนไฟล์แสดงหนึ่งบรรทัด `Skill: <agm-*> · Target: <target_kind> · Golden: <entries ที่เปิดอ่านจริง>`; ก่อนส่งงานตรวจตัวเอง ถ้ายังไม่ได้โหลด skill หรือไม่ตรง golden ให้โหลดและปรับก่อนส่ง
+5. Host ไม่มี AgriMap skills: แจ้งหนึ่งบรรทัดให้ติดตั้ง/อัปเดตผ่าน `agm-doctor` ห้ามอ้างว่า style ทั่วไปเป็น AgriMap style; คำถามที่ไม่อ้าง code/SQL ของ repo และชื่อ skill ที่ยกเป็นตัวอย่างไม่ต้องโหลด skill
 
 ## 1. ขอบเขตและ fixed ownership
 
@@ -26,7 +47,7 @@
 | changelog, diff, backfill, project memory, version, prepare, deploy, Inhouse/Production/Both, release, tag, `นำขึ้น Jenkins` ทุกคำ | อ่าน `AGENTS.release.md` ทั้งไฟล์ก่อนเริ่ม แล้วทำตาม §2 ในไฟล์นั้น (§2, §4–§8 ของ contract นี้อยู่ในไฟล์นั้น เลข § คงเดิม) |
 | `integrate`: `merge`, `รวม`, `รวมเข้า <branch>`, `pr`, `เปิด PR`, เลขตัวเลือกจาก Next-step card | ทำตาม §10.4 กับ work branch ปัจจุบัน; ห้าม promote `jenkins`/`jenkins-release`, tag, force push |
 
-งานอื่นที่ไม่ใช่ release ใช้ §1, §3, §9 และ §10 ของไฟล์นี้; การยก keyword เป็นตัวอย่างในคำขอตรวจ/แก้เอกสารไม่ใช่คำสั่ง release
+งานอื่นที่ไม่ใช่ release ใช้ §0, §1, §3, §9 และ §10 ของไฟล์นี้ (งาน code/SQL เริ่มจาก §0 เสมอ); การยก keyword เป็นตัวอย่างในคำขอตรวจ/แก้เอกสารไม่ใช่คำสั่ง release
 
 ทำตาม governance ของไฟล์นี้และ `AGENTS.release.md` เป็นค่าเริ่มต้นทุกงาน; คำสั่งเฉพาะเจาะจงของมนุษย์ในคำขอปัจจุบัน (เช่น ระบุเลข version เอง ข้าม patch หรือข้ามขั้นที่เป็นค่าเริ่มต้น) มีลำดับเหนือค่าเริ่มต้นนั้นโดยไม่ต้องขออนุมัติซ้ำ แต่ไม่ยกเว้น safety invariants ใน §3 และบันทึกไว้ในรายงานว่าข้ามค่าเริ่มต้นใดตามคำสั่ง
 
@@ -135,6 +156,7 @@
 - `.agrimap-agent/policy/workflow.json` คือ workflow ของทีม (prefix/base/target ของ branch, delivery, integration) อ่านก่อนงานที่แก้ repository ทุกครั้ง
 - ถ้าไม่มี: ตรวจ `Jenkinsfile*`, `git branch -a` และ remote แล้วเสนอ workflow ที่ตรวจพบเป็นคำถามเดียวพร้อมตัวเลือก ก่อนเขียนครั้งแรก เมื่อ owner ตอบ ให้สร้างไฟล์ `status: confirmed` และ decision record แล้วไม่ถามซ้ำ
 - Policy ที่ confirmed เป็นสิทธิ์ถาวรให้ commit และ push **work branch** เมื่องานผ่าน verification เท่านั้น ไม่ใช่สิทธิ์ push/merge `develop`, `jenkins`, `jenkins-release`, `main` หรือสร้าง tag
+- Integration ค่าเริ่มต้นคือ `local-merge` ไม่ต้องเปิด MR/PR: `merge`/`รวม` คือ merge เข้า target แล้ว push เมื่อ test ในเครื่องผ่าน; MR/PR เฉพาะเมื่อสั่ง `pr`/`mr` หรือ policy เป็น `pull-request`
 - Repository ที่ promote `develop -> jenkins -> jenkins-release` แบบ `--ff-only` (§6.2): ทุก work type รวม hotfix แตกจาก `develop` และรวมกลับ `develop`
 
 ### 10.3 เริ่มงานและส่งงาน
@@ -142,7 +164,7 @@
 1. ก่อนเขียน: บันทึก `git status --porcelain` ไว้เป็นรายการไฟล์ที่ค้างก่อนเริ่ม
 2. ถ้าอยู่บน protected branch: `git fetch origin`, ถ้า tree สะอาดให้ `git merge --ff-only origin/<base>` แล้ว `git switch -c <prefix><english-kebab-slug>`; ถ้า tree ไม่สะอาดให้ `git switch -c` จาก HEAD เดิมโดยไม่ pull ห้าม stash/reset/สร้าง worktree
 3. Branch ที่ host สร้างเอง (เช่น `claude/*`, `codex/*`) ไม่ต้องเปลี่ยนชื่อ local แต่ push ด้วยชื่อทีม: `git push -u origin HEAD:refs/heads/<prefix><slug>`
-4. เมื่อ verification ผ่าน: เติม changelog ตาม §5, stage เฉพาะไฟล์ของงานนี้ด้วย `git add -- <paths>` (ห้ามรวมไฟล์ที่ค้างก่อนเริ่มโดยไม่ถาม), `git diff --cached --check`, commit แบบ Conventional Commits ภาษาอังกฤษ header ≤ 72 ตัวอักษร, push work branch แล้วตรวจ `git ls-remote --heads origin <branch>` ให้ SHA ตรง
+4. เมื่อ verification ผ่าน: เติม changelog ตาม §5, stage เฉพาะไฟล์ของงานนี้ด้วย `git add -- <paths>` (ห้ามรวมไฟล์ที่ค้างก่อนเริ่มโดยไม่ถาม), `git diff --cached --check`, commit ตามรูปแบบ commit ของทีมใน §10.6, push work branch แล้วตรวจ `git ls-remote --heads origin <branch>` ให้ SHA ตรง
 5. สรุปจบงานไม่เกิน 12 บรรทัด: branch/commit/remote, ไฟล์และผลทดสอบ, สิ่งที่ตัดสินใจแทน, ไฟล์ที่ไม่ได้รวม แล้วปิดด้วยตัวเลือกถัดไปแบบมีเลข (ข้อ 1 คือที่แนะนำ)
 6. หยุดถามเฉพาะเรื่องที่ย้อนไม่ได้หรือไม่ปลอดภัย (push/merge branch หลัก, ข้อมูลลับ, conflict, สิทธิ์); ปัญหาอื่น เช่น test ไม่ผ่าน หรืออัปเดต spec ไม่ได้ ให้ส่งงานเข้า work branch ต่อ (commit ระบุ `AGM-Verification: failed` เมื่อ test ไม่ผ่าน) แล้วสรุปใน section `⚠️ ต้องตามต่อ` ที่บอกสิ่งที่เกิด ผลกระทบ และวิธีแก้ — ห้ามเสนอ merge จนกว่า test ผ่าน
 
@@ -170,6 +192,12 @@
 - `spec-first` หรือไฟล์ใน scope ของ `hybrid`: อ่าน spec item ที่เกี่ยวข้องก่อนเขียน; คำขอที่เพิ่ม/เปลี่ยน requirement ให้แก้ spec ก่อนใน branch เดียวกัน; คำขอที่ขัดกับ spec หรือ open question ที่ block ให้ถาม; หลัง verify ให้อัปเดต status ของ task, evidence ใน traceability, changelog และ manifest ของ spec เองทุกงานโดยไม่ต้องรอสั่ง; ส่วนที่เป็นเนื้อหา (requirement, acceptance criteria, design) แก้ตามคำสั่งในรอบนั้นเท่านั้น ถ้างานเผยว่า spec ผิดหรือขาดโดยไม่ได้สั่ง หรือไม่มั่นใจว่าคำสั่งครอบคลุมแค่ไหน ให้ถามก่อน; ปัญหาในการอัปเดต spec ไม่ทำให้ส่งงานไม่ได้ แต่ต้องแจ้งเป็น warning ให้ชัด
 - `code-first`: ยึด code และ test; ไม่แก้ spec หรือเอกสารเองนอกจาก changelog/README ตาม §5; เจอเอกสารขัด code ให้บอกบรรทัดเดียว
 - ผู้ใช้สั่งเรื่อง spec ครั้งเดียว (เช่น "อัปเดต spec ด้วย") ให้ถามว่าจะทำทุกงานไหม แล้วบันทึกลง `project.json` เพื่อไม่ต้องสั่งซ้ำ
+
+### 10.6 รูปแบบ commit ของทีม
+
+- Header `<type>: <คำอธิบายภาษาคน>` ≤ 100 ตัวอักษร ไม่มี scope เขียนให้ App Leader/BA/ลูกค้าอ่านรู้เรื่อง เทคนิคใส่ body
+- งานพัฒนา: `feature:` ความสามารถใหม่, `fix:` แก้สิ่งที่ผิด, `comment:` ปรับตาม comment/ปรับปรุง (หน้าตา ข้อความ โครงสร้าง เอกสาร); agm-release: `bump:` version, `audit:` บันทึก `.agrimap-agent`, `ci:` pipeline/governance/bootstrap
+- ตัวอย่าง: `feature: เพิ่มรับ User หลายช่องทาง`, `fix: แก้ dynamic form เพิ่มวันที่ ช่วงเวลา`
 
 ## Bootstrap contract freshness
 

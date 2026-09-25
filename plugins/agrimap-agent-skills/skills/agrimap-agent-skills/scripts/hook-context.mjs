@@ -32,7 +32,7 @@ const EXPLICIT_SKILL_PATTERNS = Object.freeze({
 
 const SQL_META_INTENT_PATTERN = /\bagm-sql\b|\b(?:skill|plugin|package|hook|routing|router)s?\b|(?:สกิล|ปลั๊กอิน|แพ็กเกจ|ฮุก|ไม่ใช้\s*(?:skill|agm-sql))/iu;
 const SQL_ACTION_PATTERN = /\b(?:create|add|write|generate|edit|modify|update|change|fix|refactor|analy[sz]e|explain|review|inspect)\b|(?:สร้าง|เพิ่ม|เขียน|แก้ไข|แก้|ปรับ|รีแฟกเตอร์|วิเคราะห์|อธิบาย|ตรวจ)/iu;
-const SQL_TARGET_PATTERN = /(?:\.sql\b|\b(?:sql|t-?sql|stored\s+procedure|procedure|ddl|dml)\b|(?:เอสคิวแอล|สโตร์ดโปรซีเยอร์|โปรซีเยอร์))/iu;
+const SQL_TARGET_PATTERN = /(?:\.sql\b|\b(?:sql|t-?sql|stored\s+procedures?|procedures?|sp|ddl|dml)\b|(?:เอสคิวแอล|สโตร์ดโปรซีเยอร์|โปรซีเยอร์|ตาราง))/iu;
 const SQL_DEFINITION_PATTERN = /\b(?:create|alter|drop)\s+(?:table|view|procedure|function|trigger|index)\b|(?:สร้าง|แก้ไข|ปรับ)\s*(?:ตาราง|วิว|โปรซีเยอร์)/iu;
 
 function escapeRegex(value) {
@@ -216,6 +216,26 @@ async function isSkillPackageRepository(cwd) {
     && lifecycle.startsWith("# Workflow lifecycle core");
 }
 
+// Domain skill routing from repository evidence (bootstrap AGENTS.md §0). Names
+// and a few root markers only; no directory scan.
+async function domainSkillHint(cwd, prompt) {
+  const names = [path.basename(cwd), remoteRepositoryName(cwd)].filter(Boolean);
+  const exists = async (name) => stat(path.join(cwd, name)).then(() => true, () => false);
+  let lane = null;
+  if (names.some((name) => /^agmws-/i.test(name))) lane = 'agm-be (be-main, backend_profile=agmws, golden/backend-main)';
+  else if (names.some((name) => /^agmbo-/i.test(name))) lane = 'agm-be (be-main, backend_profile=agmbo, golden/backend-main)';
+  else if (names.some((name) => /^agmwa-/i.test(name))) lane = 'agm-fe (fe-main, golden/frontend-main)';
+  else if (await exists('angular.json') && await exists('projects')) lane = 'agm-fe (fe-library, golden/frontend-libraries)';
+  else {
+    const root = await readdir(cwd).catch(() => []);
+    if (root.some((name) => /\.(?:sln|slnx|csproj)$/i.test(name))) lane = 'agm-be (be-library, golden/backend-libraries)';
+  }
+  const lines = [];
+  if (lane) lines.push('Domain skill (mandatory, AGENTS.md §0): code work here loads ' + lane + ' before the first answer or write, even when the request names no skill. SQL objects/files use agm-sql.');
+  if (primarySqlProductIntent(prompt)) lines.push('SQL intent: load agm-sql now; tables/SP/views follow patterns/sql.md + golden/sql and sql-contract-preflight from the first draft, without waiting to be asked.');
+  return lines;
+}
+
 function fingerprint(value) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -362,6 +382,7 @@ if (selection.active || shortReply) {
     sessionId ? 'Session: ' + sessionId : 'Use a stable session for durable work.'
   ];
   const digest = selection.active ? await sessionDigest(active) : null;
+  if (!packageWork && isRepo) context.push(...await domainSkillHint(cwd, prompt));
   if (digest) context.push(digest);
   if (active) context.push('Existing execution ' + (active.executionId || active.taskId) + ': resume only if this request concerns it; unrelated conversation does not replace it.');
   if (!isRepo) context.push('Session cwd is outside any Git repository. Before any write run `agm-workspace.mjs context --cwd "' + cwd.replaceAll('\\', '/') + '" --hint "<project>"`, then read and ack the target AGENTS.md chain. Repositories below: ' + (children.slice(0, 5).map((dir) => path.basename(dir)).join(', ') || 'none found') + '.');

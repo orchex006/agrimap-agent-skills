@@ -1,6 +1,6 @@
 ---
 name: agm-fe
-description: Analyze, design, create, edit, refactor, or explicitly test frontend work through one domain façade. Apply only to a relevant AgriMap target or explicit current invocation, never unrelated conversation or quoted examples.
+description: Analyze, design, create, edit, refactor, or explicitly test AgriMap Angular frontend work (agmwa-* apps, @agrimap/* libraries) in golden structure through one domain façade. Apply only to a relevant AgriMap target or explicit current invocation, never unrelated conversation or quoted examples.
 ---
 
 Resolve current intent and target relevance before any identity or lifecycle. Ordinary questions create no execution or task artifacts. Run only fe.

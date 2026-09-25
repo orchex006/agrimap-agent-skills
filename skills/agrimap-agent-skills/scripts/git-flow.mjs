@@ -12,8 +12,13 @@ import { isProtected, workTypeOf } from "./workflow-policy.mjs";
 
 const AUDIT_DIRECTORIES = new Set(["decisions", "instructions", "knowledge", "logs", "memory", "reports", "policy"]);
 const SECRET_KINDS = new Set(["CREDENTIAL", "TOKEN", "AUTH", "PRIVATE_KEY"]);
-const TYPE_BY_WORK = { feature: "feat", fix: "fix", hotfix: "fix", refactor: "refactor", docs: "docs", chore: "chore" };
-const HEADER = /^(feat|fix|refactor|docs|chore|test|perf|build|ci)(\([a-z0-9._/-]+\))?: \S.*$/;
+// Team commit style (bootstrap AGENTS.md §10.3): "<type>: <plain description>" that an
+// App Leader, BA or customer can read. Work: feature|fix|comment; agm-release: bump|audit|ci.
+const TYPE_BY_WORK = { feature: "feature", fix: "fix", hotfix: "fix", refactor: "comment", docs: "comment", chore: "ci" };
+export const TEAM_HEADER = /^(feature|fix|comment|ci|bump|audit): \S.*$/u;
+const TEAM_HEADER_MAX = 100;
+// Legacy English Conventional Commits stay valid for explicit input.
+const HEADER =/^(feat|fix|refactor|docs|chore|test|perf|build|ci)(\([a-z0-9._/-]+\))?: \S.*$/;
 const SLUG = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 const toSlash = value => String(value || "").replaceAll("\\", "/");
 // Append-only audit written after a delivery (delivered/completed/integrated,
@@ -336,9 +341,10 @@ function lines(value) {
 }
 
 function commitMessage({ input, workType, objective, own, executionId, verificationTrailer, bodyFallback = [] }) {
-  const type = input?.type || TYPE_BY_WORK[workType] || "chore";
+  const type = input?.type || TYPE_BY_WORK[workType] || "ci";
   let scope = input?.scope;
-  if (scope === undefined) {
+  // The team style carries no scope; only legacy Conventional input derives one.
+  if (scope === undefined && !TEAM_HEADER.test(`${type}: x`)) {
     const counts = {};
     for (const entry of own) {
       const top = entry.path.includes("/") ? entry.path.split("/")[0] : null;
@@ -458,10 +464,10 @@ export async function planDelivery({
   const verified = ["passed", "not-applicable"].includes(verification);
   if (!verified) warnings.push(warning("DELIVERED_UNVERIFIED", active.executionId, "run the tests, fix them, deliver again; merge is not offered until verification passes"));
   const message = commitMessage({ input, workType: active.workType || workTypeOf(policy, branch), objective: active.objective, own: groups.own, executionId: active.executionId, verificationTrailer: verified ? null : verification === "failed" ? "failed" : "not-run", bodyFallback });
-  const commitLanguage = policy?.delivery?.commitLanguage || "en";
   if (!pushOnly && groups.own.length) {
-    if (commitLanguage === "en" && /[^\x20-\x7e]/.test(message.header)) return stop("MESSAGE_REQUIRED", "Write an English Conventional Commit message and pass --input message.json.", { next: { action: "run", command: "deliver plan --input message.json" } });
-    if (!HEADER.test(message.header) || message.header.length > 72) return stop("MESSAGE_INVALID", `Header must match Conventional Commits and be at most 72 characters: ${message.header}`, { next: { action: "run", command: "deliver plan --input message.json" } });
+    const team = TEAM_HEADER.test(message.header) && message.header.length <= TEAM_HEADER_MAX;
+    const legacy = HEADER.test(message.header) && message.header.length <= 72 && !/[^\x20-\x7e]/.test(message.header);
+    if (!team && !legacy) return stop("MESSAGE_INVALID", `Header must be "<feature|fix|comment|ci|bump|audit>: <plain description>" (at most ${TEAM_HEADER_MAX} characters): ${message.header}`, { next: { action: "run", command: "deliver plan --input message.json" } });
   }
   const head = facts.head;
   const headMessage = head ? out(git(run, root, ["log", "-1", "--format=%B", head])) : "";
@@ -651,7 +657,7 @@ export async function integrationOptions({ root, policy, delivery, run = default
   const workType = delivery.workType || workTypeOf(policy, delivery.branch) || "feature";
   const typePolicy = policy?.branching?.workTypes?.[workType] || {};
   const target = typePolicy.target || policy?.branching?.integrationBranch || "develop";
-  const method = policy?.integration?.method || "pull-request";
+  const method = policy?.integration?.method || "local-merge";
   const context = forgeContext(root, policy, run);
   const unverified = (delivery.warnings || []).some(item => (item.code || item) === "DELIVERED_UNVERIFIED");
   const pr = method === "pull-request" || unverified ? findOpenPr(root, context, delivery.remoteBranch || delivery.branch, target, run) : null;
@@ -677,8 +683,8 @@ export async function integrationOptions({ root, policy, delivery, run = default
     ];
   } else {
     options = [
-      { id: "1", label: `Merge เข้า ${target}${backMerge}`.slice(0, 60), effect: "merge หลัง review แล้ว push แบบไม่ force และตรวจ remote", value: "integrate" },
-      ...(context.forge !== "none" ? [{ id: "2", label: "เปิด PR แทน", effect: `เปิด PR → ${target} ให้ทีม review`, value: "open-pr" }] : []),
+      { id: "1", label: `Merge เข้า ${target}${backMerge}`.slice(0, 60), effect: "merge หลัง test ในเครื่องผ่าน แล้ว push แบบไม่ force และตรวจ remote", value: "integrate" },
+      ...(context.forge !== "none" ? [{ id: "2", label: "เปิด PR/MR แทน (ถ้าต้องการ review)", effect: `เปิด PR/MR → ${target} ให้ทีม review`, value: "open-pr" }] : []),
       { id: String(context.forge !== "none" ? 3 : 2), label: "แก้ต่อ", effect: "ทำงานต่อบน work branch", value: "continue" },
       { id: String(context.forge !== "none" ? 4 : 3), label: "พักไว้", effect: "คง branch ไว้ให้ resume", value: "park" },
     ];
@@ -875,7 +881,7 @@ export async function planIntegration(options) {
       },
     };
   }
-  const method = intent === "integrate" ? policy?.integration?.method || "pull-request" : intent;
+  const method = intent === "integrate" ? policy?.integration?.method || "local-merge" : intent;
   if (intent === "open-pr" || intent === "open-pr-draft" || method === "pull-request") {
     const context = forgeContext(root, policy, run);
     const pr = findOpenPr(root, context, remoteBranch, target, run);

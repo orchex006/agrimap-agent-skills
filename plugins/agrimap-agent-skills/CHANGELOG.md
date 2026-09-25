@@ -2,6 +2,23 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.9.3 — 2026-09-25
+
+Skill-first routing, team commit style, pending-work release and customer-facing Release Description with Teams notification.
+
+- Bootstrap `AGENTS.md` §0 makes skill loading mandatory for every model before code/SQL work, with an evidence table: `agmws-*`/`agmbo-*` → `agm-be` (be-main), .NET libraries → `agm-be` (be-library), `agmwa-*` → `agm-fe` (fe-main), Angular library workspaces → `agm-fe` (fe-library), tables/SP/views/`.sql` → `agm-sql`. Golden format is the default from the first draft; a `Skill · Target · Golden` receipt line and a pre-delivery self-check are required.
+- `agm-fe`, `agm-be` and `agm-sql` descriptions now name their triggers (agmwa/agmws/agmbo, Angular/.NET libraries, tables/SP/views) so hosts pick them without an explicit skill name.
+- Prompt hook adds a domain skill line from the repository name/root markers and an `agm-sql` line when SQL intent is detected (the previously unused SQL intent detector is now wired in; `SP`, `procedures` and `ตาราง` are recognized).
+- agm-release pending work: publishing commands (`release`, `pipeline`) now include all pending product work automatically, like group B `Version *`: dirty paths and unpushed develop commits become a reviewed content commit before the version commit. Work stays local only on explicit requester exclusion; secrets, ignored state and nested repos are always excluded and listed.
+- After publication the final audit commit is pushed to develop once and verified, so develop ends clean and equal to origin. This replaces the 4.9.1 carry-forward (`--push-audit` is no longer needed); a develop-triggered pipeline, if configured, runs once more.
+- Team commit style (bootstrap `AGENTS.md` §10.6): `feature:`, `fix:`, `comment:` plus a plain-language description an App Leader, BA or customer can read (at most 100 characters, no scope); agm-release commits use `bump:`, `audit:`, `ci:`. `git-flow.mjs` generates and validates this style (legacy English Conventional Commits in explicit input still pass); new workflow policies default to `commitConvention: agrimap`, `commitLanguage: th`.
+- Release Description (`AGENTS.release.md` §8.2, `release-notify.md`): `release production|full` (including `--flash`) end with a plain-Thai `# <App> / <version>` bullet summary a BA can send to customers, naming the source project for changes from another project (e.g. `agmws-identity-netcore`). It is saved under `.agrimap-agent/reports/` and always shown in the final answer.
+- Teams notification: new managed bootstrap file `tools/agrimap/release-notify.mjs` (`check`, `set-url`, `send --preview`). It reads `NOTIFY_WEBHOOK_URL`, checks `GET …/health` before every POST, asks once for the URL when it is missing and saves it as a user environment variable. Failures leave the release completed with notify `pending`. `--silent` (alias `--skip-noti`) skips sending only.
+- Integration without MR/PR: new workflow policies default to `integration.method: local-merge` (also the fallback when no policy exists). `merge`/`รวม` merges into the target and pushes only after local verification passes; `pr`/`mr` still opens one on request. Existing confirmed policies keep their recorded method (switch with `agm-workspace.mjs policy set --key integration.method --value local-merge`).
+- Fix: `start` no longer fails with `RUN_ID_COLLISION` when two runs start in the same second; a generated `ddHHmmss` ID moves to the next free second as bootstrap §9.2 requires (explicit `--execution` IDs still report the collision). This made `git-flow` CI flaky on Linux.
+- Bootstrap manifest mode `managed`: the bundle owns the file and always replaces it (with backup) instead of reporting a merge conflict.
+- Docs: `docs/RELEASE.md` no longer says `--flash` is unsupported on prepare/pipeline (supported since 4.9.1).
+
 ## 4.9.1 — 2026-09-22
 
 agm-release fixes.
