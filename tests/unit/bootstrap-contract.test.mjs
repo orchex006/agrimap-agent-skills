@@ -158,7 +158,7 @@ test('release-notify: preview builds the service payload; missing URL and failed
   assert.equal(payload.projectType,'Web');assert.equal(payload.projectVersion,'1.4.2');assert.equal(payload.gitTag,'v1.4.2');
   assert.equal(payload.repositoryUrl,'https://gitlab.example.com/g/agmwa-demo-ng');assert.equal(payload.changes.length,2);
   const posts=[];
-  const server=http.createServer((req,res)=>{if(req.method==='POST')posts.push(req.url);res.statusCode=req.url.endsWith('/health')?503:200;res.end('{}');});
+  const server=http.createServer((req,res)=>{if(req.method==='POST')posts.push(req.url);res.statusCode=req.url.endsWith('/healthz')?503:200;res.end('{}');});
   await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>server.close());
   const url='http://127.0.0.1:'+server.address().port+'/agrimap-notify/release';
   const unhealthy=spawnSync(process.execPath,[script,'send','--description','desc.md','--url',url],{cwd:repo,env,encoding:'utf8'});

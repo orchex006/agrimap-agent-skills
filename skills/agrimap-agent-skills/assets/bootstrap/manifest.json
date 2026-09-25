@@ -214,7 +214,7 @@
       "source": "release-notify.mjs",
       "target": "tools/agrimap/release-notify.mjs",
       "mode": "managed",
-      "sha256": "7f1771a32eb1244bf7573c2de06e3c44a9404f79c5c39fbe8d887d5506b8897d",
+      "sha256": "758309bd13ffacd57c18a56ca5bae869259e29f9b720b6264e3c1577c2e7f9d3",
       "previous": []
     }
   ]

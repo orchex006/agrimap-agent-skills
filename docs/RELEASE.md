@@ -48,7 +48,7 @@ Agent ใช้ตัวจับเวลาใน bundle เก็บสถา
 
 การเปลี่ยนที่มาจาก project อื่น เช่น API ของ `agmws-identity-netcore` หรือ package `@agrimap/*` ระบุชื่อ project ต้นทางในวงเล็บ โดยไม่ลงรายละเอียดเทคนิค
 
-**แจ้งเตือน Microsoft Teams:** Agent ส่งสรุปผ่าน `node tools/agrimap/release-notify.mjs send` (managed bootstrap file ถูกแทนที่ทุกครั้งที่อัปเดต bootstrap) script ตรวจ `GET …/health` ก่อน POST ทุกครั้ง และอ่าน URL จาก env `NOTIFY_WEBHOOK_URL` ถ้าเครื่องยังไม่มี Agent ขอ URL ครั้งเดียวแล้วบันทึกด้วย `set-url` ถ้าปลายทางไม่พร้อม release ยังสำเร็จและรายงาน notify เป็น `pending` พร้อมคำสั่งส่งซ้ำ
+**แจ้งเตือน Microsoft Teams:** Agent ส่งสรุปผ่าน `node tools/agrimap/release-notify.mjs send` (managed bootstrap file ถูกแทนที่ทุกครั้งที่อัปเดต bootstrap) script ตรวจ `GET …/healthz` ก่อน POST ทุกครั้ง และอ่าน URL จาก env `NOTIFY_WEBHOOK_URL` ถ้าเครื่องยังไม่มี Agent ขอ URL ครั้งเดียวแล้วบันทึกด้วย `set-url` ถ้าปลายทางไม่พร้อม release ยังสำเร็จและรายงาน notify เป็น `pending` พร้อมคำสั่งส่งซ้ำ
 
 ข้ามการส่ง (ยังเขียนและแสดงสรุป) ด้วย `--silent` หรือ `--skip-noti`:
 

@@ -22,7 +22,7 @@ Unless `--silent`, run from the target root after F:
 node tools/agrimap/release-notify.mjs send --description <file> --commit <production-sha> --version <production-version>
 ```
 
-The script checks `GET …/health` before POST. Missing `tools/agrimap/release-notify.mjs` is a bootstrap freshness repair (managed file), not a reason to skip.
+The script checks `GET …/healthz` before POST. Missing `tools/agrimap/release-notify.mjs` is a bootstrap freshness repair (managed file), not a reason to skip.
 
 | Exit | Meaning | Action |
 | --- | --- | --- |

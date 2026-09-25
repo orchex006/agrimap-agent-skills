@@ -8,7 +8,7 @@
 //   node tools/agrimap/release-notify.mjs send --description <file.md> --commit <sha> [--preview]
 //
 // URL: --url, else env NOTIFY_WEBHOOK_URL (process, then Windows user env or shell profile).
-// Health: env NOTIFY_HEALTH_URL, else the same base with /health instead of /release.
+// Health: env NOTIFY_HEALTH_URL, else the same base with /healthz instead of /release (agrimap-notify service).
 // Exit: 0 ok, 1 usage, 2 NOTIFY_WEBHOOK_URL_MISSING, 3 health failed, 4 post failed.
 
 import { execFileSync } from 'node:child_process';
@@ -74,7 +74,7 @@ function resolveUrl(options) {
 function healthUrl(postUrl) {
   if (process.env.NOTIFY_HEALTH_URL) return process.env.NOTIFY_HEALTH_URL;
   const url = new URL(postUrl);
-  url.pathname = url.pathname.replace(/\/release\/?$/, '').replace(/\/$/, '') + '/health';
+  url.pathname = url.pathname.replace(/\/release\/?$/, '').replace(/\/$/, '') + '/healthz';
   url.search = '';
   return url.toString();
 }
