@@ -179,4 +179,4 @@ $agm-be action=analyze
 $agm-exec เพิ่ม export CSV ให้หน้า order
 ```
 
-Agent ถาม workflow ของทีมครั้งแรกครั้งเดียว แตก `feature/<slug>` จาก base ตาม policy, commit + push work branch เมื่อจบ แล้วสรุปพร้อมตัวเลือกถัดไป ตอบ `1` หรือ `pr` เพื่อเปิด PR, `merge` เพื่อรวมตาม policy
+Agent ถาม workflow ของทีมครั้งแรกครั้งเดียว แตก `feature/<slug>` จาก base ตาม policy, commit + push work branch เมื่อจบ แล้วสรุปพร้อมตัวเลือกถัดไป ตอบ `1` หรือ `merge` เพื่อรวมเข้า target ทันทีเมื่อ test ในเครื่องผ่าน (ค่าเริ่มต้นไม่ต้องเปิด MR/PR) หรือ `pr` เมื่อต้องการ MR/PR ให้ทีม review
