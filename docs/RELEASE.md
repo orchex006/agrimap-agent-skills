@@ -43,12 +43,12 @@ Agent ใช้ตัวจับเวลาใน bundle เก็บสถา
 
 - เพิ่มการเข้าสู่ระบบด้วย ThaiD
 - แก้แบบฟอร์มให้บันทึกวันที่และช่วงเวลาได้ครบ
-- ปรับขั้นตอนเข้าสู่ระบบให้รองรับการยืนยันตัวตนแบบใหม่ (ส่วนนี้มาจาก agmws-identity-netcore)
+- ปรับขั้นตอนเข้าสู่ระบบให้รองรับการยืนยันตัวตนแบบใหม่ (เกี่ยวข้อง: agmws-identity-netcore)
 ```
 
-การเปลี่ยนที่มาจาก project อื่น เช่น API ของ `agmws-identity-netcore` หรือ package `@agrimap/*` ระบุชื่อ project ต้นทางในวงเล็บ โดยไม่ลงรายละเอียดเทคนิค
+ข้อที่มาจากหรือต้องตามไปแก้ project อื่น เช่น API ของ `agmws-identity-netcore` หรือ package `@agrimap/*` ปิดท้ายด้วย `(เกี่ยวข้อง: <project>)` โดยไม่ลงรายละเอียดเทคนิค
 
-**แจ้งเตือน Microsoft Teams:** Agent ส่งสรุปผ่าน `node tools/agrimap/release-notify.mjs send` (managed bootstrap file ถูกแทนที่ทุกครั้งที่อัปเดต bootstrap) script ตรวจ `GET …/healthz` ก่อน POST ทุกครั้ง และอ่าน URL จาก env `NOTIFY_WEBHOOK_URL` ถ้าเครื่องยังไม่มี Agent ขอ URL ครั้งเดียวแล้วบันทึกด้วย `set-url` ถ้าปลายทางไม่พร้อม release ยังสำเร็จและรายงาน notify เป็น `pending` พร้อมคำสั่งส่งซ้ำ
+**แจ้งเตือน Microsoft Teams มี 2 แบบ:** Jenkins build card (`POST …/release`) ส่งจาก Jenkinsfile ตามเดิม ส่วน Release Description (`POST …/release-description`) ส่งเฉพาะชื่อ project, version และรายการที่แก้พร้อม project ที่เกี่ยวข้อง Agent ส่งผ่าน `node tools/agrimap/release-notify.mjs send` (managed bootstrap file ถูกแทนที่ทุกครั้งที่อัปเดต bootstrap) script ตรวจ `GET …/healthz` ก่อน POST ทุกครั้ง และอ่าน URL จาก env `NOTIFY_WEBHOOK_URL` (`https://appserv2.cdg.co.th/agrimap-notify/release-description`) ถ้าเครื่องยังไม่มี Agent ขอ URL ครั้งเดียวแล้วบันทึกด้วย `set-url` ถ้าปลายทางไม่พร้อม release ยังสำเร็จและรายงาน notify เป็น `pending` พร้อมคำสั่งส่งซ้ำ
 
 ข้ามการส่ง (ยังเขียนและแสดงสรุป) ด้วย `--silent` หรือ `--skip-noti`:
 

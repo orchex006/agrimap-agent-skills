@@ -98,7 +98,7 @@
       "source": "AGENTS.release.md",
       "target": "AGENTS.release.md",
       "mode": "copy",
-      "sha256": "414ee78ee1780fcd19aa99e531ccc58ce975fc47ff09c3b7a1946f951fb90b27",
+      "sha256": "3085767f1dcb943389b83f4dc1ae0b51b63b72b8986cd8068d8f6b1a53f9bfd8",
       "previous": [
         {
           "version": "4.8.0",
@@ -214,7 +214,7 @@
       "source": "release-notify.mjs",
       "target": "tools/agrimap/release-notify.mjs",
       "mode": "managed",
-      "sha256": "758309bd13ffacd57c18a56ca5bae869259e29f9b720b6264e3c1577c2e7f9d3",
+      "sha256": "007bd386a10367ffe9b94e890e6b96eaa52a972eab89803ed93bd201c868b62e",
       "previous": []
     }
   ]
