@@ -14,9 +14,10 @@ test('bootstrap preserves the complete owner-submitted canonical contract',async
   // 4.6.0: Agent Collaboration Governance §10 team workflow, policy/local allowlist, per-execution logs (spec ACG v2.1 §13, §19.16).
   // 4.8.0: instruction diet — §2 (full), §4–§8 moved verbatim to AGENTS.release.md; core keeps a short §2
   // plus the owner-answered precedence sentence (Q-4.8.0-02).
+  // 4.9.3: owner-requested §0 skill-first routing, §10.6 team commit style and release §8.2 Release Description.
   // Package bumps only change the generated version marker; freeze every other byte.
   const sourceBytes=Buffer.from(bytes.toString('utf8').replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/,'<!-- AGRIMAP BOOTSTRAP VERSION: 3.6.1 -->'));
-  assert.equal(createHash('sha256').update(sourceBytes).digest('hex'),'99c9aca77d09b52b029f770bbd9a65b77ab615fc358b73f592299ef60da97c4c');
+  assert.equal(createHash('sha256').update(sourceBytes).digest('hex'),'f286ff57b1cd2cb2d3a841db35c388fdedac8821bbf31b7742b29869cb57aa6d');
   const manifest=JSON.parse(await readFile(path.join(bundle,'manifest.json'),'utf8'));
   assert.ok(bytes.toString('utf8').includes(`<!-- AGRIMAP BOOTSTRAP VERSION: ${manifest.version} -->`));
   assert.equal(manifest.files.find(f=>f.source==='AGENTS.md').sha256,createHash('sha256').update(bytes).digest('hex'));
@@ -97,8 +98,8 @@ test('instruction diet: core AGENTS.md at most 24,000 chars; core + release keep
   const entry=manifest.files.find(f=>f.source==='AGENTS.release.md');
   assert.equal(entry.target,'AGENTS.release.md');assert.equal(entry.sha256,createHash('sha256').update(release).digest('hex'));
   const frozen=release.replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/,'<!-- AGRIMAP BOOTSTRAP VERSION: 3.6.1 -->');
-  assert.equal(createHash('sha256').update(frozen).digest('hex'),'804c0fb5421fc0184920cd0eeb14b69e7f3c111d8ea0c0a13f510e77467ad1f5');
-  const headings=['## 1.','## 2.','### 2.1','### 2.2','### 2.3','## 3.','## 4.','## 5.','### 5.1','### 5.2','## 6.','### 6.1','### 6.2','### 6.3','## 7.','## 8.','### 8.1','## 9.','### 9.1','### 9.5','## 10.','### 10.5','## Bootstrap contract freshness'];
+  assert.equal(createHash('sha256').update(frozen).digest('hex'),'3edfc00b59aadbb04d42bbf287be49b66bc72a19d9554d9496cae654638ab06a');
+  const headings=['## 0.','## 1.','## 2.','### 2.1','### 2.2','### 2.3','## 3.','## 4.','## 5.','### 5.1','### 5.2','## 6.','### 6.1','### 6.2','### 6.3','## 7.','## 8.','### 8.1','## 9.','### 9.1','### 9.5','## 10.','### 10.5','## Bootstrap contract freshness'];
   const all=(core+'\n'+release).split('\n');
   for(const h of headings)assert.ok(all.some(line=>line.startsWith(h)),h);
   assert.match(core,/อ่าน `AGENTS\.release\.md` ทั้งไฟล์ก่อนเริ่ม/);
@@ -119,4 +120,47 @@ test('upgrade from the 4.7.0 template: unmodified AGENTS.md updates, edited one 
   await writeFile(path.join(h.temp,'AGENTS.md'),Buffer.concat([old,Buffer.from('\nProject rule: keep custom naming.\n')]));
   plan=await planBootstrap({target:h.temp,kind:'be-main'});
   assert.equal(status('AGENTS.md'),'conflict');assert.equal(status('AGENTS.release.md'),'create');
+});
+
+test('managed bootstrap tool file is always replaced with a backup, never a merge conflict (4.9.3)',async t=>{
+  const {createHarness}=await import('../helpers/harness.mjs');
+  const {planBootstrap,applyBootstrap}=await import('../../skills/agrimap-agent-skills/scripts/project-bootstrap.mjs');
+  const {mkdir,writeFile}=await import('node:fs/promises');
+  const h=await createHarness('agm-managed-');t.after(()=>h.cleanup());
+  const target='tools/agrimap/release-notify.mjs';
+  await mkdir(path.join(h.temp,'tools/agrimap'),{recursive:true});
+  await writeFile(path.join(h.temp,target),'// local edit\n');
+  const plan=await planBootstrap({target:h.temp,kind:'be-main'});
+  assert.equal(plan.entries.find(e=>e.target===target).status,'update');
+  const applied=await applyBootstrap({target:h.temp,kind:'be-main'});
+  assert.equal(applied.applied,true);
+  const bundle=await readFile(path.join(projectRoot,'skills/agrimap-agent-skills/assets/bootstrap/release-notify.mjs'));
+  assert.deepEqual(await readFile(path.join(h.temp,target)),bundle);
+  const beforeHash=plan.entries.find(e=>e.target===target).beforeHash;
+  assert.equal((await readFile(path.join(h.temp,'.agrimap-agent/runtime/bootstrap-backups',beforeHash,target),'utf8')),'// local edit\n');
+});
+
+test('release-notify: preview builds the service payload; missing URL and failed health never POST (4.9.3)',async t=>{
+  const {createHarness}=await import('../helpers/harness.mjs');
+  const {execFileSync,spawnSync}=await import('node:child_process');
+  const {mkdir,writeFile}=await import('node:fs/promises');
+  const http=await import('node:http');
+  const h=await createHarness('agm-notify-');t.after(()=>h.cleanup());
+  const script=path.join(projectRoot,'skills/agrimap-agent-skills/assets/bootstrap/release-notify.mjs');
+  const repo=path.join(h.temp,'agmwa-demo-ng');await mkdir(repo);
+  execFileSync('git',['init','-q'],{cwd:repo});execFileSync('git',['remote','add','origin','git@gitlab.example.com:g/agmwa-demo-ng.git'],{cwd:repo});
+  await writeFile(path.join(repo,'desc.md'),'# AgriMap Demo / 1.4.2\n\n- เพิ่มการเข้าสู่ระบบด้วย ThaiD\n- ปรับขั้นตอนเข้าสู่ระบบ (ส่วนนี้มาจาก agmws-identity-netcore)\n');
+  const env={...process.env,NOTIFY_WEBHOOK_URL:'',NOTIFY_HEALTH_URL:'',HOME:h.temp,USERPROFILE:h.temp};
+  const run=args=>spawnSync(process.execPath,[script,...args],{cwd:repo,env,encoding:'utf8'});
+  const preview=run(['send','--description','desc.md','--commit','abc','--preview']);
+  assert.equal(preview.status,0,preview.stdout+preview.stderr);
+  const payload=JSON.parse(preview.stdout).payload;
+  assert.equal(payload.projectType,'Web');assert.equal(payload.projectVersion,'1.4.2');assert.equal(payload.gitTag,'v1.4.2');
+  assert.equal(payload.repositoryUrl,'https://gitlab.example.com/g/agmwa-demo-ng');assert.equal(payload.changes.length,2);
+  const posts=[];
+  const server=http.createServer((req,res)=>{if(req.method==='POST')posts.push(req.url);res.statusCode=req.url.endsWith('/health')?503:200;res.end('{}');});
+  await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>server.close());
+  const url='http://127.0.0.1:'+server.address().port+'/agrimap-notify/release';
+  const unhealthy=spawnSync(process.execPath,[script,'send','--description','desc.md','--url',url],{cwd:repo,env,encoding:'utf8'});
+  assert.equal(unhealthy.status,3);assert.equal(JSON.parse(unhealthy.stdout).sent,false);assert.deepEqual(posts,[]);
 });

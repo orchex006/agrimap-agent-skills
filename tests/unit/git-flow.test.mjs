@@ -52,7 +52,7 @@ test('develop -> feature branch -> commit + push with remote verified; develop u
   verify(p,'s1',executionId);
   const {plan:dplan,applied}=deliver(p,'s1');
   assert.equal(applied.ok,true,JSON.stringify(applied));
-  assert.match(dplan.message.header,/^(feat|fix|refactor|docs|chore|test|perf|build|ci)(\([a-z0-9._/-]+\))?: \S.*$/);
+  assert.match(dplan.message.header,/^feature: \S.*$/u,'team commit style: <type>: <plain description>, no scope');
   const body=p.git(['log','-1','--format=%B']);
   assert.match(body,new RegExp(`AGM-Execution: ${executionId}`));
   assert.equal(applied.remoteSha,p.git(['rev-parse','HEAD']));assert.equal(applied.remoteVerified,true);
@@ -525,4 +525,10 @@ test('a merge git refuses before conflicts (local file would be overwritten) is 
   assert.equal(await present(path.join(p.repo,'.git','MERGE_HEAD')),false);
   assert.equal(p.git(['rev-parse','HEAD']),before);
   assert.equal(await readFile(path.join(p.repo,'.agrimap-agent','reports','shared.md'),'utf8'),'mine, not committed\n');
+});
+
+test('team commit style: feature|fix|comment for work, bump|audit|ci for agm-release, Thai headers (4.9.3)',async()=>{
+  const {TEAM_HEADER}=await import('../../skills/agrimap-agent-skills/scripts/git-flow.mjs');
+  for(const header of ['feature: เพิ่มรับ User หลายช่องทาง','fix: แก้ dynamic form เพิ่มวันที่ ช่วงเวลา','comment: ปรับโทนสีปุ่มเป็นสีม่วง','bump: Production 1.4.2','audit: บันทึกประวัติ release 1.4.2','ci: อัปเดต bootstrap 4.9.3'])assert.match(header,TEAM_HEADER,header);
+  for(const header of ['feat(orders): add export','Feature: เพิ่ม','fix:ไม่มีช่องว่าง','docs: update'])assert.doesNotMatch(header,TEAM_HEADER,header);
 });

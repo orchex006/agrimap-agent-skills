@@ -328,6 +328,15 @@ test('hook in a non-git parent writes nothing and points to context with child r
  assert.match(hook.hookSpecificOutput.additionalContext,/agmws-orders-netcore/);
  assert.equal(await present(path.join(parent,'.agrimap-agent')),false);
 });
+test('hook names the domain skill from the repository name and SQL intent (4.9.3)',async t=>{
+ const h=await fixture(t);
+ const ws=path.join(h.temp,'agmws-orders-netcore');await initRepo(ws);
+ const be=h.run(h.scripts.hook,['--provider','claude'],{cwd:ws,session_id:'d1',hook_event_name:'UserPromptSubmit',prompt:'แก้ไข validation ในโค้ด service นี้'}).hookSpecificOutput.additionalContext;
+ assert.match(be,/Domain skill .*agm-be \(be-main, backend_profile=agmws/);assert.doesNotMatch(be,/SQL intent/);
+ const wa=path.join(h.temp,'agmwa-platform-ng');await initRepo(wa);
+ const fe=h.run(h.scripts.hook,['--provider','claude'],{cwd:wa,session_id:'d2',hook_event_name:'UserPromptSubmit',prompt:'สร้างตาราง ORDER และ SP สำหรับบันทึกข้อมูล'}).hookSpecificOutput.additionalContext;
+ assert.match(fe,/agm-fe \(fe-main/);assert.match(fe,/SQL intent: load agm-sql now/);
+});
 test('hook short replies: option with a stored card, silence without, question guard for delivered work',async t=>{
  const h=await fixture(t);const root=path.join(h.temp,'agmws-x-netcore');await initRepo(root);
  const send=prompt=>h.run(h.scripts.hook,['--provider','claude'],{cwd:root,session_id:'s1',hook_event_name:'UserPromptSubmit',prompt});

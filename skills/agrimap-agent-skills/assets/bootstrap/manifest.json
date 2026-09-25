@@ -1,12 +1,12 @@
 {
-  "version": "4.9.1",
+  "version": "4.9.3",
   "source": "Owner-supplied canonical contract submitted 2026-09-08; owner-authorized missing-memory indexing revision 2026-09-09; owner-authorized explicit Version/Patch precedence and compatible direct preparation revision 2026-09-09",
   "files": [
     {
       "source": "AGENTS.md",
       "target": "AGENTS.md",
       "mode": "copy",
-      "sha256": "e6361e83cf7520d567c27598ae08b4141dde3b91d2f10ed7a927c6a9a87c33a0",
+      "sha256": "c14878d4a4fa4e3eca9a6c6161d20685728cbc9e60cdb59cba5e2a1bac402f8a",
       "previous": [
         {
           "version": "3.2.2",
@@ -87,6 +87,10 @@
         {
           "version": "4.8.0",
           "sha256": "4f566fccdafb249da14e62f84185f671cb3a93841af36d2ed82188994ece1bc6"
+        },
+        {
+          "version": "4.9.1",
+          "sha256": "e6361e83cf7520d567c27598ae08b4141dde3b91d2f10ed7a927c6a9a87c33a0"
         }
       ]
     },
@@ -94,11 +98,15 @@
       "source": "AGENTS.release.md",
       "target": "AGENTS.release.md",
       "mode": "copy",
-      "sha256": "321bf0a410ea5286f87c5163eb7272350084f2908aa36ec9525be2c0b164ad67",
+      "sha256": "414ee78ee1780fcd19aa99e531ccc58ce975fc47ff09c3b7a1946f951fb90b27",
       "previous": [
         {
           "version": "4.8.0",
           "sha256": "2e9e4e5a810d38e1890fadc5abf2275114c485a717ad07d925f6d7c2858414b7"
+        },
+        {
+          "version": "4.9.1",
+          "sha256": "321bf0a410ea5286f87c5163eb7272350084f2908aa36ec9525be2c0b164ad67"
         }
       ]
     },
@@ -201,6 +209,13 @@
           "sha256": "5fcb9257d97f0a9f8f8af7b6d3694b79242679ce9064e215cc3de6bf97b4e0a5"
         }
       ]
+    },
+    {
+      "source": "release-notify.mjs",
+      "target": "tools/agrimap/release-notify.mjs",
+      "mode": "managed",
+      "sha256": "7f1771a32eb1244bf7573c2de06e3c44a9404f79c5c39fbe8d887d5506b8897d",
+      "previous": []
     }
   ]
 }

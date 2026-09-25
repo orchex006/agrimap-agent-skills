@@ -5,7 +5,7 @@
 - Operation: `be`
 - Workflow depth: default `light`; allowed `light`, `standard`, `regulated`
 - Mode: `action-routed`
-- Purpose: Analyze, design, create, edit, refactor, or explicitly test backend work through one domain façade.
+- Purpose: Analyze, design, create, edit, refactor, or explicitly test AgriMap .NET backend work (agmws-*/agmbo-* services, AgriMap.* libraries) in golden structure through one domain façade.
 - Deliverable: requested result with proportional evidence; no lifecycle for ordinary answers
 
 ## Action gate

@@ -1,4 +1,4 @@
-# AgriMap Agent Skills 4.9.1
+# AgriMap Agent Skills 4.9.3
 
 [รุ่นล่าสุด](https://github.com/orchex006/agrimap-agent-skills/releases/latest) · [Tags รุ่นก่อน](https://github.com/orchex006/agrimap-agent-skills/tags) · [เลือกเวอร์ชันและ source ย้อนหลัง](docs/VERSIONS.md)
 
@@ -67,13 +67,15 @@ Design ทำงานแบบ passive ในคำสั่งที่เห�
 | `$agm-release pipeline inhouse` | ตรวจ candidate ที่เตรียมแล้ว → commit → push/ตรวจ SHA | ไม่เพิ่มซ้ำ | `develop → jenkins` | ไม่เกี่ยวข้อง |
 | `$agm-release pipeline production` | ตรวจ Production candidate → commit → push/ตรวจ SHA → เตรียมแผนส่ง Production | ไม่เพิ่มซ้ำ | `develop → jenkins`; ยังไม่ push Production | รอคำสั่ง promote |
 | `$agm-release promote` | แสดง SHA/version/notes/tag → ขอคำยืนยัน → push Production → สร้างและ push annotated tag | ไม่เพิ่ม | `jenkins-release` และ tag ของ Production เท่านั้น | **ต้องยืนยันทุกครั้งก่อนทำจริง** |
-| `$agm-release release full` | indexing → prepare ทั้งสองฝั่ง → notes เฉพาะ Production → pipeline Inhouse/Production ใช้ candidate เดียว → ยืนยัน → promote | Inhouse และ Production +0.0.1 แยกกัน | `develop → jenkins → jenkins-release` + Production tag | **ต้องยืนยันก่อน promote** |
-| `$agm-release release production` | indexing → prepare Production → pipeline Production → ยืนยัน → promote | Production +0.0.1; Inhouse คงเดิม | ผ่าน `develop → jenkins` ไป `jenkins-release` + Production tag | **ต้องยืนยันก่อน promote** |
+| `$agm-release release full` | indexing → prepare ทั้งสองฝั่ง → notes เฉพาะ Production → pipeline Inhouse/Production ใช้ candidate เดียว → ยืนยัน → promote → Release Description/แจ้งเตือน Teams | Inhouse และ Production +0.0.1 แยกกัน | `develop → jenkins → jenkins-release` + Production tag | **ต้องยืนยันก่อน promote** |
+| `$agm-release release production` | indexing → prepare Production → pipeline Production → ยืนยัน → promote → Release Description/แจ้งเตือน Teams | Production +0.0.1; Inhouse คงเดิม | ผ่าน `develop → jenkins` ไป `jenkins-release` + Production tag | **ต้องยืนยันก่อน promote** |
 | `$agm-release release inhouse` | indexing → prepare Inhouse → pipeline Inhouse | Inhouse +0.0.1 | `develop → jenkins`; ไม่มี Production/tag | ไม่เกี่ยวข้อง |
 
 `project.md` ใน Flow นี้คือ `.agrimap-agent/memory/project.md` ส่วน changelog คือ `changelog.md` ที่ root ของโครงการ ใช้ Version ที่เจ้าของระบุชัด หรือเพิ่ม PATCH เป็นค่าเริ่มต้น เช่น `1.2.9 → 1.2.10` โดยอ่าน Inhouse จาก `Jenkinsfile` และ Production จาก `Jenkinsfile_Production` หากทำต่อจาก candidate เดิมจะไม่เพิ่มเลขซ้ำ
 
 หากยังไม่มี Project Memory คำสั่ง indexing/prepare/release จะทำ indexing จากหลักฐานและสร้าง `.agrimap-agent/memory/project.md` พร้อมโฟลเดอร์ที่จำเป็นให้ใน flow เดิม ไม่ต้องสั่ง Project Backfill หรือ bootstrap แยก โดย indexing รวม Project Backfill และต้องพิสูจน์ coverage ก่อนจบ ส่วน standalone prepare ไม่อ้าง full backfill จาก scoped indexing ส่วน standalone pipeline/promote ต้องพิสูจน์ candidate ที่เตรียมแล้วก่อน reconstruct memory
+
+**Release Description (4.9.3):** `release production|full` เขียนสรุปภาษาคนให้ BA ส่งลูกค้าได้ และส่งแจ้งเตือน Teams ผ่าน `tools/agrimap/release-notify.mjs` (env `NOTIFY_WEBHOOK_URL`, ตรวจ health ก่อนส่ง) ข้ามการส่งด้วย `--silent` หรือ `--skip-noti` ดู [Release](docs/RELEASE.md)
 
 **Release notes และ tag เป็นของ Production เท่านั้น:** ถ้า candidate Inhouse เป็น `1.0.6` และ Production เป็น `1.0.3` ให้สร้าง `release-notes/1.0.3.md` และใช้ tag `v1.0.3` ห้ามนำเลข Inhouse ไปสร้าง `release-notes/1.0.6.md` งาน Inhouse-only ไม่แก้ `release.md` หรือ versioned notes ประวัติเดิมต้องคงอยู่
 
