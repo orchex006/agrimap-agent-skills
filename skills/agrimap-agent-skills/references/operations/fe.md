@@ -5,7 +5,7 @@
 - Operation: `fe`
 - Workflow depth: default `light`; allowed `light`, `standard`, `regulated`
 - Mode: `action-routed`
-- Purpose: Analyze, design, create, edit, refactor, or explicitly test frontend work through one domain façade.
+- Purpose: Analyze, design, create, edit, refactor, or explicitly test AgriMap Angular frontend work (agmwa-* apps, @agrimap/* libraries) in golden structure through one domain façade.
 - Deliverable: requested result with proportional evidence; no lifecycle for ordinary answers
 
 ## Action gate

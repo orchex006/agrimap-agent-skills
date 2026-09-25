@@ -18,8 +18,8 @@
 | `pipeline inhouse` | ตรวจ candidate ที่เตรียมแล้ว → commit paths ที่ตรวจ → push/verify develop และ jenkins | ไม่ bump ซ้ำ; ไม่มี Production/tag |
 | `pipeline production` | ตรวจ Production candidate → commit → push/verify develop และ jenkins → เตรียมแผน Production | หยุดก่อน jenkins-release และ tag |
 | `promote` | ตรวจ candidate → แสดง SHA/version/branch/tag → ขอยืนยัน → publish/verify Production และ annotated tag | ต้องมี candidate ที่เตรียมแล้วและการยืนยัน concrete plan |
-| `release full` | indexing → prepare owners แยกกัน → pipeline inhouse/production → ยืนยัน → promote | เลขตามคำขอ หรือ PATCH+1 แยก owner; notes/tag เฉพาะ Production |
-| `release production` | indexing → prepare production → pipeline production → ยืนยัน → promote | Inhouse version คงเดิม แม้ผ่าน branch jenkins |
+| `release full` | indexing → prepare owners แยกกัน → pipeline inhouse/production → ยืนยัน → promote → Release Description/แจ้งเตือน | เลขตามคำขอ หรือ PATCH+1 แยก owner; notes/tag เฉพาะ Production |
+| `release production` | indexing → prepare production → pipeline production → ยืนยัน → promote → Release Description/แจ้งเตือน | Inhouse version คงเดิม แม้ผ่าน branch jenkins |
 | `release inhouse` | indexing → prepare inhouse → pipeline inhouse | เฉพาะ develop/jenkins; ไม่แก้ Production notes/tag |
 
 เลข Version/Patch ที่ผู้ใช้ระบุชัดมีลำดับเหนือค่า PATCH+1 และกฎ default รุ่นเก่า อ่าน baseline จริงก่อนคำนวณ ไม่ถามอนุมัติเลขเดิมซ้ำ เช่น Inhouse `1.0.0 → 1.0.8` และ Production `1.0.4 → 1.0.5` ต้องได้ notes `1.0.5.md` และ tag `v1.0.5` ไม่ใช้เลข Inhouse แทน
@@ -31,6 +31,33 @@
 Agent ใช้ตัวจับเวลาใน bundle เก็บสถานะนอกไฟล์ที่จะ commit เปลี่ยน step ก่อนทำงานและหยุดนับ Active ก่อนรอคำตอบ การ retry นับเวลาที่ใช้เพิ่มจริง งานขนานนับเพียงครั้งเดียว ถ้าหยุด session หรือไม่มีหลักฐานเวลาเพียงพอ ต้องรายงานส่วนที่วัดไม่ได้ ไม่เดาตัวเลข ดู [Timing contract](../skills/agrimap-agent-skills/references/release-timing.md)
 
 คำสั่งที่มี publication รวม `history.md` และ audit ที่เกี่ยวกับ release และผ่านการตรวจแล้วใน scope commit/push เดิม ก่อน commit candidate ต้องตรวจประวัติด้วย หลัง confirmation ให้ตรวจซ้ำและรวมส่วนที่เพิ่มใหม่ใน commit audit สุดท้ายบน develop พร้อมตรวจ remote และไฟล์ตกค้าง แยก SHA ของ candidate กับ final develop; ไม่เปลี่ยน tag หรือ promote audit ตามไปด้วย งานอื่น ไฟล์ที่ ignore และข้อห้ามของ target ยังต้องรักษา ส่วน indexing/prepare ยังคงเป็นงาน local
+
+## งานค้าง, Release Description และแจ้งเตือนทีม (4.9.3)
+
+**งานค้าง:** `release` และ `pipeline` รวมไฟล์ที่ยังไม่ commit และ commit บน develop ที่ยังไม่ขึ้น remote เข้า release ให้อัตโนมัติ (ตรวจข้อมูลลับก่อนเสมอ) เก็บไว้ local เฉพาะเมื่อสั่งยกเว้น หลัง release Agent commit `audit:` แล้ว push develop หนึ่งครั้งให้ clean โดยไม่ promote ไป jenkins/jenkins-release และไม่แตะ tag
+
+**Release Description:** หลัง `release production` และ `release full` (รวม `--flash`) Agent เขียนสรุปภาษาคนที่ BA copy ส่งลูกค้าได้ทันที และแสดงในคำตอบสุดท้ายทุกครั้ง:
+
+```markdown
+# AgriMap Platform / 1.4.2
+
+- เพิ่มการเข้าสู่ระบบด้วย ThaiD
+- แก้แบบฟอร์มให้บันทึกวันที่และช่วงเวลาได้ครบ
+- ปรับขั้นตอนเข้าสู่ระบบให้รองรับการยืนยันตัวตนแบบใหม่ (ส่วนนี้มาจาก agmws-identity-netcore)
+```
+
+การเปลี่ยนที่มาจาก project อื่น เช่น API ของ `agmws-identity-netcore` หรือ package `@agrimap/*` ระบุชื่อ project ต้นทางในวงเล็บ โดยไม่ลงรายละเอียดเทคนิค
+
+**แจ้งเตือน Microsoft Teams:** Agent ส่งสรุปผ่าน `node tools/agrimap/release-notify.mjs send` (managed bootstrap file ถูกแทนที่ทุกครั้งที่อัปเดต bootstrap) script ตรวจ `GET …/health` ก่อน POST ทุกครั้ง และอ่าน URL จาก env `NOTIFY_WEBHOOK_URL` ถ้าเครื่องยังไม่มี Agent ขอ URL ครั้งเดียวแล้วบันทึกด้วย `set-url` ถ้าปลายทางไม่พร้อม release ยังสำเร็จและรายงาน notify เป็น `pending` พร้อมคำสั่งส่งซ้ำ
+
+ข้ามการส่ง (ยังเขียนและแสดงสรุป) ด้วย `--silent` หรือ `--skip-noti`:
+
+```text
+$agm-release release production --silent
+$agm-release release full --flash --silent
+```
+
+**รูปแบบ commit ของทีม:** `feature:` ความสามารถใหม่, `fix:` แก้สิ่งที่ผิด, `comment:` ปรับตาม comment/ปรับปรุง ตามด้วยคำอธิบายภาษาคน เช่น `fix: แก้ dynamic form เพิ่มวันที่ ช่วงเวลา`; commit ที่ agm-release สร้างใช้ `bump:`, `audit:`, `ci:` ดูรายละเอียดใน canonical AGENTS §10.6
 
 ## การตัดสินใจและขอคำยืนยัน
 
@@ -44,7 +71,7 @@ $agm-release release inhouse --flash
 $agm-release production --flash
 ```
 
-ชื่อย่อ `full --flash`, `inhouse --flash`, `production --flash` เท่ากับ `release full|inhouse|production --flash` ตามลำดับ โหมดไม่มี flag ยังทำงานเหมือนเดิม ไม่รองรับ flag นี้กับ prepare/pipeline/promote/indexing/bootstrap
+ชื่อย่อ `full --flash`, `inhouse --flash`, `production --flash` เท่ากับ `release full|inhouse|production --flash` ตามลำดับ ใช้กับ `prepare inhouse|production` และ `pipeline inhouse|production` ได้ด้วย (pipeline ไม่สร้าง candidate ที่ยังไม่ได้เตรียม) โหมดไม่มี flag ยังทำงานเหมือนเดิม ไม่รองรับ flag นี้กับ promote/indexing/bootstrap
 
 | ส่วนงาน | --flash |
 | --- | --- |

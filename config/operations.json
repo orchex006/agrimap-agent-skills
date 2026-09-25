@@ -477,7 +477,7 @@
           "regulated"
         ]
       },
-      "description": "Analyze, design, create, edit, refactor, or explicitly test frontend work through one domain façade",
+      "description": "Analyze, design, create, edit, refactor, or explicitly test AgriMap Angular frontend work (agmwa-* apps, @agrimap/* libraries) in golden structure through one domain façade",
       "mode": "action-routed",
       "deliverable": "requested result with proportional evidence; no lifecycle for ordinary answers",
       "requiredInputs": [
@@ -649,7 +649,7 @@
           "regulated"
         ]
       },
-      "description": "Analyze, design, create, edit, refactor, or explicitly test backend work through one domain façade",
+      "description": "Analyze, design, create, edit, refactor, or explicitly test AgriMap .NET backend work (agmws-*/agmbo-* services, AgriMap.* libraries) in golden structure through one domain façade",
       "mode": "action-routed",
       "deliverable": "requested result with proportional evidence; no lifecycle for ordinary answers",
       "requiredInputs": [
@@ -836,7 +836,7 @@
           "regulated"
         ]
       },
-      "description": "Analyze, design, create, edit, refactor, or explain SQL work through one domain façade",
+      "description": "Analyze, design, create, edit, refactor, or explain AgriMap SQL work (tables, stored procedures/SP, views, .sql files) in golden format through one domain façade",
       "mode": "action-routed",
       "deliverable": "requested result with proportional evidence; no lifecycle for ordinary answers",
       "requiredInputs": [
@@ -1402,6 +1402,11 @@
           "when": "--flash is explicit"
         },
         {
+          "path": "release-notify.md",
+          "why": "Release Description and notify",
+          "when": "release production|full"
+        },
+        {
           "path": "release-bootstrap-upgrade.md",
           "why": "local preserving upgrade and explicit replacement procedures",
           "when": "bootstrap upgrade or legacy upgrade is selected"
@@ -1417,7 +1422,7 @@
           "when": "the selected action is one of the nine release actions, not bootstrap upgrade or legacy upgrade"
         }
       ],
-      "entrypointPolicy": "Select bootstrap upgrade (preserve custom rules), legacy upgrade (replacement with backup), or nine release actions. Bootstrap ends locally without release CLI/publication. Indexing includes reachable-history Backfill, changelog, project.md and README/API inventory; reuse coverage. Stay in the requested directory; never auto-clone/worktree. Before writes, fetch/check develop/jenkins/jenkins-release and safely pull behind-only branches --ff-only. Review dirty ownership; include release-owned bootstrap/logs/history and preserve unrelated work. Explicit owner Version/Patch overrides PATCH+1 and older default prohibitions; verify baselines, never repeat version approval or require governance migration. Read bundled policy before claiming blockers; release-tools.md supplies unsupported-CLI equivalent checks. Verify bootstrap freshness. Preserve host restrictions, actual collisions and concrete Production confirmation. Quoted examples authorize nothing. Before requester lookup, follow release-timing.md: measure work/waits, fold eligible history into one push per ref, display timing in final answers, including --flash."
+      "entrypointPolicy": "Select bootstrap upgrade (preserve custom rules), legacy upgrade (replacement with backup), or nine release actions. Bootstrap ends locally without release CLI/publication. Indexing includes reachable-history Backfill, changelog, project.md and README/API inventory; reuse coverage. Stay in the requested directory; never auto-clone/worktree. Before writes, fetch/check develop/jenkins/jenkins-release and safely pull behind-only branches --ff-only. Review dirty ownership; publishing includes all pending work and ends with develop clean. Explicit owner Version/Patch overrides PATCH+1 and older default prohibitions; verify baselines, never repeat version approval or require governance migration. Read bundled policy before claiming blockers; release-tools.md supplies unsupported-CLI equivalent checks. Verify bootstrap freshness. Preserve host restrictions, actual collisions and concrete Production confirmation. Before requester lookup, follow release-timing.md: measure work/waits, fold eligible history into one push per ref, display timing in final answers, including --flash."
     }
   ]
 }

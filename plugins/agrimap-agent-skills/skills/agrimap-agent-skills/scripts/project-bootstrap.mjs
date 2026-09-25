@@ -47,7 +47,8 @@ export async function planBootstrap({ target, kind, upgrade = false, reviewedMer
     const before = await readMaybe(dest);
     const prior = before && (item.previous || []).find(old => old.sha256 === hash(normalized(before)));
     let content = source, status = before ? hash(before) === hash(source) ? 'unchanged' : 'conflict' : 'create';
-    if ((prior || upgrade === true) && status === 'conflict') status = 'update';
+    // Managed tool files are owned by the bundle: always replaced (with backup), never merged.
+    if ((prior || upgrade === true || item.mode === 'managed') && status === 'conflict') status = 'update';
     let previousVersion = prior?.version || null;
     if (item.mode === 'section') {
       const text = before?.toString('utf8') || '';

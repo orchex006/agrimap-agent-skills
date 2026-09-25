@@ -1,6 +1,6 @@
 ---
 name: agm-sql
-description: Analyze, design, create, edit, refactor, or explain SQL work through one domain façade. Apply only to a relevant AgriMap target or explicit current invocation, never unrelated conversation or quoted examples.
+description: Analyze, design, create, edit, refactor, or explain AgriMap SQL work (tables, stored procedures/SP, views, .sql files) in golden format through one domain façade. Apply only to a relevant AgriMap target or explicit current invocation, never unrelated conversation or quoted examples.
 ---
 
 Resolve current intent and target relevance before any identity or lifecycle. Ordinary questions create no execution or task artifacts. Run only sql.
