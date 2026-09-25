@@ -342,20 +342,22 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 
 ใช้กับ `release production` และ `release full` (รวม `--flash`) หลัง Production branch/tag checkpoint ผ่านแล้วเท่านั้น; `release inhouse`, `pipeline`, `prepare`, `promote` และกลุ่ม A/B ไม่ส่ง
 
-- **Release Description** เป็นภาษาคนที่ BA copy ส่งลูกค้าได้ทันที เขียนไทย สั้น เรียบง่าย ไม่ใช้ชื่อ class/ไฟล์/route/SHA เป็นเนื้อหา:
+แจ้งเตือนมี 2 แบบแยกกัน: **Jenkins build card** (`POST …/release`) ส่งจาก `post { always }` ของ `Jenkinsfile`/`Jenkinsfile_Production` พร้อม metadata ของ build ส่วน Agent ไม่แก้ไข; **Release Description** (`POST …/release-description`) คือสรุปจาก AI ตามหัวข้อนี้ ส่งเฉพาะชื่อ project, version และรายการที่แก้พร้อม project ที่เกี่ยวข้อง
+
+- **Release Description** เป็นภาษาคนที่ BA copy ส่งลูกค้าได้ทันที เขียนไทย สั้น ตรง ไม่ใช้ชื่อ class/ไฟล์/route/SHA เป็นเนื้อหา:
 
   ```markdown
-  # <ชื่อแอป> / <Production version>
+  # <ชื่อ project> / <Production version>
 
   - เพิ่ม...
   - แก้...
-  - ปรับ... (ส่วนนี้มาจาก agmws-identity-netcore)
+  - ปรับขั้นตอนเข้าสู่ระบบ... (เกี่ยวข้อง: agmws-identity-netcore)
   ```
 
 - ครอบคลุมทุกจุดที่เปลี่ยนใน version นั้นจาก release notes/diff ที่ตรวจแล้ว หนึ่งข้อต่อหนึ่งเรื่องที่ผู้ใช้สังเกตได้ รวมเรื่องเล็กที่เกี่ยวกันเป็นข้อเดียว ไม่ใส่ bump/audit/ci
-- การเปลี่ยนที่มาจาก project อื่น เช่น generated API client `agmws-*`, package `@agrimap/*`, NuGet `AgriMap.*` หรือ endpoint ของ service อื่น ให้ระบุชื่อ project ต้นทางในวงเล็บ `(ส่วนนี้มาจาก <project>)` โดยอธิบายผลที่ผู้ใช้เห็น ไม่อธิบายเทคนิค
+- ข้อที่ต้องแก้หรือกระทบ project อื่น (generated API client `agmws-*`, package `@agrimap/*`, NuGet `AgriMap.*`, endpoint ของ service อื่น หรือ project ที่ต้องตามไปแก้/deploy คู่กัน) ปิดท้ายข้อด้วย `(เกี่ยวข้อง: <project>, <project>)` ใช้ชื่อ repo จริง โดยอธิบายผลที่ผู้ใช้เห็น ไม่อธิบายเทคนิค
 - บันทึกที่ `.agrimap-agent/reports/YYYY-MM/<RUN_ID>-release-description.md` (commit ไปกับ `audit:` commit) และแสดงข้อความเต็มในคำตอบสุดท้ายเสมอ รวมกรณี `--silent`
-- ส่งด้วย `node tools/agrimap/release-notify.mjs send --description <file> --commit <production-sha> --version <production-version>` ซึ่งตรวจ health ก่อน POST ทุกครั้ง URL มาจาก env `NOTIFY_WEBHOOK_URL`
+- ส่งด้วย `node tools/agrimap/release-notify.mjs send --description <file> --environment Production` ซึ่งตรวจ `…/healthz` ก่อน POST ทุกครั้ง URL มาจาก env `NOTIFY_WEBHOOK_URL` (เช่น `https://appserv2.cdg.co.th/agrimap-notify/release-description`)
   - exit 2 (ไม่มี env): ถามผู้ใช้ครั้งเดียวขอ URL แล้วรัน `set-url <url>` บันทึก env ถาวรบนเครื่อง จากนั้นส่งต่อใน invocation เดิม
   - exit 3/4 (health หรือ POST ล้มเหลว): release ยังถือว่าสำเร็จ รายงาน notify เป็น `pending` พร้อม HTTP status และคำสั่งส่งซ้ำ ห้าม retry วนหรือส่งซ้ำเมื่อ `sent: true` แล้ว
 - `--silent` (alias `--skip-noti`) ข้ามเฉพาะการส่ง ยังเขียนและแสดง Release Description; รายงาน notify เป็น `skipped (--silent)`
