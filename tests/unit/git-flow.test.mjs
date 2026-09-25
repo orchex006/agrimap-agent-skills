@@ -209,6 +209,7 @@ test('audit written after delivery rides with the next delivery instead of becom
   assert.ok(residue.length,'integrate/complete leave audit dirty');
   p.ack('s2');
   const started=p.cli(['start','--operation','execute','--session','s2','--requested-by','Tester','--title','Second change']);
+  assert.equal(started.ok,true,JSON.stringify(started));
   assert.ok(!started.activeTask.preexistingDirty.some(e=>e.path.startsWith('.agrimap-agent/logs/')));
   const bplan=p.cli(['branch','plan','--session','s2','--type','feature','--slug','residue','--mode','current']);
   p.cli(['branch','apply','--session','s2','--type','feature','--slug','residue','--mode','current','--plan-hash',bplan.planHash]);
@@ -531,4 +532,16 @@ test('team commit style: feature|fix|comment for work, bump|audit|ci for agm-rel
   const {TEAM_HEADER}=await import('../../skills/agrimap-agent-skills/scripts/git-flow.mjs');
   for(const header of ['feature: เพิ่มรับ User หลายช่องทาง','fix: แก้ dynamic form เพิ่มวันที่ ช่วงเวลา','comment: ปรับโทนสีปุ่มเป็นสีม่วง','bump: Production 1.4.2','audit: บันทึกประวัติ release 1.4.2','ci: อัปเดต bootstrap 4.9.3'])assert.match(header,TEAM_HEADER,header);
   for(const header of ['feat(orders): add export','Feature: เพิ่ม','fix:ไม่มีช่องว่าง','docs: update'])assert.doesNotMatch(header,TEAM_HEADER,header);
+});
+
+test('a generated execution ID that collides within the same second moves to the next free second (§9.2)',async t=>{
+  const h=await fixture(t);const p=await project(h,{method:'local-merge'});
+  // Reserve the current and next two Bangkok seconds, as a concurrent run would.
+  const parts=d=>Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(d).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
+  const taken=[];
+  for(let i=0;i<3;i++){const v=parts(new Date(Date.now()+i*1000));const id=v.day+v.hour+v.minute+v.second;taken.push(id);await mkdir(path.join(p.repo,'.agrimap-agent/runtime/reservations',v.year+'-'+v.month,id),{recursive:true});}
+  p.ack('s9');
+  const started=p.cli(['start','--operation','execute','--session','s9','--requested-by','Tester','--title','Same second start']);
+  assert.equal(started.ok,true,JSON.stringify(started));
+  assert.ok(!taken.includes(started.activeTask.executionId),started.activeTask.executionId);
 });

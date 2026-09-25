@@ -236,7 +236,20 @@ async function findTaskPath(state, taskId, active = {}) {
   return null;
 }
 
+// ddHHmmss has one-second resolution. A generated ID that collides moves to the
+// next free second (bootstrap AGENTS.md §9.2); an explicit ID never changes.
 async function reserveExecutionId(state, preferredId, timestamp, timeZone) {
+  if (preferredId) return reserveExecutionIdOnce(state, preferredId, timestamp, timeZone);
+  const base = new Date(timestamp).getTime();
+  let result;
+  for (let offset = 0; offset < 60; offset += 1) {
+    result = await reserveExecutionIdOnce(state, null, new Date(base + offset * 1000).toISOString(), timeZone);
+    if (result.ok || result.code !== "RUN_ID_COLLISION") return result;
+  }
+  return result;
+}
+
+async function reserveExecutionIdOnce(state, preferredId, timestamp, timeZone) {
   const parts = zonedParts(timestamp, timeZone);
   const executionId = safeTaskId(preferredId || parts.runId);
   const reservation = path.join(state, "runtime", "reservations", parts.period, executionId);
