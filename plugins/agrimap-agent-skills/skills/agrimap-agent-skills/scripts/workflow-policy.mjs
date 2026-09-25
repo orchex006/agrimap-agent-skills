@@ -63,7 +63,7 @@ function profileDefaults(profile, { trunkBranch = "main" } = {}) {
       changelog: { path: "changelog.md", mode: "required-if-exists" },
       trailers: ["AGM-Execution"],
     },
-    integration: { method: "pull-request", forge: "auto", mergeStrategy: "merge-commit", afterDelivery: "offer", deleteBranchAfterMerge: "ask", verifyBeforeMerge: true },
+    integration: { method: "local-merge", forge: "auto", mergeStrategy: "merge-commit", afterDelivery: "offer", deleteBranchAfterMerge: "ask", verifyBeforeMerge: true },
     autonomy: { maxQuestionsPerRound: 3, reviewAtEnd: true, calibration: true },
     learning: { promoteAfter: 2 },
   };

@@ -657,7 +657,7 @@ export async function integrationOptions({ root, policy, delivery, run = default
   const workType = delivery.workType || workTypeOf(policy, delivery.branch) || "feature";
   const typePolicy = policy?.branching?.workTypes?.[workType] || {};
   const target = typePolicy.target || policy?.branching?.integrationBranch || "develop";
-  const method = policy?.integration?.method || "pull-request";
+  const method = policy?.integration?.method || "local-merge";
   const context = forgeContext(root, policy, run);
   const unverified = (delivery.warnings || []).some(item => (item.code || item) === "DELIVERED_UNVERIFIED");
   const pr = method === "pull-request" || unverified ? findOpenPr(root, context, delivery.remoteBranch || delivery.branch, target, run) : null;
@@ -683,8 +683,8 @@ export async function integrationOptions({ root, policy, delivery, run = default
     ];
   } else {
     options = [
-      { id: "1", label: `Merge เข้า ${target}${backMerge}`.slice(0, 60), effect: "merge หลัง review แล้ว push แบบไม่ force และตรวจ remote", value: "integrate" },
-      ...(context.forge !== "none" ? [{ id: "2", label: "เปิด PR แทน", effect: `เปิด PR → ${target} ให้ทีม review`, value: "open-pr" }] : []),
+      { id: "1", label: `Merge เข้า ${target}${backMerge}`.slice(0, 60), effect: "merge หลัง test ในเครื่องผ่าน แล้ว push แบบไม่ force และตรวจ remote", value: "integrate" },
+      ...(context.forge !== "none" ? [{ id: "2", label: "เปิด PR/MR แทน (ถ้าต้องการ review)", effect: `เปิด PR/MR → ${target} ให้ทีม review`, value: "open-pr" }] : []),
       { id: String(context.forge !== "none" ? 3 : 2), label: "แก้ต่อ", effect: "ทำงานต่อบน work branch", value: "continue" },
       { id: String(context.forge !== "none" ? 4 : 3), label: "พักไว้", effect: "คง branch ไว้ให้ resume", value: "park" },
     ];
@@ -881,7 +881,7 @@ export async function planIntegration(options) {
       },
     };
   }
-  const method = intent === "integrate" ? policy?.integration?.method || "pull-request" : intent;
+  const method = intent === "integrate" ? policy?.integration?.method || "local-merge" : intent;
   if (intent === "open-pr" || intent === "open-pr-draft" || method === "pull-request") {
     const context = forgeContext(root, policy, run);
     const pr = findOpenPr(root, context, remoteBranch, target, run);

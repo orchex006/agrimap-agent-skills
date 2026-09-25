@@ -17,7 +17,7 @@ test('bootstrap preserves the complete owner-submitted canonical contract',async
   // 4.9.3: owner-requested §0 skill-first routing, §10.6 team commit style and release §8.2 Release Description.
   // Package bumps only change the generated version marker; freeze every other byte.
   const sourceBytes=Buffer.from(bytes.toString('utf8').replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/,'<!-- AGRIMAP BOOTSTRAP VERSION: 3.6.1 -->'));
-  assert.equal(createHash('sha256').update(sourceBytes).digest('hex'),'f286ff57b1cd2cb2d3a841db35c388fdedac8821bbf31b7742b29869cb57aa6d');
+  assert.equal(createHash('sha256').update(sourceBytes).digest('hex'),'b0d96556dc0f457631f19566e499b62bef65b0b39a139ec5204d0655efa249b2');
   const manifest=JSON.parse(await readFile(path.join(bundle,'manifest.json'),'utf8'));
   assert.ok(bytes.toString('utf8').includes(`<!-- AGRIMAP BOOTSTRAP VERSION: ${manifest.version} -->`));
   assert.equal(manifest.files.find(f=>f.source==='AGENTS.md').sha256,createHash('sha256').update(bytes).digest('hex'));

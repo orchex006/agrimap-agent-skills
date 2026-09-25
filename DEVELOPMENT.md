@@ -18,6 +18,8 @@ Use this same working directory. Inspect status, branch/upstream and fetch when 
 
 An implementation request authorizes scoped local changes, not commits or external writes. A commit/push request covers its named development branch, not main, PR merge or publication. Explicit release approval can cover the complete named version/source/publication sequence without repeated questions. Never infer publication from a bump, successful tests or the word finish.
 
+Integration needs no human review (owner decision 2026-09-25, 4.9.3): the gate is passing local verification (below). Once the local checks pass, the Agent merges locally and pushes. While GitHub protection still requires a PR plus the `verify` checks (currently enforced, including for admins, with 0 required approvals), the Agent opens the PR itself and merges it as soon as the checks pass, without waiting for review. Only the owner changes that server protection.
+
 PR into main accepts develop, release/* or hotfix/* in this repository; PR into develop accepts feature/*, fix/* and release/hotfix synchronization. Direct develop-to-main integration still requires the normal PR checks and does not publish a release automatically. Review scope and verification; no blind conflict resolutions or history rewrites. Main/develop protection and required checks must also be configured on the server: Markdown alone cannot enforce them.
 
 ## Version lifecycle

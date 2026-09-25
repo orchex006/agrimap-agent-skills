@@ -6,9 +6,9 @@
 
 ## 0. Skill-first routing (บังคับทุก model ก่อนงาน code/SQL)
 
-ใช้กับทุก Agent/model (GPT, Claude Opus/Sonnet, Gemini ฯลฯ) ไม่ขึ้นกับความมั่นใจหรือขนาดงาน และคำขอไม่ต้องระบุชื่อ skill
+ใช้กับทุก Agent/model (GPT, Claude Opus/Sonnet, Gemini ฯลฯ) ไม่ขึ้นกับความมั่นใจหรือขนาดงาน คำขอไม่ต้องระบุชื่อ skill
 
-1. ก่อนตอบ วิเคราะห์ อธิบาย review สร้าง แก้ หรือ refactor code/SQL ใน repository นี้ ให้จับคู่หลักฐานกับตาราง (แถวแรกที่ตรง) แล้วโหลด skill ผ่านกลไก skill ของ host (เช่น Skill tool, `/agm-sql`, `$agm-sql`) และอ่าน reference ที่ skill กำหนดก่อนเขียนบรรทัดแรก ห้ามใช้ความรู้ทั่วไปแทน golden pattern ของ AgriMap
+1. ก่อนตอบ วิเคราะห์ อธิบาย review สร้าง แก้ หรือ refactor code/SQL ใน repository นี้ ให้จับคู่หลักฐานกับตาราง (แถวแรกที่ตรง) แล้วโหลด skill ผ่านกลไก skill ของ host (เช่น `/agm-sql`, `$agm-sql`) และอ่าน reference ที่ skill กำหนดก่อนเขียนบรรทัดแรก ห้ามใช้ความรู้ทั่วไปแทน golden pattern ของ AgriMap
 2. งานหลาย lane ใช้ skill ของ lane นั้นกับไฟล์ของ lane นั้น (หนึ่งไฟล์มี skill เจ้าของเดียว)
 
 | หลักฐาน (ชื่อ repo / path / คำในคำขอ) | Skill | Target / golden |
@@ -156,6 +156,7 @@
 - `.agrimap-agent/policy/workflow.json` คือ workflow ของทีม (prefix/base/target ของ branch, delivery, integration) อ่านก่อนงานที่แก้ repository ทุกครั้ง
 - ถ้าไม่มี: ตรวจ `Jenkinsfile*`, `git branch -a` และ remote แล้วเสนอ workflow ที่ตรวจพบเป็นคำถามเดียวพร้อมตัวเลือก ก่อนเขียนครั้งแรก เมื่อ owner ตอบ ให้สร้างไฟล์ `status: confirmed` และ decision record แล้วไม่ถามซ้ำ
 - Policy ที่ confirmed เป็นสิทธิ์ถาวรให้ commit และ push **work branch** เมื่องานผ่าน verification เท่านั้น ไม่ใช่สิทธิ์ push/merge `develop`, `jenkins`, `jenkins-release`, `main` หรือสร้าง tag
+- Integration ค่าเริ่มต้นคือ `local-merge` ไม่ต้องเปิด MR/PR: `merge`/`รวม` คือ merge เข้า target แล้ว push เมื่อ test ในเครื่องผ่าน; MR/PR เฉพาะเมื่อสั่ง `pr`/`mr` หรือ policy เป็น `pull-request`
 - Repository ที่ promote `develop -> jenkins -> jenkins-release` แบบ `--ff-only` (§6.2): ทุก work type รวม hotfix แตกจาก `develop` และรวมกลับ `develop`
 
 ### 10.3 เริ่มงานและส่งงาน
@@ -194,9 +195,9 @@
 
 ### 10.6 รูปแบบ commit ของทีม
 
-- Header `<type>: <คำอธิบายภาษาคน>` ≤ 100 ตัวอักษร ไม่มี scope เขียนให้ App Leader/BA/ลูกค้าอ่านรู้เรื่อง รายละเอียดเทคนิคใส่ body
+- Header `<type>: <คำอธิบายภาษาคน>` ≤ 100 ตัวอักษร ไม่มี scope เขียนให้ App Leader/BA/ลูกค้าอ่านรู้เรื่อง เทคนิคใส่ body
 - งานพัฒนา: `feature:` ความสามารถใหม่, `fix:` แก้สิ่งที่ผิด, `comment:` ปรับตาม comment/ปรับปรุง (หน้าตา ข้อความ โครงสร้าง เอกสาร); agm-release: `bump:` version, `audit:` บันทึก `.agrimap-agent`, `ci:` pipeline/governance/bootstrap
-- ตัวอย่าง: `feature: เพิ่มรับ User หลายช่องทาง`, `fix: แก้ dynamic form เพิ่มวันที่ ช่วงเวลา`, `comment: ปรับโทนสีปุ่มเป็นสีม่วง`
+- ตัวอย่าง: `feature: เพิ่มรับ User หลายช่องทาง`, `fix: แก้ dynamic form เพิ่มวันที่ ช่วงเวลา`
 
 ## Bootstrap contract freshness
 

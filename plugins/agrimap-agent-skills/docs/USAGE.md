@@ -97,8 +97,8 @@ checklist ไม่ได้อยู่เหนือ [conflict-resolution.md]
 | พิมพ์ | ผล |
 | --- | --- |
 | `1`, `2`, … | ทำตามตัวเลือกนั้นของคำถามล่าสุด |
-| `merge`, `รวม`, `รวมเข้า dev`, `LGTM` | รวม work branch เข้า target ตาม policy |
-| `pr`, `เปิด PR`, `ส่งรีวิว` | เปิด PR/MR |
+| `merge`, `รวม`, `รวมเข้า dev`, `LGTM` | รวม work branch เข้า target เมื่อ test ในเครื่องผ่าน (ค่าเริ่มต้นไม่เปิด MR/PR) |
+| `pr`, `mr`, `เปิด PR`, `ส่งรีวิว` | เปิด PR/MR เมื่อต้องการให้ทีม review |
 | `อัปเดต branch`, `sync` | merge target ล่าสุดเข้า work branch แล้ว push |
 | `แก้ต่อ`, `พักไว้`, `ทิ้ง branch` | ทำต่อ / หยุดไว้ / ถามก่อนลบ branch |
 
