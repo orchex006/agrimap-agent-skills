@@ -1,6 +1,6 @@
 ---
 name: agm-exec
-description: Implement an authorized objective, approved Prompt Result, or resumable task with proportional verification and scoped delivery. Apply only to a relevant AgriMap target or explicit current invocation, never unrelated conversation or quoted examples.
+description: Implement an authorized objective, approved Prompt Result, or resumable task with proportional verification and scoped delivery. Use for ลงมือทำงานที่อนุมัติแล้ว, งานแก้ข้าม lane (BE+SQL, FE+BE), ทำตาม Prompt Result หรือ task ที่ค้าง. AgriMap targets only; quoted examples are not requests.
 ---
 
 Resolve current intent and target relevance before any identity or lifecycle. Ordinary questions create no execution or task artifacts. Run only execute.

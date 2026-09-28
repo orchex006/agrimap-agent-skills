@@ -1,6 +1,6 @@
 ---
 name: agm-prompt
-description: Analyze and refine requester intent into one immutable versioned Prompt Result with explicit Main and Subagent ownership. Apply only to a relevant AgriMap target or explicit current invocation, never unrelated conversation or quoted examples.
+description: Analyze and refine requester intent into one immutable versioned Prompt Result with explicit Main and Subagent ownership. Use for กลั่นโจทย์หรือ requirement เป็น Prompt Result, เรียบเรียงคำสั่งเพื่อส่งต่อ. AgriMap targets only; quoted examples are not requests.
 ---
 
 Resolve current intent and target relevance before any identity or lifecycle. Ordinary questions create no execution or task artifacts. Run only prompt.

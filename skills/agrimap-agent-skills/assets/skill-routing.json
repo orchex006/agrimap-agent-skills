@@ -1,0 +1,579 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Canonical skill routing: lane (where the work lives) x intent (what is asked) selects one AgriMap skill; supporting packages add evidence only. npm run sync renders references/skill-routing.md, bootstrap AGENTS.md section 0 and the workspace template from this file.",
+  "hosts": [
+    {
+      "id": "claude",
+      "label": "Claude Code",
+      "pattern": "agrimap-agent-skills:{skill}"
+    },
+    {
+      "id": "codex",
+      "label": "Codex",
+      "pattern": "${skill}"
+    },
+    {
+      "id": "antigravity",
+      "label": "Antigravity",
+      "pattern": "/{skill}"
+    }
+  ],
+  "router": "agrimap-agent-skills",
+  "lanes": [
+    {
+      "id": "sql",
+      "family": "sql",
+      "skill": "agm-sql",
+      "target": "sql-table/sql-procedure",
+      "golden": "golden/sql/",
+      "evidence": "`*.sql`, `sql/**`, `LUT_*`, `*_I/_U/_D/_Q`, `[agrimap_app]`, SP/DDL"
+    },
+    {
+      "id": "be-main",
+      "family": "be",
+      "skill": "agm-be",
+      "target": "be-main",
+      "golden": "golden/backend-main/",
+      "evidence": "`agmws-*`, `agmbo-*`",
+      "repositories": [
+        "^agmws-",
+        "^agmbo-"
+      ]
+    },
+    {
+      "id": "be-library",
+      "family": "be",
+      "skill": "agm-be",
+      "target": "be-library",
+      "golden": "golden/backend-libraries/",
+      "evidence": "`AgriMap.Platform.*`, `libraries/netcore/**`, csproj ไม่มี web host",
+      "repositories": [
+        "^agrimap\\.platform",
+        "^agrimap-platform-netcore"
+      ],
+      "paths": [
+        "(?:^|/)libraries/netcore/",
+        "(?:^|/)agrimap\\.platform\\.[^/]+/"
+      ]
+    },
+    {
+      "id": "fe-main",
+      "family": "fe",
+      "skill": "agm-fe",
+      "target": "fe-main",
+      "golden": "golden/frontend-main/",
+      "evidence": "`agmwa-*`, Angular app (`src/app/`)",
+      "repositories": [
+        "^agmwa-"
+      ]
+    },
+    {
+      "id": "fe-library",
+      "family": "fe",
+      "skill": "agm-fe",
+      "target": "fe-library",
+      "golden": "golden/frontend-libraries/",
+      "evidence": "`projects/<lib>/`, `@agrimap/*`, `libraries/angular/**`",
+      "paths": [
+        "(?:^|/)libraries/angular/",
+        "(?:^|/)projects/[^/]+/src/lib/"
+      ]
+    }
+  ],
+  "signals": {
+    "sqlPaths": [
+      "\\.sql$",
+      "(?:^|/)sql/",
+      "(?:^|/)db-schema/"
+    ],
+    "sqlObjects": [
+      "\\bLUT_[A-Z0-9_]+",
+      "\\bSP_[A-Za-z0-9_]+",
+      "\\[agrimap_app\\]",
+      "\\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+_(?:I|U|D|Q|IU)\\b",
+      "\\bDB_METADATA_CONTEXT\\b"
+    ],
+    "objectToken": "\\b[A-Z][A-Z0-9]+(?:_[A-Z0-9]+)+\\b",
+    "sqlStrong": [
+      "\\bsql\\b",
+      "\\bt-?sql\\b",
+      "\\bstored\\s*proc(?:edure)?s?\\b",
+      "\\bprocedures?\\b",
+      "\\bsp\\b",
+      "\\bddl\\b",
+      "\\bdml\\b",
+      "\\b(?:create|alter|drop)\\s+(?:table|view|procedure|proc|function|trigger|index)\\b",
+      "เอสคิวแอล",
+      "สโตร์",
+      "โปรซีเยอร์",
+      "โพรซีเจอร์"
+    ],
+    "sqlWeak": [
+      "\\btables?\\b",
+      "ตาราง",
+      "\\bviews?\\b",
+      "วิว",
+      "\\bcolumns?\\b",
+      "คอลัมน์",
+      "\\bindex(?:es)?\\b",
+      "อินเด็กซ์",
+      "\\btriggers?\\b",
+      "\\bstore\\b",
+      "\\bdatabase\\b",
+      "ฐานข้อมูล",
+      "\\bschema\\b",
+      "\\bmessage\\s*codes?\\b"
+    ],
+    "beKeywords": [
+      "\\bcontrollers?\\b",
+      "\\bendpoints?\\b",
+      "\\bapi\\b",
+      "\\bdto\\b",
+      "\\brepository\\b",
+      "\\bmiddleware\\b",
+      "\\bc#",
+      "\\.net\\b",
+      "\\bquartz\\b",
+      "\\bjob\\s*scheduler\\b",
+      "\\bbackend\\b",
+      "หลังบ้าน"
+    ],
+    "feKeywords": [
+      "\\bcomponents?\\b",
+      "คอมโพเนนต์",
+      "หน้าจอ",
+      "หน้า\\s*(?:web|เว็บ|list|form|dashboard|หลัก)",
+      "\\bpages?\\b",
+      "\\bui\\b",
+      "ปุ่ม",
+      "\\bbuttons?\\b",
+      "\\bforms?\\b",
+      "ฟอร์ม",
+      "\\bdialog\\b",
+      "\\bmodal\\b",
+      "\\bangular\\b",
+      "\\bhtml\\b",
+      "\\bs?css\\b",
+      "\\bsignals?\\b",
+      "\\btemplate\\b",
+      "\\bfrontend\\b",
+      "หน้าบ้าน"
+    ],
+    "meta": [
+      "\\bskills?\\b",
+      "สกิล",
+      "\\bplugins?\\b",
+      "ปลั๊กอิน"
+    ],
+    "repositoryMention": "\\b(?:agm(?:ws|bo|wa)-[a-z0-9-]+|agrimap\\.platform\\.[a-z0-9.]+)\\b",
+    "codeWords": [
+      "\\bcode\\b",
+      "โค้ด",
+      "ไฟล์",
+      "\\bfiles?\\b",
+      "\\bclass(?:es)?\\b",
+      "\\bmethods?\\b",
+      "\\bfunctions?\\b",
+      "ฟังก์ชัน",
+      "\\bservices?\\b",
+      "\\bvalidation\\b",
+      "\\bbugs?\\b",
+      "บั๊ก",
+      "\\berrors?\\b",
+      "\\bexceptions?\\b",
+      "\\bapi\\b",
+      "\\bendpoints?\\b",
+      "\\bquer(?:y|ies)\\b",
+      "\\btests?\\b",
+      "เทส",
+      "\\blogic\\b",
+      "ลอจิก",
+      "\\bfeatures?\\b",
+      "ฟีเจอร์",
+      "\\bmodules?\\b",
+      "\\bdto\\b",
+      "\\bmodels?\\b",
+      "\\bfields?\\b",
+      "ฟิลด์",
+      "\\binterfaces?\\b",
+      "\\benums?\\b",
+      "\\bresponse\\b",
+      "\\brequest\\b",
+      "\\bparameters?\\b",
+      "พารามิเตอร์",
+      "\\bnull\\b",
+      "\\bconfig\\b"
+    ],
+    "identifier": "\\b(?:[A-Z][a-z0-9]+){2,}\\b|\\b[a-z]+(?:[A-Z][a-z0-9]*)+\\b",
+    "anchors": [
+      "(?<!วัน|ตอน|ขณะ|ดัง|เดี๋ยว)นี้",
+      "ของเรา",
+      "ใน\\s*(?:repo|โปรเจกต์|โปรเจค|โครงการ|ระบบ)",
+      "\\b(?:this|these|our|current)\\s+(?:code|file|repo|repository|project|service|sp|procedure|table|view|api|endpoint|component|page|function|method|class|query|bug|error)s?\\b"
+    ]
+  },
+  "intents": [
+    {
+      "id": "doctor",
+      "label": "ติดตั้ง / อัปเดต skills",
+      "single": "agm-doctor",
+      "cross": "agm-doctor",
+      "laneFree": true,
+      "projectKeywords": [
+        "\\bagm-doctor\\b",
+        "(?:ติดตั้ง|อัปเดต|อัพเดท|update|install)\\s*(?:agm|agrimap|skills?|สกิล|plugins?|ปลั๊กอิน)"
+      ],
+      "keywords": [
+        "\\bagm-doctor\\b",
+        "(?:ติดตั้ง|อัปเดต|อัพเดท|update|install)\\s*(?:agm|agrimap|skills?|สกิล|plugins?|ปลั๊กอิน)",
+        "\\bdoctor\\b"
+      ]
+    },
+    {
+      "id": "release",
+      "label": "version / changelog / release / Jenkins",
+      "single": "agm-release",
+      "cross": "agm-release",
+      "laneFree": true,
+      "projectKeywords": [
+        "\\bbump\\b",
+        "\\bjenkins\\b",
+        "\\bchangelog\\b",
+        "\\bpromote\\b",
+        "นำขึ้น",
+        "ออก\\s*(?:version|เวอร์ชัน)",
+        "ขึ้น\\s*(?:prod|production|inhouse)\\b",
+        "\\bversion\\s+(?:inhouse|production|both)\\b"
+      ],
+      "keywords": [
+        "\\brelease\\b",
+        "\\bbump\\b",
+        "\\bdeploy",
+        "\\bjenkins\\b",
+        "\\bchangelog\\b",
+        "\\bpromote\\b",
+        "นำขึ้น",
+        "ออก\\s*(?:version|เวอร์ชัน)",
+        "ขึ้น\\s*(?:prod|production|inhouse)\\b",
+        "\\bversion\\s+(?:inhouse|production|both)\\b"
+      ]
+    },
+    {
+      "id": "prompt",
+      "label": "กลั่นโจทย์เป็น Prompt Result",
+      "single": "agm-prompt",
+      "cross": "agm-prompt",
+      "laneFree": true,
+      "projectKeywords": [
+        "\\bprompt\\s*result\\b",
+        "\\brefine\\s+(?:the\\s+)?(?:prompt|request)\\b",
+        "เรียบเรียง(?:โจทย์|คำสั่ง|prompt)",
+        "กลั่นโจทย์"
+      ],
+      "keywords": [
+        "\\bprompt\\s*result\\b",
+        "\\brefine\\s+(?:the\\s+)?(?:prompt|request)\\b",
+        "เรียบเรียง(?:โจทย์|คำสั่ง|prompt)",
+        "กลั่นโจทย์"
+      ]
+    },
+    {
+      "id": "plan",
+      "label": "วางแผน",
+      "single": "agm-plan",
+      "cross": "agm-plan",
+      "laneFree": true,
+      "keywords": [
+        "วางแผน",
+        "แผนงาน",
+        "แผนการ",
+        "\\bplan\\b",
+        "\\broadmap\\b",
+        "\\bbreak\\s*down\\b",
+        "ลำดับ(?:ขั้น|การทำ|งาน)"
+      ]
+    },
+    {
+      "id": "architect",
+      "label": "ออกแบบระบบ / contract ข้าม service",
+      "single": "agm-architect",
+      "cross": "agm-architect",
+      "laneFree": true,
+      "keywords": [
+        "สถาปัตยกรรม",
+        "\\barchitect(?:ure)?\\b",
+        "\\bboundar(?:y|ies)\\b",
+        "ออกแบบ\\s*(?:ระบบ|สถาปัตย|โครงสร้างระบบ)",
+        "แยก\\s*service",
+        "\\bmigration\\s+(?:plan|design|strategy)\\b"
+      ]
+    },
+    {
+      "id": "qa",
+      "label": "ตรวจรับ / QA",
+      "single": "agm-qa",
+      "cross": "agm-qa",
+      "laneFree": true,
+      "projectKeywords": [
+        "ตรวจรับ",
+        "ตรวจงาน",
+        "\\bacceptance\\b"
+      ],
+      "keywords": [
+        "\\bqa\\b",
+        "ตรวจรับ",
+        "ตรวจงาน",
+        "\\bverify\\b",
+        "\\bacceptance\\b"
+      ]
+    },
+    {
+      "id": "refactor",
+      "label": "refactor",
+      "single": "{lane}",
+      "cross": "agm-exec",
+      "action": "refactor",
+      "keywords": [
+        "\\brefactor",
+        "รีแฟกเตอร์",
+        "รีแฟคเตอร์",
+        "ปรับโครงสร้าง(?:โค้ด|code)?",
+        "\\bclean\\s*up\\b"
+      ]
+    },
+    {
+      "id": "test",
+      "label": "เขียน test",
+      "single": "{lane}",
+      "cross": "agm-exec",
+      "action": "test",
+      "keywords": [
+        "\\bunit\\s*tests?\\b",
+        "(?:เขียน|เพิ่ม|(?<!โครง)สร้าง)\\s*(?:unit\\s*)?(?:tests?|เทส)",
+        "\\b(?:write|add|create)\\s+(?:unit\\s+)?tests?\\b",
+        "\\btest\\s*cases?\\b"
+      ]
+    },
+    {
+      "id": "change",
+      "label": "สร้าง / แก้ / แก้ bug",
+      "single": "{lane}",
+      "cross": "agm-exec",
+      "action": "create|edit",
+      "keywords": [
+        "(?<!โครง)สร้าง",
+        "เพิ่ม",
+        "เขียน",
+        "แก้",
+        "ปรับ",
+        "เปลี่ยน",
+        "ลบ",
+        "ย้าย",
+        "\\bimplement",
+        "\\bcreate\\b",
+        "\\badd\\b",
+        "\\bwrite\\b",
+        "\\bgenerate\\b",
+        "\\bedit\\b",
+        "\\bmodify\\b",
+        "\\bupdate\\b",
+        "\\bchange\\b",
+        "\\bfix\\b",
+        "\\bremove\\b",
+        "\\bdelete\\b",
+        "\\brename\\b"
+      ],
+      "createKeywords": [
+        "(?<!โครง)สร้าง",
+        "ใหม่",
+        "\\bcreate\\b",
+        "\\bnew\\b",
+        "\\bgenerate\\b"
+      ],
+      "editKeywords": [
+        "แก้",
+        "ปรับ",
+        "เปลี่ยน",
+        "ลบ",
+        "ย้าย",
+        "\\bfix\\b",
+        "\\bedit\\b",
+        "\\bmodify\\b",
+        "\\bupdate\\b",
+        "\\bchange\\b",
+        "\\bremove\\b",
+        "\\bdelete\\b",
+        "\\brename\\b"
+      ]
+    },
+    {
+      "id": "diagnose",
+      "label": "หาสาเหตุ bug / error / ช้า (ยังไม่สั่งแก้)",
+      "single": "agm-diagnose",
+      "cross": "agm-diagnose",
+      "laneFree": true,
+      "keywords": [
+        "\\berrors?\\b",
+        "\\bbugs?\\b",
+        "บั๊ก",
+        "\\b[45]\\d\\d\\b",
+        "\\bexceptions?\\b",
+        "\\bfail(?:s|ed|ing|ure)?\\b",
+        "พัง",
+        "ไม่ทำงาน",
+        "ผิดปกติ",
+        "ช้า",
+        "\\bslow\\b",
+        "\\btimeouts?\\b",
+        "\\bcrash",
+        "ค้าง",
+        "สาเหตุ",
+        "\\broot\\s*cause\\b"
+      ],
+      "weakKeywords": [
+        "ทำไม",
+        "\\bwhy\\b",
+        "\\bdebug"
+      ]
+    },
+    {
+      "id": "read",
+      "label": "อธิบาย / วิเคราะห์ / review / ออกแบบ",
+      "single": "{lane}",
+      "cross": "agm-analyze",
+      "action": "analyze",
+      "keywords": [
+        "อธิบาย",
+        "วิเคราะห์",
+        "\\breview\\b",
+        "รีวิว",
+        "ดู",
+        "ตรวจ(?!รับ|งาน)",
+        "\\bexplain\\b",
+        "\\banaly[sz]e\\b",
+        "\\binspect\\b",
+        "ออกแบบ",
+        "\\bdesign\\b",
+        "เปรียบเทียบ",
+        "\\bcompare\\b",
+        "คืออะไร",
+        "ทำงาน(?:ยังไง|อย่างไร)",
+        "\\bhow\\s+does\\b",
+        "\\bwhat\\s+does\\b"
+      ],
+      "explainKeywords": [
+        "อธิบาย",
+        "\\bexplain\\b",
+        "คืออะไร",
+        "ทำงาน(?:ยังไง|อย่างไร)",
+        "\\bhow\\s+does\\b",
+        "\\bwhat\\s+does\\b"
+      ],
+      "designKeywords": [
+        "ออกแบบ",
+        "\\bdesign\\b"
+      ]
+    }
+  ],
+  "displayOrder": [
+    "read",
+    "change",
+    "refactor",
+    "test",
+    "diagnose",
+    "plan",
+    "architect",
+    "qa",
+    "prompt",
+    "release",
+    "doctor"
+  ],
+  "defaultIntent": "read",
+  "supporting": [
+    {
+      "id": "sql-context-pack",
+      "label": "sql-context-pack",
+      "reference": "sql-context-readonly.md",
+      "invocations": [
+        "$sql-context-pack",
+        "/sql-context-pack:sql-context-pack",
+        "/sql-context-pack",
+        "$sql-content-pack"
+      ],
+      "mention": "\\bsql-cont(?:ext|ent)-pack\\b|\\bsqlctx\\b",
+      "use": "live schema, columns, parameters or bounded masked rows that local `sql/**` files and `.agrimap-agent/knowledge/references/db-schema/**` cannot answer",
+      "keywords": [
+        "ข้อมูลจริง",
+        "ข้อมูลใน\\s*(?:db|database|ฐานข้อมูล)",
+        "ใน\\s*(?:db|database|ฐานข้อมูล)\\s*(?:จริง|มี)",
+        "\\blive\\s+(?:db|database|data|schema)\\b",
+        "โครงสร้างตาราง",
+        "\\bcolumns?\\s+(?:อะไร|list)",
+        "มี\\s*(?:column|คอลัมน์)\\s*อะไร",
+        "\\bsample\\s+(?:rows?|data)\\b",
+        "ตัวอย่างข้อมูล",
+        "นับ(?:จำนวน)?\\s*(?:rows?|แถว|records?)",
+        "\\bquery\\s+(?:the\\s+)?(?:db|database|data)\\b",
+        "\\bmetadata\\b"
+      ],
+      "readOnlyTools": [
+        "sqlctx_get_capabilities",
+        "sqlctx_get_active_profile",
+        "sqlctx_list_context_index",
+        "sqlctx_list_managed_folders",
+        "sqlctx_query_data"
+      ],
+      "recipes": [
+        {
+          "need": "readiness and the connected profile",
+          "steps": "`sqlctx_get_capabilities`, then `sqlctx_get_active_profile`; no profile means a named gap (never connect, change or inherit a profile to answer)"
+        },
+        {
+          "need": "which objects exist for a domain, context or tag",
+          "steps": "`sqlctx_list_context_index` with type/context/tag filters; read every page until `next_cursor` is null"
+        },
+        {
+          "need": "columns, types and nullability of a table or view",
+          "steps": "`sqlctx_query_data` on `INFORMATION_SCHEMA.COLUMNS` filtered by exact `TABLE_SCHEMA`/`TABLE_NAME`"
+        },
+        {
+          "need": "procedure or function parameters",
+          "steps": "`sqlctx_query_data` on `INFORMATION_SCHEMA.PARAMETERS` filtered by exact `SPECIFIC_NAME`"
+        },
+        {
+          "need": "representative data shape",
+          "steps": "`sqlctx_query_data` with an explicit column list, a narrow WHERE and `TOP` at most 500; output stays masked"
+        },
+        {
+          "need": "full DDL or routine body",
+          "steps": "read local `sql/**` or db-schema references first; if missing, name the gap and suggest the owner run an explicit `$sql-context-pack` capture; never materialize it from an AgriMap operation"
+        }
+      ],
+      "ownerOperations": [
+        "export/catalog capture",
+        "DB_METADATA_CONTEXT sync",
+        "folder classification",
+        "context generation",
+        "routine deployment",
+        "profile connect/change",
+        "SQLFluff install/update"
+      ],
+      "ownerKeywords": [
+        "\\bexport",
+        "\\bsync\\b",
+        "\\bclassif",
+        "\\bdeploy",
+        "\\bcatalog",
+        "\\bmateriali[sz]e",
+        "\\bgenerat",
+        "\\bconnect\\b",
+        "\\bchange-profile\\b",
+        "\\bdisconnect\\b",
+        "จัดหมวด",
+        "ติดตั้ง"
+      ],
+      "supportingRule": "Inside any agm-* operation sql-context-pack is supporting evidence only: its read-only tools and recipes (metadata and masked SELECT). No DDL/DML, EXEC/CALL, export, metadata sync, classification or routine deployment.",
+      "ownerRule": "A direct owner request to sql-context-pack (its invocation, or naming it with an owner operation) is that package's turn: follow its own SKILL and approval gates. AgriMap adds no authority, lifecycle or prohibition to that turn and never runs those operations inside an agm-* operation."
+    }
+  ]
+}

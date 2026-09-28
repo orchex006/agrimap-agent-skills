@@ -15,7 +15,7 @@ Before requester lookup, run `node <bundle>/scripts/release-timing.mjs <action> 
 | `pause interrupted` | Stop active measurement for unattended/unknown gaps |
 | `finish` | After final audit push, remote verification and worktree check; local actions after local verification |
 | `report` | Read-only totals and copy-ready `finalOutput`; pending confirmation remains unfinished |
-| `output` | Print user-facing timing text; nonzero exit until finished |
+| `output` | After `finish`; open timeline: IN-PROGRESS, exit 0 |
 | `unavailable <reason>` | Print UNKNOWN fields with the actual missing-measurement reason |
 
 Name actual steps: readiness, indexing, hash, changelog, preparation, verification, commit-push-inhouse, commit-push-production, tag, final-audit. Split separately reported work. Tools, builds, network and retries count as active; concurrent work counts once. While awaiting answers, measure ongoing independent work; waiting starts when work stops. Reused checkpoints count only recheck time.
@@ -38,7 +38,7 @@ Also report candidate/final develop SHAs, audit status, exclusions/reasons and r
 
 ## Mandatory user-visible delivery
 
-Every final release answer, including --flash, local-only, failed/blocked runs, MUST contain the timing block itself, not a file/tool reference. After final verification run `node <bundle>/scripts/release-timing.mjs output <state.json>` and include its text: Elapsed, Active, Waiting, per-step minutes/seconds. Preserve PARTIAL/Unmeasured or IN-PROGRESS; labels may be translated.
+Every final release answer, including --flash, local-only, failed/blocked runs, MUST contain the timing block itself, not a file/tool reference. After final verification run `node <bundle>/scripts/release-timing.mjs output <state.json>` and include its text: Elapsed, Active, Waiting, per-step minutes/seconds. Preserve PARTIAL/Unmeasured; IN-PROGRESS only if paused; labels may be translated.
 
 For absent/invalid/unreliable measurements, run `node <bundle>/scripts/release-timing.mjs unavailable "<reason>"`; include UNKNOWN fields and the reason. Never guess, substitute zero or repeat release to recover timing.
 

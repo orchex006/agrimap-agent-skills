@@ -2,6 +2,22 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.9.5 — 2026-09-28
+
+Skill routing: the Agent picks the right skill without being told, in every repository and at the multi-repository workspace root.
+
+- One routing registry, `skills/agrimap-agent-skills/assets/skill-routing.json`: lanes (`sql`, `be-main`, `be-library`, `fe-main`, `fe-library`) with their evidence, intents with Thai/English keywords and precedence, host invocation per host, and supporting packages. `npm run sync` renders `references/skill-routing.md`, bootstrap `AGENTS.md` §0 and the sql-context recipes from it; the validator fails on drift. A new package (the coming axiom) is added there, not in prose.
+- Intent × lane instead of a domain-only table: single-lane explain/analyze/design/create/edit/refactor/test uses the lane skill; cross-lane changes use `agm-exec` and cross-lane analysis `agm-analyze`; finding a cause without a fix request uses `agm-diagnose`; plan, architect, QA, prompt, release and doctor keep their own skill. This removes the conflict between §0 ("one skill per lane") and the router ("never combine operation skills"): one operation skill per turn plus the lane references its entrypoint loads.
+- Lane evidence order is file path/extension → repository name → request words. Broad words (table/ตาราง, view, column, index) count as SQL only with an object name or outside a frontend context, so "เพิ่มคอลัมน์ในตารางหน้า user list" in `agmwa-*` stays `agm-fe` and "แก้ function calculateTotal" never becomes SQL. The old first-match row no longer sends UI tables/views to `agm-sql`.
+- Bootstrap `AGENTS.md` §0 is generated (heading now "Skill routing, Workflow และ Release"): host invocation per host (Claude Code `agrimap-agent-skills:agm-sql`, Codex `$agm-sql`, Antigravity `/agm-sql`), the lane and intent tables, and a `Skill · Lane · Golden` first line for answers as well as writes. The core file stays under the 24,000-character diet.
+- Prompt hook: routing replaces the old SQL regex (it missed 10 of 11 realistic Thai prompts such as `ทำไม SP_ORDER_Q ช้า`, `แก้ UM_USER_I …`, `เพิ่ม index ให้ ORDER_H`). Each code/SQL request gets `Skill for this turn: <host invocation> (lane · intent → action)`, also outside a Git repository, and code questions without a change verb now activate it. General questions (`merge ยังไง?`) and quoted examples get nothing. The stale "AgriMap 3.0" line is gone.
+- Claude skill gate (`PreToolUse` Edit|Write|MultiEdit|NotebookEdit, `scripts/skill-gate.mjs`): editing `.sql`/`.cs`/`.ts`/`.html` in an AgriMap repository without the lane skill (or `agm-exec`) loaded in the session is denied once with the skill to load; the retry passes, so a requester who declines skills is never locked out. Fail-open; `governance.skillGate:false` or `guards:false` turns it off. Codex and Antigravity: `not-supported-on-host`.
+- Workspace root: `skill-routing.mjs workspace --cwd <folder>` plans (and with `--apply` writes) an `AGENTS.md` + `CLAUDE.md` for a non-Git folder holding several repositories, with a repository → lane table and the §0 matrix. It never overwrites a file the team wrote. The hook suggests it when the folder has none.
+- sql-context-pack ownership (owner decision 2026-09-28): inside any `agm-*` operation it stays read-only supporting evidence; a direct owner request (`$sql-context-pack …`, or naming it with export/sync/classify/deploy) is that package's own turn under its approval gates, and AgriMap no longer injects a contradicting prohibition into that turn. `sql-context-readonly.md` now carries read-only recipes (capabilities → active profile → context index → `INFORMATION_SCHEMA` columns/parameters → bounded masked rows); `sqlctx_get_active_profile` joins the read-only tool guard.
+- Skill descriptions name their triggers in Thai and English (for example `agm-diagnose`: หาสาเหตุ bug, error, 500, ช้า …) and drop most of the negative wording that suppressed automatic selection. The router description and `operation-index.md` point to the routing matrix.
+- Release timing: `release-timing.mjs output` on an unfinished timeline now exits 0 and prints `Release timing: IN-PROGRESS` with a "Not final" line, instead of exit 1 that hosts showed as "Failed (exit 1)" during a healthy release. A missing or invalid timing file still exits 1. `release-timing.md` says `report` is the mid-run command and `output` follows `finish`.
+- Tests: `skill-routing.test.mjs` (44 Thai/English routing evals, sql-context ownership, generated artifacts, hook in and outside a repository, workspace install) and `skill-gate.test.mjs`.
+
 ## 4.9.4 — 2026-09-28
 
 Release Description notification fix. 4.9.3 reached main but was never published; its notify script could not deliver.
@@ -10,6 +26,7 @@ Release Description notification fix. 4.9.3 reached main but was never published
 - `tools/agrimap/release-notify.mjs` (managed bootstrap file, replaced on upgrade) posts only `{projectName, version, environment?, items[{text, relatedProjects}]}`. An item ending with `(เกี่ยวข้อง: a, b)` lists the other projects it affects. Items are clipped to the service limits (50 items, 500 characters, 20 related projects).
 - The health check uses `GET …/healthz`; 4.9.3 checked `/health`, got 404 and never posted.
 - Set `NOTIFY_WEBHOOK_URL=https://appserv2.cdg.co.th/agrimap-notify/release-description`; the notify stack must be redeployed with the `/release-description` endpoint.
+- Docs: `docs/USAGE.md` explains which commit type the Agent writes when (`feature|fix|comment` for work, `bump|audit|ci` for agm-release); the `AGENTS.release.md` example no longer uses an undefined `release:` type.
 - `AGENTS.release.md` §8.2, `release-notify.md` and user docs describe both notifications and the `(เกี่ยวข้อง: …)` item format.
 
 ## 4.9.3 — 2026-09-25

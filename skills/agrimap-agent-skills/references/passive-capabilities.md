@@ -35,8 +35,10 @@ The mandatory `goal-rules` capability is owned by [goal-rules.md](goal-rules.md)
 - Explain purpose; inputs and outputs/result sets; objects read and written; joins, filters, and business rules; control flow; transactions; error/message behavior; deployment/idempotency; assumptions; risks; and relevant performance concerns.
 - Label claims as `FACT` when directly supported by SQL/schema/callers, `INFERENCE` when derived, and `UNKNOWN` when evidence is missing.
 - Prefer plain language or compact pseudocode. If modification is requested, route to `agm-sql action=edit`; explain itself never edits.
+
 ## External supporting capabilities
 
-- SQL schema/metadata gaps: sql-context-pack via [sql-context-readonly.md](sql-context-readonly.md); never write authority.
+- External packages are registered in `assets/skill-routing.json` (`supporting`) with their triggers, read-only tools, recipes and owner rule; [skill-routing.md](skill-routing.md) renders them. Add a package there, not in prose here.
+- SQL schema/metadata gaps: sql-context-pack via [sql-context-readonly.md](sql-context-readonly.md); never write authority inside agm-*. A direct owner request to sql-context-pack is that package's own turn.
 - Bootstrap/branch/version/release requests: [release-and-bootstrap.md](release-and-bootstrap.md); quoted intents never execute.
 - Capability choice requires relevant inputs, evidence output, effect boundary and fallback. Do not start another lifecycle merely to retrieve supporting knowledge.

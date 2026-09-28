@@ -1,6 +1,6 @@
 ---
 name: agm-analyze
-description: Analyze scope, hidden problems, impacts, and trade-offs. Apply only to a relevant AgriMap target or explicit current invocation, never unrelated conversation or quoted examples.
+description: Analyze scope, hidden problems, impacts, and trade-offs. Use for วิเคราะห์, review, ประเมินผลกระทบหรือทางเลือกเมื่องานข้ามหลาย lane (FE+BE+SQL) หรือยังไม่รู้ lane. AgriMap targets only; quoted examples are not requests.
 ---
 
 Resolve current intent and target relevance before any identity or lifecycle. Ordinary questions create no execution or task artifacts. Run only analyze.

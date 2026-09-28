@@ -1,6 +1,6 @@
 ---
 name: agm-qa
-description: Verify an artifact under a product-read-only, execution-restricted QA contract. Apply only to a relevant AgriMap target or explicit current invocation, never unrelated conversation or quoted examples.
+description: Verify an artifact under a product-read-only, execution-restricted QA contract. Use for ตรวจรับ, QA, verify ตาม acceptance, ตรวจว่างานผ่านหรือไม่. AgriMap targets only; quoted examples are not requests.
 ---
 
 Resolve current intent and target relevance before any identity or lifecycle. Ordinary questions create no execution or task artifacts. Run only qa.

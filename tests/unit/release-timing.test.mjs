@@ -21,7 +21,12 @@ test('visible output prints measured totals and steps; pending/missing timing ca
   state = transition(state, 'wait', 'requester', 180000);
   state = transition(state, 'step', 'hash', 600000);
   await writeFile(file, JSON.stringify(state));
-  assert.equal(cli('output', file).status, 1);
+  // 4.9.5: an open timeline exits 0 (hosts show nonzero as "Failed") but is visibly not final.
+  const pending = cli('output', file);
+  assert.equal(pending.status, 0);
+  assert.match(pending.stdout, /^Release timing: IN-PROGRESS/);
+  assert.match(pending.stdout, /Not final: the timeline is still open\. Run `finish`/);
+  assert.equal((await timingOutput(file)).ready, false);
   state = transition(state, 'finish', '', 900000);
   await writeFile(file, JSON.stringify(state));
   const result = cli('output', file);

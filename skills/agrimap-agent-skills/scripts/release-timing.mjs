@@ -40,8 +40,10 @@ export async function timingOutput(file, unavailableReason = '') {
   const status = !summary.endedAt ? 'in-progress' : summary.activeComplete ? 'measured' : 'partial';
   const qualifier = summary.activeComplete ? '' : ' (measured portion only)';
   const rows = Object.entries(summary.stepMs).map(([label, ms]) => `| ${display(label)} | ${duration(ms)} |`);
+  // An unfinished timeline is a valid mid-run state, not a failure: say so in the text.
+  const pending = summary.endedAt ? '' : '\n\nNot final: the timeline is still open. Run `finish` after the last release step, then `output` for the final answer.';
   return {status, ready:Boolean(summary.endedAt), summary, finalOutput:
-    `Release timing: ${status.toUpperCase()}\nElapsed: ${duration(summary.elapsedMs)}\nActive: ${duration(summary.activeMs)}${qualifier}\nWaiting: ${duration(summary.humanWaitMs)}\nUnmeasured: ${duration(summary.unmeasuredMs)}\n\n| Step | Active time |\n| --- | --- |\n${rows.join('\n') || '| No measured steps | UNKNOWN |'}`};
+    `Release timing: ${status.toUpperCase()}\nElapsed: ${duration(summary.elapsedMs)}\nActive: ${duration(summary.activeMs)}${qualifier}\nWaiting: ${duration(summary.humanWaitMs)}\nUnmeasured: ${duration(summary.unmeasuredMs)}\n\n| Step | Active time |\n| --- | --- |\n${rows.join('\n') || '| No measured steps | UNKNOWN |'}${pending}`};
 }
 
 // One serialized timeline per release. Waiting and unattended gaps are explicit,
@@ -112,7 +114,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   main(process.argv.slice(2)).then(async result => {
     if (['output','unavailable'].includes(process.argv[2])) {
       process.stdout.write(result.finalOutput + '\n');
-      if (!result.ready) process.exitCode = 1;
+      // Hosts show any nonzero exit as "Failed"; an open timeline is reported in the text
+      // (IN-PROGRESS, Not final). Only a missing/invalid timing file or reason exits 1.
+      if (!result.ready && result.status !== 'in-progress') process.exitCode = 1;
       return;
     }
     if (['finish','report'].includes(process.argv[2])) result = {...result, ...(await timingOutput(process.argv[3]))};

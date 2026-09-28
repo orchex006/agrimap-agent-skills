@@ -57,7 +57,7 @@ $agm-release release production --silent
 $agm-release release full --flash --silent
 ```
 
-**รูปแบบ commit ของทีม:** `feature:` ความสามารถใหม่, `fix:` แก้สิ่งที่ผิด, `comment:` ปรับตาม comment/ปรับปรุง ตามด้วยคำอธิบายภาษาคน เช่น `fix: แก้ dynamic form เพิ่มวันที่ ช่วงเวลา`; commit ที่ agm-release สร้างใช้ `bump:`, `audit:`, `ci:` ดูรายละเอียดใน canonical AGENTS §10.6
+**รูปแบบ commit ของทีม:** `feature:`, `fix:`, `comment:` สำหรับงานพัฒนา และ `bump:`, `audit:`, `ci:` สำหรับ commit ที่ agm-release สร้างเอง ดูตารางว่า Agent ใช้แบบไหนเมื่อไรใน [Usage](USAGE.md#agent-commit-style)
 
 ## การตัดสินใจและขอคำยืนยัน
 

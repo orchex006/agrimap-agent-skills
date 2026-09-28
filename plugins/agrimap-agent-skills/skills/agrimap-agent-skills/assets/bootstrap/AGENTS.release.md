@@ -1,6 +1,6 @@
 # กติกา Release, Version, Changelog และ Deployment
 
-<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.4 -->
+<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.5 -->
 
 ไฟล์นี้ใช้ร่วมกับ `AGENTS.md` (core) ของ repository เดียวกัน: เก็บ §2 Intent routing ฉบับเต็มและ §4–§8 โดยคงเลข § เดิม เพื่อให้การอ้างอิงข้ามไฟล์ไม่เปลี่ยน §1, §3, §9 และ §10 อยู่ใน `AGENTS.md` และยังบังคับใช้กับงาน release ทุกงาน
 
@@ -231,7 +231,7 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
   git add -- <scoped-files>
   git diff --cached --check
   git diff --cached --name-status
-  git commit -m "release: prepare v<VERSION>"
+  git commit -m "bump: <Environment> <VERSION>"
   git push origin HEAD:develop
   git rev-parse HEAD
   git ls-remote --heads origin develop
