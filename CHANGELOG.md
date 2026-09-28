@@ -10,6 +10,7 @@ Release Description notification fix. 4.9.3 reached main but was never published
 - `tools/agrimap/release-notify.mjs` (managed bootstrap file, replaced on upgrade) posts only `{projectName, version, environment?, items[{text, relatedProjects}]}`. An item ending with `(เกี่ยวข้อง: a, b)` lists the other projects it affects. Items are clipped to the service limits (50 items, 500 characters, 20 related projects).
 - The health check uses `GET …/healthz`; 4.9.3 checked `/health`, got 404 and never posted.
 - Set `NOTIFY_WEBHOOK_URL=https://appserv2.cdg.co.th/agrimap-notify/release-description`; the notify stack must be redeployed with the `/release-description` endpoint.
+- Docs: `docs/USAGE.md` explains which commit type the Agent writes when (`feature|fix|comment` for work, `bump|audit|ci` for agm-release); the `AGENTS.release.md` example no longer uses an undefined `release:` type.
 - `AGENTS.release.md` §8.2, `release-notify.md` and user docs describe both notifications and the `(เกี่ยวข้อง: …)` item format.
 
 ## 4.9.3 — 2026-09-25

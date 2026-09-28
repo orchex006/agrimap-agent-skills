@@ -231,7 +231,7 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
   git add -- <scoped-files>
   git diff --cached --check
   git diff --cached --name-status
-  git commit -m "release: prepare v<VERSION>"
+  git commit -m "bump: <Environment> <VERSION>"
   git push origin HEAD:develop
   git rev-parse HEAD
   git ls-remote --heads origin develop
