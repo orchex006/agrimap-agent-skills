@@ -181,7 +181,7 @@
         "sanitized context with provenance",
         "unknowns and fallback"
       ],
-      "conflicts": "User prohibition overrides all provider write capabilities; no metadata sync or database DDL/DML/EXEC."
+      "conflicts": "User prohibition overrides all provider write capabilities; no metadata sync or database DDL/DML/EXEC inside agm-*. A direct owner request to sql-context-pack is that package's turn under its own approval gates (assets/skill-routing.json)."
     },
     {
       "id": "release-knowledge",

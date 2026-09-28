@@ -44,7 +44,8 @@ export function classifyRequest({ prompt = '', explicit = false, recognized = fa
   return { active: explicit || (recognized && (relevant || projectTerms)), reason: explicit ? 'explicit-invocation' : recognized && (relevant || projectTerms) ? 'relevant-project-intent' : 'ordinary-conversation' };
 }
 
-const SQL_READ_TOOLS = new Set(['sqlctx_list_context_index', 'sqlctx_query_data', 'sqlctx_list_managed_folders', 'sqlctx_get_capabilities']);
+// Mirrors supporting[sql-context-pack].readOnlyTools in assets/skill-routing.json (tests keep them equal).
+const SQL_READ_TOOLS = new Set(['sqlctx_get_capabilities', 'sqlctx_get_active_profile', 'sqlctx_list_context_index', 'sqlctx_list_managed_folders', 'sqlctx_query_data']);
 export function sqlContextToolAllowed(name) { return SQL_READ_TOOLS.has(name); }
 
 // Defense in depth for the AgriMap adapter. The managed service's read-only

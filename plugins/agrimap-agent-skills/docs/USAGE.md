@@ -35,11 +35,32 @@
 | `agm-sql` | อธิบาย/ออกแบบ/แก้ **ไฟล์ SQL** | ไม่อนุญาต execute database writes |
 | `agm-qa` | ตรวจตาม acceptance | หลักฐานผ่าน/ไม่ผ่าน/ติดข้อจำกัด; ไม่แก้ product |
 | `agm-prompt` | กลั่นโจทย์เป็นคำสั่งเก็บและส่งต่อ | Prompt Result เมื่อพร้อม; ไม่ implement |
-| `agm-exec` | ลงมือทำโจทย์ที่อนุมัติแล้ว | แก้ไขใน scope และตรวจผล; ไม่บังคับมี prompt file |
+| `agm-exec` | ลงมือทำโจทย์ที่อนุมัติแล้ว หรืองานแก้ข้าม lane (BE+SQL, FE+BE) | แก้ไขใน scope และตรวจผล; ไม่บังคับมี prompt file |
 | `agm-doctor` | ตรวจรุ่น ความพร้อม และอัปเดต AGM ตาม host | status/version/check อ่านอย่างเดียว; update เปลี่ยนเฉพาะแพ็กเกจ ดู [ตารางคำสั่ง](DOCTOR.md) |
 | `agm-release` | bootstrap upgrade, upgrade, indexing, prepare, pipeline, promote และ release full/production/inhouse | ตรวจ/ติดตั้งเครื่องมือที่ขาด; ใช้เลขที่เจ้าของระบุ หรือเพิ่ม PATCH ตาม owner; ขอคำยืนยันก่อน Production/tag ดู [ตารางครบทุกคำสั่ง](../README.md#agm-release) |
 
 `agrimap-agent-skills` เป็น router สำหรับกรณียังเลือกไม่ได้ มันเลือกหนึ่ง operation แล้วหยุด ไม่ใช่ executor อีกตัว และไม่จำเป็นต้องเรียกก่อนคำสั่งตรง
+
+<a id="skill-routing"></a>
+
+## Agent เลือก skill เองจาก intent × lane (4.9.5)
+
+ไม่ต้องพิมพ์ชื่อ skill Agent ดู **lane** (path/นามสกุลไฟล์ → ชื่อ repo → คำในคำขอ) กับ **เจตนา** แล้วเลือก skill เดียวต่อรอบ ตารางเต็มอยู่ใน `AGENTS.md` §0 ของ product repo และ `references/skill-routing.md` ของ skill ทั้งสองสร้างจาก `assets/skill-routing.json` ชุดเดียวกัน
+
+| คำขอ | Skill ที่ควรได้ |
+| --- | --- |
+| `อธิบาย sp นี้` | `agm-sql` action=explain |
+| `ทำไม SP_ORDER_Q ช้า` | `agm-diagnose` |
+| `แก้ bug ที่ API /orders ตอบ 500` ใน `agmws-*` | `agm-be` action=edit |
+| `เพิ่มคอลัมน์ในตารางหน้า user list` ใน `agmwa-*` | `agm-fe` (คำว่าตาราง/คอลัมน์ในบริบทหน้าจอไม่ใช่ SQL) |
+| `เพิ่ม API สร้าง order และ SP ORDER_H_I` | `agm-exec` (ข้าม lane) |
+| `ขอดูโครงสร้างตาราง ORDER_H ใน database จริง` | `agm-sql` + sql-context-pack แบบอ่านอย่างเดียว |
+
+- Claude Code: hook เติมบรรทัด `Skill for this turn: …` ให้ทุกคำขอที่เป็นงาน code/SQL ทั้งใน repo และที่โฟลเดอร์รวมหลาย repo และก่อนแก้ไฟล์ `.sql`/`.cs`/`.ts`/`.html` ใน repo AgriMap จะมี gate ปฏิเสธครั้งแรกถ้ายังไม่ได้โหลด skill ของ lane นั้น (หรือ `agm-exec`) ดู [Troubleshooting](TROUBLESHOOTING.md#skill-gate)
+- Codex / Antigravity: ใช้ตาราง `AGENTS.md` §0 และคำใน description ของแต่ละ skill (ยังไม่มี gate)
+- โฟลเดอร์รวมหลาย repo ที่ไม่ใช่ Git (เช่น `AgriMapPlatform/`): รัน `node <skill>/scripts/skill-routing.mjs workspace --cwd <folder>` เพื่อดูแผนก่อน แล้วเพิ่ม `--apply` เพื่อเขียน `AGENTS.md` + `CLAUDE.md` ที่มีตาราง repo → lane (ไม่ทับไฟล์ที่ทีมเขียนเอง)
+- sql-context-pack: ภายใน `agm-*` อ่านอย่างเดียว (metadata + SELECT แบบ mask); คำสั่งตรงอย่าง `$sql-context-pack export …` เป็นงานของ sql-context-pack ตาม approval gate ของมันเอง AgriMap ไม่เพิ่มหรือตัดสิทธิ์
+- คำถามทั่วไปที่ไม่แตะ code (เช่น `merge ยังไง?`) และชื่อ skill ที่ยกมาเป็นตัวอย่าง ไม่ทำให้เลือก skill
 
 <a id="agent-commit-style"></a>
 

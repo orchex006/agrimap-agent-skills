@@ -15,9 +15,11 @@ test('bootstrap preserves the complete owner-submitted canonical contract',async
   // 4.8.0: instruction diet — §2 (full), §4–§8 moved verbatim to AGENTS.release.md; core keeps a short §2
   // plus the owner-answered precedence sentence (Q-4.8.0-02).
   // 4.9.3: owner-requested §0 skill-first routing, §10.6 team commit style and release §8.2 Release Description.
+  // 4.9.5: owner-requested intent x lane routing; §0 is generated from assets/skill-routing.json, heading renamed,
+  // host recording example compacted to stay within the 24,000-character diet.
   // Package bumps only change the generated version marker; freeze every other byte.
   const sourceBytes=Buffer.from(bytes.toString('utf8').replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/,'<!-- AGRIMAP BOOTSTRAP VERSION: 3.6.1 -->'));
-  assert.equal(createHash('sha256').update(sourceBytes).digest('hex'),'b0d96556dc0f457631f19566e499b62bef65b0b39a139ec5204d0655efa249b2');
+  assert.equal(createHash('sha256').update(sourceBytes).digest('hex'),'ea802cb848aaaeee73827ee2577c0f0fe957e1b39b03c4cc26c138e65774e405');
   const manifest=JSON.parse(await readFile(path.join(bundle,'manifest.json'),'utf8'));
   assert.ok(bytes.toString('utf8').includes(`<!-- AGRIMAP BOOTSTRAP VERSION: ${manifest.version} -->`));
   assert.equal(manifest.files.find(f=>f.source==='AGENTS.md').sha256,createHash('sha256').update(bytes).digest('hex'));

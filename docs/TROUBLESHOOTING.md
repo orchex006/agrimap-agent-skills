@@ -68,6 +68,21 @@ Claude Code มี hook `PreToolUse` ที่ตรวจคำสั่ง git
 - ปิดต่อ project: ตั้ง `"governance": { "guards": false }` ใน `.agrimap-agent/config.json` (ทั้ง guard และ Stop reminder เป็น no-op)
 - Codex, Gemini/Antigravity: ยังไม่ติดตั้ง guard (host ยังยืนยันรูปแบบ hook ไม่ได้) — doctor รายงาน `guards: not-supported-on-host`
 
+## `release-timing.mjs` ขึ้น "Failed (exit 1)" ทั้งที่มีตารางเวลา
+
+ก่อน 4.9.5 คำสั่ง `output` คืน exit 1 เมื่อ Agent เรียกก่อน `finish` host จึงแสดง Failed แม้ release ไม่ได้ล้มเหลว ตั้งแต่ 4.9.5 กรณีนี้คืน 0 และพิมพ์ `Release timing: IN-PROGRESS` พร้อมบรรทัด `Not final` แทน ตรวจผล release จริงจาก Git/branch ไม่ใช่จากข้อความนี้ ถ้าไฟล์ใต้ `.agrimap-agent/runtime/release-timing/` มี `"endedAt": null` แปลว่าเวลายังเปิดอยู่ exit 1 ที่เหลือหมายถึงไฟล์เวลาหายหรือเสียเท่านั้น
+
+<a id="skill-gate"></a>
+
+## แก้ไฟล์แล้วถูก deny ด้วย "AGM_SKILL_GATE[…]" (4.9.5)
+
+Claude Code ตรวจก่อน Edit/Write ไฟล์ `.sql`, `.cs`, `.ts`, `.html`, `.scss` ใน repo AgriMap ว่า session นี้โหลด skill ของ lane นั้นแล้ว (`agm-sql`, `agm-be`, `agm-fe` หรือ `agm-exec` สำหรับงานข้าม lane) ถ้ายังไม่โหลดจะ deny ครั้งแรกพร้อมบอก skill ที่ต้องใช้
+
+- ปกติ Agent โหลด skill แล้วลองใหม่เอง ไม่ต้องทำอะไร
+- ถ้าผู้ใช้สั่งชัดว่าไม่ใช้ AgriMap skills การลองครั้งที่สองของ lane เดียวกันใน session เดิมจะผ่าน
+- ไม่ตรวจ: ไฟล์ `.md`/`.json`/`Jenkinsfile`, `.agrimap-agent/**`, repo ที่ไม่ใช่ AgriMap และ repo ของ skill package เอง
+- ปิดต่อ project: `"governance": { "skillGate": false }` ใน `.agrimap-agent/config.json` (หรือ `guards: false` ซึ่งปิด guard ทั้งหมด)
+
 ## Push สำเร็จแต่ไม่รู้ว่า deploy ผ่านไหม
 
 ดู pipeline/run ของ environment ที่ push ไป: jenkins=Inhouse, jenkins-release=Production Remote SHA ยืนยัน Git publication เท่านั้น หากไม่มีสิทธิ์ดู Jenkins ให้รายงาน deployment unverified ไม่อ้าง success ดู [Release](RELEASE.md)

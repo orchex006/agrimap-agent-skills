@@ -1,4 +1,4 @@
-# AgriMap Agent Skills 4.9.4
+# AgriMap Agent Skills 4.9.5
 
 [รุ่นล่าสุด](https://github.com/orchex006/agrimap-agent-skills/releases/latest) · [Tags รุ่นก่อน](https://github.com/orchex006/agrimap-agent-skills/tags) · [เลือกเวอร์ชันและ source ย้อนหลัง](docs/VERSIONS.md)
 
@@ -31,6 +31,8 @@
 
 สิ่งที่ควรได้: คำอธิบายพร้อมตำแหน่งไฟล์ ไม่ใช่การแก้โค้ด สร้าง task หรือรัน test ทั้งโครงการ คำถามทั่วไปพิมพ์ได้ตามปกติ ไม่จำเป็นต้องเรียก skill
 
+**ไม่ต้องจำชื่อ skill (4.9.5):** พิมพ์งานตามปกติ Agent เลือก skill เดียวจาก intent × lane เช่น `ทำไม SP_ORDER_Q ช้า` → `agm-diagnose`, `เพิ่ม API และ SP` → `agm-exec` ดู [ตารางเลือก skill](docs/USAGE.md#skill-routing)
+
 ## คำแนะนำที่มีหลักฐาน
 
 Design ทำงานแบบ passive ในคำสั่งที่เหลือ: เสนอเมื่อข้อมูลพอ หากไม่พอให้แจ้งสิ่งที่ขาด แยกข้อเท็จจริงจากสมมติฐาน และบอกข้อจำกัด/ความมั่นใจ คำแนะนำชั่วคราวต้องมีเงื่อนไขชัดเจน ไม่เดาข้อมูลเพื่อเติมคำตอบ และไม่ถือเป็นสิทธิ์ implement
@@ -39,7 +41,7 @@ Design ทำงานแบบ passive ในคำสั่งที่เห�
 
 - คำสั่งวิเคราะห์ไม่อนุญาตให้แก้โค้ด; คำสั่งแก้โค้ดไม่อนุญาตให้ push หรือ deploy โดยอัตโนมัติ
 - ไม่ต้องสร้าง Prompt Result ก่อนทุกงาน ใช้ `agm-prompt` เมื่อต้องการคำสั่งที่เก็บและส่งต่อได้จริง
-- SQL context อ่าน metadata และ SELECT แบบจำกัด/ปกปิดข้อมูลได้ แต่ห้าม execute database writes หรือ stored procedures
+- SQL context ภายใน `agm-*` อ่าน metadata และ SELECT แบบจำกัด/ปกปิดข้อมูลได้ แต่ห้าม execute database writes หรือ stored procedures; คำสั่งตรงถึง sql-context-pack ใช้ approval gate ของ package นั้น
 - Bootstrap ติดตั้งเอกสารโครงการ ไม่สร้าง pipeline หรือ deploy; flow release คือ `develop → jenkins → jenkins-release`
 - คำสั่งที่ยกตัวอย่างในเอกสารไม่ใช่การอนุมัติให้ Agent รัน
 

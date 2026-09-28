@@ -63,6 +63,7 @@
       "kind": "router",
       "depth": "light",
       "mustLoad": [
+        "skill-routing.md",
         "operation-index.md",
         "platform-syntax.md"
       ]
