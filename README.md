@@ -1,4 +1,4 @@
-# AgriMap Agent Skills 4.9.3
+# AgriMap Agent Skills 4.9.4
 
 [รุ่นล่าสุด](https://github.com/orchex006/agrimap-agent-skills/releases/latest) · [Tags รุ่นก่อน](https://github.com/orchex006/agrimap-agent-skills/tags) · [เลือกเวอร์ชันและ source ย้อนหลัง](docs/VERSIONS.md)
 
@@ -75,7 +75,7 @@ Design ทำงานแบบ passive ในคำสั่งที่เห�
 
 หากยังไม่มี Project Memory คำสั่ง indexing/prepare/release จะทำ indexing จากหลักฐานและสร้าง `.agrimap-agent/memory/project.md` พร้อมโฟลเดอร์ที่จำเป็นให้ใน flow เดิม ไม่ต้องสั่ง Project Backfill หรือ bootstrap แยก โดย indexing รวม Project Backfill และต้องพิสูจน์ coverage ก่อนจบ ส่วน standalone prepare ไม่อ้าง full backfill จาก scoped indexing ส่วน standalone pipeline/promote ต้องพิสูจน์ candidate ที่เตรียมแล้วก่อน reconstruct memory
 
-**Release Description (4.9.3):** `release production|full` เขียนสรุปภาษาคนให้ BA ส่งลูกค้าได้ และส่งแจ้งเตือน Teams แบบสั้น (ชื่อ project, version, รายการที่แก้และ project ที่เกี่ยวข้อง) ผ่าน `tools/agrimap/release-notify.mjs` ไปที่ `…/agrimap-notify/release-description` (env `NOTIFY_WEBHOOK_URL`, ตรวจ `/healthz` ก่อนส่ง) แยกจาก Jenkins build card ข้ามการส่งด้วย `--silent` หรือ `--skip-noti` ดู [Release](docs/RELEASE.md)
+**Release Description (4.9.4):** `release production|full` เขียนสรุปภาษาคนให้ BA ส่งลูกค้าได้ และส่งแจ้งเตือน Teams แบบสั้น (ชื่อ project, version, รายการที่แก้และ project ที่เกี่ยวข้อง) ผ่าน `tools/agrimap/release-notify.mjs` ไปที่ `…/agrimap-notify/release-description` (env `NOTIFY_WEBHOOK_URL`, ตรวจ `/healthz` ก่อนส่ง) แยกจาก Jenkins build card ข้ามการส่งด้วย `--silent` หรือ `--skip-noti` ดู [Release](docs/RELEASE.md)
 
 **Release notes และ tag เป็นของ Production เท่านั้น:** ถ้า candidate Inhouse เป็น `1.0.6` และ Production เป็น `1.0.3` ให้สร้าง `release-notes/1.0.3.md` และใช้ tag `v1.0.3` ห้ามนำเลข Inhouse ไปสร้าง `release-notes/1.0.6.md` งาน Inhouse-only ไม่แก้ `release.md` หรือ versioned notes ประวัติเดิมต้องคงอยู่
 

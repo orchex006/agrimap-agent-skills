@@ -2,6 +2,16 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.9.4 — 2026-09-28
+
+Release Description notification fix. 4.9.3 reached main but was never published; its notify script could not deliver.
+
+- Two notifications stay separate: the Jenkins build card (`POST /release`, sent by each Jenkinsfile, unchanged) and the AI Release Description, which now has its own agrimap-notify endpoint `POST /release-description`.
+- `tools/agrimap/release-notify.mjs` (managed bootstrap file, replaced on upgrade) posts only `{projectName, version, environment?, items[{text, relatedProjects}]}`. An item ending with `(เกี่ยวข้อง: a, b)` lists the other projects it affects. Items are clipped to the service limits (50 items, 500 characters, 20 related projects).
+- The health check uses `GET …/healthz`; 4.9.3 checked `/health`, got 404 and never posted.
+- Set `NOTIFY_WEBHOOK_URL=https://appserv2.cdg.co.th/agrimap-notify/release-description`; the notify stack must be redeployed with the `/release-description` endpoint.
+- `AGENTS.release.md` §8.2, `release-notify.md` and user docs describe both notifications and the `(เกี่ยวข้อง: …)` item format.
+
 ## 4.9.3 — 2026-09-25
 
 Skill-first routing, team commit style, pending-work release and customer-facing Release Description with Teams notification.
@@ -12,8 +22,8 @@ Skill-first routing, team commit style, pending-work release and customer-facing
 - agm-release pending work: publishing commands (`release`, `pipeline`) now include all pending product work automatically, like group B `Version *`: dirty paths and unpushed develop commits become a reviewed content commit before the version commit. Work stays local only on explicit requester exclusion; secrets, ignored state and nested repos are always excluded and listed.
 - After publication the final audit commit is pushed to develop once and verified, so develop ends clean and equal to origin. This replaces the 4.9.1 carry-forward (`--push-audit` is no longer needed); a develop-triggered pipeline, if configured, runs once more.
 - Team commit style (bootstrap `AGENTS.md` §10.6): `feature:`, `fix:`, `comment:` plus a plain-language description an App Leader, BA or customer can read (at most 100 characters, no scope); agm-release commits use `bump:`, `audit:`, `ci:`. `git-flow.mjs` generates and validates this style (legacy English Conventional Commits in explicit input still pass); new workflow policies default to `commitConvention: agrimap`, `commitLanguage: th`.
-- Release Description (`AGENTS.release.md` §8.2, `release-notify.md`): `release production|full` (including `--flash`) end with a plain-Thai `# <project> / <version>` bullet summary a BA can send to customers; items that come from or require changes in other projects end with `(เกี่ยวข้อง: <repo>, …)` (e.g. `agmws-identity-netcore`). It is saved under `.agrimap-agent/reports/` and always shown in the final answer.
-- Teams notification: new managed bootstrap file `tools/agrimap/release-notify.mjs` (`check`, `set-url`, `send --preview`) posts `{projectName, version, environment?, items[{text, relatedProjects}]}` to the agrimap-notify `POST /release-description` endpoint (separate from the Jenkins build card `POST /release`). It reads `NOTIFY_WEBHOOK_URL`, checks `GET …/healthz` before every POST, asks once for the URL when it is missing and saves it as a user environment variable. Failures leave the release completed with notify `pending`. `--silent` (alias `--skip-noti`) skips sending only.
+- Release Description (`AGENTS.release.md` §8.2, `release-notify.md`): `release production|full` (including `--flash`) end with a plain-Thai `# <App> / <version>` bullet summary a BA can send to customers, naming the source project for changes from another project (e.g. `agmws-identity-netcore`). It is saved under `.agrimap-agent/reports/` and always shown in the final answer.
+- Teams notification: new managed bootstrap file `tools/agrimap/release-notify.mjs` (`check`, `set-url`, `send --preview`). It reads `NOTIFY_WEBHOOK_URL`, checks `GET …/health` before every POST, asks once for the URL when it is missing and saves it as a user environment variable. Failures leave the release completed with notify `pending`. `--silent` (alias `--skip-noti`) skips sending only.
 - Integration without MR/PR: new workflow policies default to `integration.method: local-merge` (also the fallback when no policy exists). `merge`/`รวม` merges into the target and pushes only after local verification passes; `pr`/`mr` still opens one on request. Existing confirmed policies keep their recorded method (switch with `agm-workspace.mjs policy set --key integration.method --value local-merge`).
 - Fix: `start` no longer fails with `RUN_ID_COLLISION` when two runs start in the same second; a generated `ddHHmmss` ID moves to the next free second as bootstrap §9.2 requires (explicit `--execution` IDs still report the collision). This made `git-flow` CI flaky on Linux.
 - Bootstrap manifest mode `managed`: the bundle owns the file and always replaces it (with backup) instead of reporting a merge conflict.
