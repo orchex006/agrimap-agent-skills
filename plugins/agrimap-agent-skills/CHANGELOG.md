@@ -2,6 +2,16 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.9.4 — 2026-09-28
+
+Release Description notification fix. 4.9.3 reached main but was never published; its notify script could not deliver.
+
+- Two notifications stay separate: the Jenkins build card (`POST /release`, sent by each Jenkinsfile, unchanged) and the AI Release Description, which now has its own agrimap-notify endpoint `POST /release-description`.
+- `tools/agrimap/release-notify.mjs` (managed bootstrap file, replaced on upgrade) posts only `{projectName, version, environment?, items[{text, relatedProjects}]}`. An item ending with `(เกี่ยวข้อง: a, b)` lists the other projects it affects. Items are clipped to the service limits (50 items, 500 characters, 20 related projects).
+- The health check uses `GET …/healthz`; 4.9.3 checked `/health`, got 404 and never posted.
+- Set `NOTIFY_WEBHOOK_URL=https://appserv2.cdg.co.th/agrimap-notify/release-description`; the notify stack must be redeployed with the `/release-description` endpoint.
+- `AGENTS.release.md` §8.2, `release-notify.md` and user docs describe both notifications and the `(เกี่ยวข้อง: …)` item format.
+
 ## 4.9.3 — 2026-09-25
 
 Skill-first routing, team commit style, pending-work release and customer-facing Release Description with Teams notification.

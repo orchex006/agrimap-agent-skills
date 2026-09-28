@@ -1,12 +1,12 @@
 {
-  "version": "4.9.3",
+  "version": "4.9.4",
   "source": "Owner-supplied canonical contract submitted 2026-09-08; owner-authorized missing-memory indexing revision 2026-09-09; owner-authorized explicit Version/Patch precedence and compatible direct preparation revision 2026-09-09",
   "files": [
     {
       "source": "AGENTS.md",
       "target": "AGENTS.md",
       "mode": "copy",
-      "sha256": "d512faecf59dc10596ffb8eff19a98f144c3cb34ad4557c7ddba6f5c4718aca9",
+      "sha256": "9d19c3c77585464678271c2407f37f4155351286c9040855448ee055dbae2f60",
       "previous": [
         {
           "version": "3.2.2",
@@ -91,6 +91,10 @@
         {
           "version": "4.9.1",
           "sha256": "e6361e83cf7520d567c27598ae08b4141dde3b91d2f10ed7a927c6a9a87c33a0"
+        },
+        {
+          "version": "4.9.3",
+          "sha256": "d512faecf59dc10596ffb8eff19a98f144c3cb34ad4557c7ddba6f5c4718aca9"
         }
       ]
     },
@@ -98,7 +102,7 @@
       "source": "AGENTS.release.md",
       "target": "AGENTS.release.md",
       "mode": "copy",
-      "sha256": "414ee78ee1780fcd19aa99e531ccc58ce975fc47ff09c3b7a1946f951fb90b27",
+      "sha256": "69bf13008976fa5c613635dae9217eccdb165f6709903d78ceb2dd840b2b3606",
       "previous": [
         {
           "version": "4.8.0",
@@ -107,6 +111,10 @@
         {
           "version": "4.9.1",
           "sha256": "321bf0a410ea5286f87c5163eb7272350084f2908aa36ec9525be2c0b164ad67"
+        },
+        {
+          "version": "4.9.3",
+          "sha256": "414ee78ee1780fcd19aa99e531ccc58ce975fc47ff09c3b7a1946f951fb90b27"
         }
       ]
     },
@@ -214,8 +222,13 @@
       "source": "release-notify.mjs",
       "target": "tools/agrimap/release-notify.mjs",
       "mode": "managed",
-      "sha256": "7f1771a32eb1244bf7573c2de06e3c44a9404f79c5c39fbe8d887d5506b8897d",
-      "previous": []
+      "sha256": "007bd386a10367ffe9b94e890e6b96eaa52a972eab89803ed93bd201c868b62e",
+      "previous": [
+        {
+          "version": "4.9.3",
+          "sha256": "7f1771a32eb1244bf7573c2de06e3c44a9404f79c5c39fbe8d887d5506b8897d"
+        }
+      ]
     }
   ]
 }
