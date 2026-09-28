@@ -4,6 +4,7 @@ import test from 'node:test';
 import {mkdir,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
 import {createHarness,projectRoot} from '../helpers/harness.mjs';
 import {initRepo} from '../helpers/git-fixture.mjs';
 import {acceptedSkills,evaluateWrite,skillLoaded} from '../../skills/agrimap-agent-skills/scripts/skill-gate.mjs';
@@ -43,6 +44,17 @@ test('gate denies an AgriMap SQL edit once without the lane skill, then allows t
  assert.match(be.reason,/AGM_SKILL_GATE\[be\].*be-main work.*agm-be/);
  await writeFile(transcript,hookText+skillCall('agrimap-agent-skills:agm-be'));
  assert.equal(await evaluateWrite({filePath:path.join(repo,'Services/OrderService.cs'),transcriptPath:transcript,session:`gate-${randomUUID()}`,routing}),null);
+});
+
+test('gate resolves a Windows 8.3 short path to the same repository file (CI temp dirs)',async t=>{
+ if(process.platform!=='win32')return t.skip('Windows only');
+ const h=await fixture(t);
+ const repo=await initRepo(path.join(h.temp,'agmws-orders-netcore'));
+ const transcript=path.join(h.temp,'transcript.jsonl');await writeFile(transcript,hookText);
+ const short=spawnSync('cmd',['/d','/s','/c',`for %I in ("${repo}") do @echo %~sI`],{encoding:'utf8',windowsVerbatimArguments:true}).stdout.trim();
+ if(!short||short.toLowerCase()===repo.toLowerCase())return t.skip('8.3 names unavailable');
+ const verdict=await evaluateWrite({filePath:path.join(short,'sql','X_I.sql'),transcriptPath:transcript,session:`gate-${randomUUID()}`,routing});
+ assert.match(verdict?.reason||'',/AGM_SKILL_GATE\[sql\]: sql\/X_I\.sql is sql work/);
 });
 
 test('gate stays out of non-code paths, non-AgriMap repositories, the skill package and opted-out projects',async t=>{

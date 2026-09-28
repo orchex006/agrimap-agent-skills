@@ -65,7 +65,10 @@ export async function evaluateWrite({ filePath, transcriptPath, session, routing
   if (!directory) return null;
   const root = git(directory, ["rev-parse", "--show-toplevel"]);
   if (!root) return null;
-  const relative = path.relative(root, path.resolve(filePath)).replaceAll("\\", "/");
+  // Relative to the repository via git's own prefix: the top level comes back in long
+  // form while a Windows caller may pass an 8.3 short path (C:\Users\RUNNER~1\...).
+  const prefix = git(directory, ["rev-parse", "--show-prefix"]);
+  const relative = (prefix + path.relative(directory, path.resolve(filePath))).replaceAll("\\", "/");
   if (!relative || relative.startsWith("..") || relative.split("/").some((segment) => SKIPPED_SEGMENTS.has(segment))) return null;
   const config = await readJson(path.join(root, ".agrimap-agent", "config.json"));
   if (config?.governance?.skillGate === false || config?.governance?.guards === false) return null;
