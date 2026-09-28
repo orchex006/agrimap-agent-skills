@@ -41,6 +41,25 @@
 
 `agrimap-agent-skills` เป็น router สำหรับกรณียังเลือกไม่ได้ มันเลือกหนึ่ง operation แล้วหยุด ไม่ใช่ executor อีกตัว และไม่จำเป็นต้องเรียกก่อนคำสั่งตรง
 
+<a id="agent-commit-style"></a>
+
+## Agent เขียน commit แบบไหน (4.9.4)
+
+ทุก commit ที่ Agent เขียนใน project ใช้รูปแบบเดียวกัน: `<type>: <คำอธิบายภาษาคน>` ไม่มี scope ยาวไม่เกิน 100 ตัวอักษร เขียนให้ App Leader, BA หรือลูกค้าอ่าน header แล้วรู้ว่าเปลี่ยนอะไร รายละเอียดเทคนิค (ชื่อ class, ไฟล์, route) ใส่ใน body ได้ ไม่ใส่ใน header กติกาเต็มอยู่ใน canonical AGENTS §10.6
+
+| Type | Agent ใช้เมื่อ | ตัวอย่าง |
+| --- | --- | --- |
+| `feature:` | ส่งงานที่เพิ่มความสามารถใหม่ให้ผู้ใช้ (branch `feature/*`) | `feature: เพิ่มรับ User หลายช่องทาง` |
+| `fix:` | ส่งงานที่แก้สิ่งที่ทำงานผิด รวม hotfix (branch `fix/*`, `hotfix/*`) | `fix: แก้ dynamic form เพิ่มวันที่ ช่วงเวลา` |
+| `comment:` | ปรับตาม comment หรือปรับปรุงที่ไม่ใช่ความสามารถใหม่ เช่น หน้าตา ข้อความ ปรับโครงสร้าง เอกสาร (`refactor/*`, `docs/*`) | `comment: ปรับโทนสีปุ่มเป็นสีม่วง` |
+| `bump:` | agm-release แก้เลข version ใน `Jenkinsfile*` และ release notes/changelog ของ version นั้น | `bump: Production 1.4.2` |
+| `audit:` | agm-release บันทึกประวัติ/รายงาน `.agrimap-agent` หลังปิด release แล้ว push develop ครั้งเดียว | `audit: บันทึกประวัติ release 1.4.2` |
+| `ci:` | แก้ pipeline, governance หรือ bootstrap เช่น `AGENTS.md`, `tools/agrimap/*` | `ci: อัปเดต bootstrap 4.9.4` |
+
+- ตอน release ที่รวมงานค้าง Agent แยกเป็น content commit ตามชนิดงานจริง (`feature:`/`fix:`/`comment:`) ก่อน แล้วค่อย `bump:` เป็น commit แยก
+- `changelog.md` ยังเป็นภาษาอังกฤษตาม AGENTS §5 ไม่คัดลอก header ไทยไปลง changelog
+- Commit แบบ Conventional Commits ภาษาอังกฤษ (`feat(scope): ...`) ที่ส่งเข้ามาเองยังผ่านการตรวจ แต่ Agent จะไม่สร้างแบบนั้นเอง
+
 ## Passive recommendations
 
 Design ไม่ใช่คำสั่งแยกอีกต่อไป Agent เสนอคำแนะนำที่เกี่ยวข้องกับงานปัจจุบันได้เองเมื่อมีหลักฐานเพียงพอ โดยบอกเหตุผลและระดับความมั่นใจ ถ้าข้อมูลไม่พอต้องระบุสิ่งที่ขาด แยก facts/assumptions และแจ้ง limitations; คำแนะนำชั่วคราวต้องมีเงื่อนไขและ confidence ชัดเจน ห้ามเติมข้อเท็จจริงขึ้นเอง

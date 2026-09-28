@@ -98,7 +98,7 @@ test('instruction diet: core AGENTS.md at most 24,000 chars; core + release keep
   const entry=manifest.files.find(f=>f.source==='AGENTS.release.md');
   assert.equal(entry.target,'AGENTS.release.md');assert.equal(entry.sha256,createHash('sha256').update(release).digest('hex'));
   const frozen=release.replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/,'<!-- AGRIMAP BOOTSTRAP VERSION: 3.6.1 -->');
-  assert.equal(createHash('sha256').update(frozen).digest('hex'),'346cf2b93ab1a35f28aee8283f87a310814047fc4bd2cf4fdc1dc504d67a115f');
+  assert.equal(createHash('sha256').update(frozen).digest('hex'),'431d6a9f137c74f9562cd6f7ca12edde9b74175d978a676345704e1d8606e110');
   const headings=['## 0.','## 1.','## 2.','### 2.1','### 2.2','### 2.3','## 3.','## 4.','## 5.','### 5.1','### 5.2','## 6.','### 6.1','### 6.2','### 6.3','## 7.','## 8.','### 8.1','## 9.','### 9.1','### 9.5','## 10.','### 10.5','## Bootstrap contract freshness'];
   const all=(core+'\n'+release).split('\n');
   for(const h of headings)assert.ok(all.some(line=>line.startsWith(h)),h);
