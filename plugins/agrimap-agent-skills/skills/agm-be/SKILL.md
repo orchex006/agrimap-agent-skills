@@ -1,6 +1,6 @@
 ---
 name: agm-be
-description: Analyze, design, create, edit, refactor, or explicitly test AgriMap .NET backend work (agmws-*/agmbo-* services, AgriMap.* libraries) in golden structure through one domain façade. Apply only to a relevant AgriMap target or explicit current invocation, never unrelated conversation or quoted examples.
+description: Analyze, design, create, edit, refactor, or explicitly test AgriMap .NET backend work (agmws-*/agmbo-* services, AgriMap.* libraries) in golden structure through one domain façade. Use for .NET controller, API, endpoint, service, repository, job ใน agmws-*, agmbo-* หรือ AgriMap.Platform.*; อธิบาย ออกแบบ สร้าง แก้ refactor เขียน test. AgriMap targets only; quoted examples are not requests.
 ---
 
 Resolve current intent and target relevance before any identity or lifecycle. Ordinary questions create no execution or task artifacts. Run only be.

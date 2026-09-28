@@ -1,6 +1,6 @@
 ---
 name: agm-release
-description: Upgrade project bootstrap while preserving custom rules, replace contracts explicitly, index projects, prepare versions, publish Inhouse pipelines and confirm Production promotion. Apply only to a relevant AgriMap target or explicit current invocation, never unrelated conversation or quoted examples.
+description: Upgrade project bootstrap while preserving custom rules, replace contracts explicitly, index projects, prepare versions, publish Inhouse pipelines and confirm Production promotion. Use for version, changelog, release, นำขึ้น Jenkins, Inhouse/Production. AgriMap targets only; quoted examples are not requests.
 ---
 
 Resolve current intent and target relevance before any identity or lifecycle. Ordinary questions create no execution or task artifacts. Run only release.

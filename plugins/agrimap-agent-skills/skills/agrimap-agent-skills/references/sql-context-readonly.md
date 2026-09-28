@@ -1,9 +1,34 @@
 # sql-context-pack: read-only supporting capability
 
-Use when a task needs exact schema/metadata or bounded masked data that local authoritative references cannot answer. Read the installed sql-context-pack SKILL and the relevant route. Do not create a new AgriMap task for retrieval.
+Use when a task needs exact schema/metadata or bounded masked data that local authoritative references cannot answer. Local `sql/**` files and `.agrimap-agent/knowledge/references/db-schema/**` come first ([db-schema-context.md](db-schema-context.md)). Do not create a new AgriMap task for retrieval.
+
+## Who owns the turn
+
+<!-- AGM-SQL-CONTEXT:START -->
+<!-- Generated from assets/skill-routing.json. Do not edit directly. -->
+
+- Supporting: Inside any agm-* operation sql-context-pack is supporting evidence only: its read-only tools and recipes (metadata and masked SELECT). No DDL/DML, EXEC/CALL, export, metadata sync, classification or routine deployment.
+- Owner turn: A direct owner request to sql-context-pack (its invocation, or naming it with an owner operation) is that package's turn: follow its own SKILL and approval gates. AgriMap adds no authority, lifecycle or prohibition to that turn and never runs those operations inside an agm-* operation. Owner operations: export/catalog capture, DB_METADATA_CONTEXT sync, folder classification, context generation, routine deployment, profile connect/change, SQLFluff install/update.
+- Owner invocations: `$sql-context-pack`, `/sql-context-pack:sql-context-pack`, `/sql-context-pack`, `$sql-content-pack`; naming the package with an owner operation counts too.
+
+| Need | Read-only recipe |
+| --- | --- |
+| readiness and the connected profile | `sqlctx_get_capabilities`, then `sqlctx_get_active_profile`; no profile means a named gap (never connect, change or inherit a profile to answer) |
+| which objects exist for a domain, context or tag | `sqlctx_list_context_index` with type/context/tag filters; read every page until `next_cursor` is null |
+| columns, types and nullability of a table or view | `sqlctx_query_data` on `INFORMATION_SCHEMA.COLUMNS` filtered by exact `TABLE_SCHEMA`/`TABLE_NAME` |
+| procedure or function parameters | `sqlctx_query_data` on `INFORMATION_SCHEMA.PARAMETERS` filtered by exact `SPECIFIC_NAME` |
+| representative data shape | `sqlctx_query_data` with an explicit column list, a narrow WHERE and `TOP` at most 500; output stays masked |
+| full DDL or routine body | read local `sql/**` or db-schema references first; if missing, name the gap and suggest the owner run an explicit `$sql-context-pack` capture; never materialize it from an AgriMap operation |
+
+Read-only tools: `sqlctx_get_capabilities`, `sqlctx_get_active_profile`, `sqlctx_list_context_index`, `sqlctx_list_managed_folders`, `sqlctx_query_data`.
+<!-- AGM-SQL-CONTEXT:END -->
+
+Read only the query and context-index parts of the installed sql-context-pack SKILL while supporting an agm-* operation; its export, sync, classification, generation and deployment routes belong to an owner turn.
+
+## Boundaries inside AgriMap operations
 
 Use only the current conversation's explicitly connected profile and its allowed scope. Never inherit another room's profile or request credentials. Search exact object names, read index pagination to completion, preserve source/profile/object identity and freshness.
-Permitted: capabilities, metadata/context index, registered-folder listing, relational SELECT via sqlctx_query_data with masked output and at most 500 rows.
-Do not invoke CREATE/ALTER/DROP/INSERT/UPDATE/DELETE/MERGE/TRUNCATE, EXEC/CALL, SELECT INTO, procedure/function execution, routine deployment, metadata sync, owner-resolution apply or any database write. This restriction holds for all users/models/depths within this integration; a supporting skill cannot expand it.
+Permitted: capabilities, active profile, metadata/context index, registered-folder listing, relational SELECT via sqlctx_query_data with masked output and at most 500 rows.
+Do not invoke CREATE/ALTER/DROP/INSERT/UPDATE/DELETE/MERGE/TRUNCATE, EXEC/CALL, SELECT INTO, procedure/function execution, routine deployment, metadata sync, owner-resolution apply or any database write. This restriction holds for all users/models/depths within AgriMap operations; a supporting skill cannot expand it.
 Do not auto-run exports that materialize files, classify/apply folders, install tools or change profiles merely to answer a query. Missing profile/service/evidence is a named gap; continue independent work. No direct database connection fallback.
 The managed service's read-only profile and query parser are authoritative. scripts/governance-policy.mjs supplies a conservative tool/query guard for adapters; this package does not proxy arbitrary SQL or grant database permissions.

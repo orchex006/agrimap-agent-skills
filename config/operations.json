@@ -13,6 +13,7 @@
         ]
       },
       "description": "Check AGM installation versions, host compatibility and workflow dependencies, or update the selected host's AGM package",
+      "triggers": "ติดตั้ง/อัปเดต/ตรวจรุ่น AgriMap skills, agm version, host compatibility",
       "mode": "action-routed",
       "deliverable": "evidence-backed readiness report or verified package update; never a product release or host upgrade",
       "requiredInputs": [
@@ -108,6 +109,7 @@
         ]
       },
       "description": "Analyze scope, hidden problems, impacts, and trade-offs",
+      "triggers": "วิเคราะห์, review, ประเมินผลกระทบหรือทางเลือกเมื่องานข้ามหลาย lane (FE+BE+SQL) หรือยังไม่รู้ lane",
       "mode": "product-read-only",
       "deliverable": "requested result with proportional evidence; no lifecycle for ordinary answers",
       "requiredInputs": [
@@ -204,6 +206,7 @@
         ]
       },
       "description": "Diagnose a problem to a proven root cause",
+      "triggers": "หาสาเหตุ bug, error, 500/404, exception, ช้า, timeout, ข้อมูลผิด, ทำไมไม่ทำงาน (ยังไม่ได้สั่งแก้), root cause",
       "mode": "product-read-only",
       "deliverable": "requested result with proportional evidence; no lifecycle for ordinary answers",
       "requiredInputs": [
@@ -296,6 +299,7 @@
         ]
       },
       "description": "Create a reverse-engineered execution plan",
+      "triggers": "วางแผน, ลำดับงาน, แตกงาน, roadmap, execution plan",
       "mode": "product-read-only",
       "deliverable": "requested result with proportional evidence; no lifecycle for ordinary answers",
       "requiredInputs": [
@@ -387,6 +391,7 @@
         ]
       },
       "description": "Design boundaries, contracts, and migration trade-offs",
+      "triggers": "ออกแบบระบบ, สถาปัตยกรรม, boundary/contract ข้าม service, migration strategy",
       "mode": "product-read-only",
       "deliverable": "requested result with proportional evidence; no lifecycle for ordinary answers",
       "requiredInputs": [
@@ -478,6 +483,7 @@
         ]
       },
       "description": "Analyze, design, create, edit, refactor, or explicitly test AgriMap Angular frontend work (agmwa-* apps, @agrimap/* libraries) in golden structure through one domain façade",
+      "triggers": "Angular component, หน้าจอ, form, signal, frontend service ใน agmwa-* หรือ @agrimap/*; อธิบาย ออกแบบ สร้าง แก้ refactor เขียน test",
       "mode": "action-routed",
       "deliverable": "requested result with proportional evidence; no lifecycle for ordinary answers",
       "requiredInputs": [
@@ -650,6 +656,7 @@
         ]
       },
       "description": "Analyze, design, create, edit, refactor, or explicitly test AgriMap .NET backend work (agmws-*/agmbo-* services, AgriMap.* libraries) in golden structure through one domain façade",
+      "triggers": ".NET controller, API, endpoint, service, repository, job ใน agmws-*, agmbo-* หรือ AgriMap.Platform.*; อธิบาย ออกแบบ สร้าง แก้ refactor เขียน test",
       "mode": "action-routed",
       "deliverable": "requested result with proportional evidence; no lifecycle for ordinary answers",
       "requiredInputs": [
@@ -837,6 +844,7 @@
         ]
       },
       "description": "Analyze, design, create, edit, refactor, or explain AgriMap SQL work (tables, stored procedures/SP, views, .sql files) in golden format through one domain façade",
+      "triggers": "ตาราง, SP/stored procedure, view, column, index, LUT_*, *_I/_U/_D/_Q, messages.sql, ไฟล์ .sql; อธิบาย ออกแบบ สร้าง แก้ refactor",
       "mode": "action-routed",
       "deliverable": "requested result with proportional evidence; no lifecycle for ordinary answers",
       "requiredInputs": [
@@ -1001,6 +1009,7 @@
         ]
       },
       "description": "Verify an artifact under a product-read-only, execution-restricted QA contract",
+      "triggers": "ตรวจรับ, QA, verify ตาม acceptance, ตรวจว่างานผ่านหรือไม่",
       "mode": "verification-only",
       "deliverable": "requested result with proportional evidence; no lifecycle for ordinary answers",
       "requiredInputs": [
@@ -1093,6 +1102,7 @@
         ]
       },
       "description": "Analyze and refine requester intent into one immutable versioned Prompt Result with explicit Main and Subagent ownership",
+      "triggers": "กลั่นโจทย์หรือ requirement เป็น Prompt Result, เรียบเรียงคำสั่งเพื่อส่งต่อ",
       "mode": "workflow-write-only",
       "deliverable": "one immutable Prompt Result only when requested content changes; no tasks",
       "requiredInputs": [
@@ -1207,6 +1217,7 @@
         ]
       },
       "description": "Implement an authorized objective, approved Prompt Result, or resumable task with proportional verification and scoped delivery",
+      "triggers": "ลงมือทำงานที่อนุมัติแล้ว, งานแก้ข้าม lane (BE+SQL, FE+BE), ทำตาม Prompt Result หรือ task ที่ค้าง",
       "mode": "product-write",
       "deliverable": "requested result with proportional evidence; no lifecycle for ordinary answers",
       "requiredInputs": [
@@ -1360,6 +1371,7 @@
         ]
       },
       "description": "Upgrade project bootstrap while preserving custom rules, replace contracts explicitly, index projects, prepare versions, publish Inhouse pipelines and confirm Production promotion",
+      "triggers": "version, changelog, release, นำขึ้น Jenkins, Inhouse/Production",
       "mode": "product-write",
       "deliverable": "verified checkpoints for the selected release command; explicit confirmation before Production promotion and tag publication",
       "requiredInputs": [

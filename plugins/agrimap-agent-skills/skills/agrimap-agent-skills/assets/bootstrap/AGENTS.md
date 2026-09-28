@@ -1,29 +1,42 @@
-# กติกากลาง Changelog, Release และ Deployment
+# กติกากลาง: Skill routing, Workflow และ Release
 
-<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.4 -->
+<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.5 -->
 
 ไฟล์นี้เป็น canonical instruction ของ repository สำหรับ Codex, Claude Code, Gemini CLI, Cursor และผู้พัฒนา โดยไม่ต้องมี AgriMap skills หรือ local Git hook กติกา Markdown ช่วยกำกับพฤติกรรม; Agent ใช้ .NET Global Tool `agm-release` ตรวจ local gate และตรวจหลักฐาน Git ตามไฟล์นี้ ห้ามอนุมานว่า Jenkins บังคับ release gate อยู่ ส่วน GitLab Protected Branch/Tag ต้องตั้งค่าฝั่ง server แยกต่างหาก
 
 ## 0. Skill-first routing (บังคับทุก model ก่อนงาน code/SQL)
 
-ใช้กับทุก Agent/model (GPT, Claude Opus/Sonnet, Gemini ฯลฯ) ไม่ขึ้นกับความมั่นใจหรือขนาดงาน คำขอไม่ต้องระบุชื่อ skill
+<!-- AGM-ROUTING:START generated; edit assets/skill-routing.json -->
+ทุก model ไม่ขึ้นกับความมั่นใจหรือขนาดงาน: ก่อนตอบ วิเคราะห์ review หรือแก้ code/SQL ใน repo นี้ เลือก skill เดียวจาก Lane × เจตนา โหลดผ่าน host (Claude Code `agrimap-agent-skills:agm-sql`, Codex `$agm-sql`, Antigravity `/agm-sql`) และเปิด reference ของ skill ก่อนบรรทัดแรก แม้คำขอไม่ระบุชื่อ skill; ห้ามใช้ความรู้ทั่วไปแทน golden pattern
 
-1. ก่อนตอบ วิเคราะห์ อธิบาย review สร้าง แก้ หรือ refactor code/SQL ใน repository นี้ ให้จับคู่หลักฐานกับตาราง (แถวแรกที่ตรง) แล้วโหลด skill ผ่านกลไก skill ของ host (เช่น `/agm-sql`, `$agm-sql`) และอ่าน reference ที่ skill กำหนดก่อนเขียนบรรทัดแรก ห้ามใช้ความรู้ทั่วไปแทน golden pattern ของ AgriMap
-2. งานหลาย lane ใช้ skill ของ lane นั้นกับไฟล์ของ lane นั้น (หนึ่งไฟล์มี skill เจ้าของเดียว)
+**Lane**: path/นามสกุลไฟล์ → ชื่อ repo → คำในคำขอ; table/ตาราง, view, column, index นับเป็น SQL เมื่อมีชื่อ object หรือไม่ใช่บริบท FE
 
-| หลักฐาน (ชื่อ repo / path / คำในคำขอ) | Skill | Target / golden |
-| --- | --- | --- |
-| `*.sql`, `sql/**`, table/ตาราง, stored procedure/SP, view, function, DDL, column, index, `LUT_*` | `agm-sql` | `sql-table`/`sql-procedure`, `golden/sql/` + `sql-contract-preflight` |
-| `agmws-*` หรือ ASP.NET Core host ที่มี Controllers | `agm-be` | `be-main` + `agmws`, `golden/backend-main/` |
-| `agmbo-*` หรือ Quartz `JobScheduler.cs` | `agm-be` | `be-main` + `agmbo`, `golden/backend-main/` |
-| .NET library (`*.csproj` ไม่มี web host, `AgriMap.Platform.*`, `libraries/netcore/**`) | `agm-be` | `be-library`, `golden/backend-libraries/` |
-| `agmwa-*` หรือ Angular app (`src/app/` + `angular.json`) | `agm-fe` | `fe-main`, `golden/frontend-main/` |
-| Angular library workspace (`projects/<lib>/ng-package.json`, `@agrimap/*`, `libraries/angular/**`) | `agm-fe` | `fe-library`, `golden/frontend-libraries/` |
-| ไม่แน่ใจ | `agrimap-agent-skills` | router เลือก skill เดียว |
+| หลักฐาน | Lane → skill |
+| --- | --- |
+| `*.sql`, `sql/**`, `LUT_*`, `*_I/_U/_D/_Q`, `[agrimap_app]`, SP/DDL | `sql` → `agm-sql` |
+| `agmws-*`, `agmbo-*` | `be-main` → `agm-be` |
+| `AgriMap.Platform.*`, `libraries/netcore/**`, csproj ไม่มี web host | `be-library` → `agm-be` |
+| `agmwa-*`, Angular app (`src/app/`) | `fe-main` → `agm-fe` |
+| `projects/<lib>/`, `@agrimap/*`, `libraries/angular/**` | `fe-library` → `agm-fe` |
 
-3. Golden format เป็นค่าเริ่มต้นตั้งแต่ร่างแรก: Table/SP/View ใช้ schema `[agrimap_app]`, header, column grouping, audit baseline, `CREATE OR ALTER PROCEDURE`, `GO` และ SQLFluff; BE/FE ตรงโครงสร้าง golden collection ที่เลือก ผู้ใช้ไม่ต้องสั่ง "ใช้ agm-sql" หรือ "ปรับตาม Golden Pattern" ซ้ำ
-4. ก่อนเขียนไฟล์แสดงหนึ่งบรรทัด `Skill: <agm-*> · Target: <target_kind> · Golden: <entries ที่เปิดอ่านจริง>`; ก่อนส่งงานตรวจตัวเอง ถ้ายังไม่ได้โหลด skill หรือไม่ตรง golden ให้โหลดและปรับก่อนส่ง
-5. Host ไม่มี AgriMap skills: แจ้งหนึ่งบรรทัดให้ติดตั้ง/อัปเดตผ่าน `agm-doctor` ห้ามอ้างว่า style ทั่วไปเป็น AgriMap style; คำถามที่ไม่อ้าง code/SQL ของ repo และชื่อ skill ที่ยกเป็นตัวอย่างไม่ต้องโหลด skill
+| เจตนา | Skill |
+| --- | --- |
+| อธิบาย / วิเคราะห์ / review / ออกแบบ | skill ของ lane (`analyze`/`explain`/`design`); ข้าม lane `agm-analyze` |
+| สร้าง / แก้ / แก้ bug / refactor / เขียน test | skill ของ lane (`create`/`edit`/`refactor`/`test`); ข้าม lane `agm-exec` |
+| หาสาเหตุ bug / error / ช้า (ยังไม่สั่งแก้) | `agm-diagnose` |
+| วางแผน | `agm-plan` |
+| ออกแบบระบบ / contract ข้าม service | `agm-architect` |
+| ตรวจรับ / QA | `agm-qa` |
+| กลั่นโจทย์เป็น Prompt Result | `agm-prompt` |
+| version / changelog / release / Jenkins | `agm-release` |
+| ติดตั้ง / อัปเดต skills | `agm-doctor` |
+
+- ไม่อยู่ใน lane ใช้ skill ตามเจตนา; เลือกไม่ได้ใช้ `agrimap-agent-skills`; operation skill เดียวต่อรอบ ห้ามโหลดตัวที่สองเองโดยไม่ได้สั่ง
+- `sql-context-pack` เสริมเมื่อต้องการ schema/ข้อมูลจริงที่ไฟล์ใน repo ตอบไม่ได้: ใน agm-* อ่านอย่างเดียว; คำสั่งตรงถึง package นั้นใช้ approval gate ของมัน
+- บรรทัดแรกของคำตอบหรือก่อนเขียนไฟล์: `Skill: <skill> · Lane: <lane> · Golden: <entries ที่เปิดจริง>`; ยังไม่โหลดหรือไม่ตรง golden ให้แก้ก่อนส่ง
+- Golden เป็นค่าเริ่มต้นตั้งแต่ร่างแรก (SQL: `[agrimap_app]`, `CREATE OR ALTER PROCEDURE`, SQLFluff)
+- Host ไม่มี AgriMap skills: แจ้งให้ติดตั้งผ่าน `agm-doctor` ห้ามอ้างว่า style ทั่วไปคือ AgriMap; ชื่อ skill ที่ยกมาเป็นตัวอย่าง
+<!-- AGM-ROUTING:END -->
 
 ## 1. ขอบเขตและ fixed ownership
 
@@ -205,4 +218,4 @@ Before relevant durable project work, compare the AGRIMAP BOOTSTRAP VERSION mark
 
 ### Host recording example
 
-สำหรับงานใน Antigravity CLI ให้บันทึก `provider: antigravity`, `model: <actual runtime model ID>` หรือ `unknown` เมื่อไม่มีหลักฐาน และ `modelLabel: not-configured` เมื่อไม่ได้กำหนด label; Antigravity CLI เป็นชื่อ host ไม่ใช่ชื่อ model ห้ามเดา Gemini version จากชื่อ host ประวัติ Gemini CLI เดิมคง provider/model ตามหลักฐานเดิม ตัวอย่าง: `Provider: antigravity | Actual model: unknown`
+Antigravity CLI บันทึก `provider: antigravity`, `model: <actual runtime model ID>` หรือ `unknown` และ `modelLabel: not-configured`; ชื่อ host ไม่ใช่ model ห้ามเดา Gemini version ประวัติ Gemini CLI เดิมคงค่าเดิม เช่น `Provider: antigravity | Actual model: unknown`

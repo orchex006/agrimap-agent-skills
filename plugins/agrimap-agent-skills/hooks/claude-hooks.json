@@ -42,6 +42,15 @@
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/agrimap-agent-skills/scripts/git-guard.mjs\" --provider claude"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/agrimap-agent-skills/scripts/skill-gate.mjs\" --provider claude"
+          }
+        ]
       }
     ],
     "Stop": [

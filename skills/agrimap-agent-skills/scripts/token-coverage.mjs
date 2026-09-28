@@ -331,6 +331,7 @@ export async function runTokenCoverage(options = {}) {
     operation: "router",
     depth: { default: "light", allowed: ["light"] },
     references: [
+      { path: "skill-routing.md", why: "intent x lane skill selection" },
       { path: "operation-index.md", why: "dedicated operation selection" },
       { path: "platform-syntax.md", why: "active-provider invocation rendering" }
     ],

@@ -11,13 +11,13 @@ export function renderOperationIndex(config) {
     "",
     "<!-- Generated from config/operations.json. Do not edit directly. -->",
     "",
-    "Use this file only to select one dedicated `agm-*` skill. It is not an execution contract.",
+    "Use this file only to select one dedicated `agm-*` skill; pick by intent x lane in [skill-routing.md](skill-routing.md). It is not an execution contract.",
     "",
     "| Dedicated skill | Operation | Purpose | Mode | Workflow depth |",
     "| --- | --- | --- | --- | --- |",
     ...publicOperations.map((item) => `| \`${item.name}\` | \`${item.operation}\` | ${item.description} | \`${item.mode}\` | default \`${item.depth.default}\`; allowed ${item.depth.allowed.map((depth) => `\`${depth}\``).join(", ")} |`),
     "",
-    "After selecting one row, hand off to that skill and stop the router. Never combine multiple operation skills implicitly.",
+    "After selecting one row, hand off to that skill and stop the router. One operation skill per turn: its entrypoint loads the lane references it needs, and cross-lane changes use `agm-exec`. Load a second operation skill only when the requester asks.",
     "",
   ].join("\n");
 }
@@ -44,7 +44,7 @@ export function operationConfigIssues(config) {
   const names = new Set();
   const operations = new Set();
   for (const item of config.operations) {
-    for (const field of ["name", "operation", "description", "mode", "deliverable", "example"]) {
+    for (const field of ["name", "operation", "description", "triggers", "mode", "deliverable", "example"]) {
       if (!String(item?.[field] || "").trim()) issues.push(`${item?.name || "unknown"}: ${field} is required`);
     }
     if (item.entrypointPolicy !== undefined && (typeof item.entrypointPolicy !== "string" || !item.entrypointPolicy.trim())) issues.push(`${item.name}: entrypointPolicy must be a non-empty string`);
@@ -155,7 +155,7 @@ export function renderOperationEntrypoint(item) {
 }
 
 export function renderAliasSkill(item) {
-  return `---\nname: ${item.name}\ndescription: ${item.description}. Apply only to a relevant AgriMap target or explicit current invocation, never unrelated conversation or quoted examples.\n---\n\nResolve current intent and target relevance before any identity or lifecycle. Ordinary questions create no execution or task artifacts. Run only ${item.operation}.\n${item.entrypointPolicy ? `\n${item.entrypointPolicy}\n\n` : ""}Read ../agrimap-agent-skills/references/lifecycle-core.md and ../agrimap-agent-skills/references/operations/${item.operation}.md, then only the required and matching conditional references. Respect host/user authority and the selected action. Missing required contracts: PACKAGE_ENTRYPOINT_MISSING.\n`;
+  return `---\nname: ${item.name}\ndescription: ${item.description}. Use for ${item.triggers}. AgriMap targets only; quoted examples are not requests.\n---\n\nResolve current intent and target relevance before any identity or lifecycle. Ordinary questions create no execution or task artifacts. Run only ${item.operation}.\n${item.entrypointPolicy ? `\n${item.entrypointPolicy}\n\n` : ""}Read ../agrimap-agent-skills/references/lifecycle-core.md and ../agrimap-agent-skills/references/operations/${item.operation}.md, then only the required and matching conditional references. Respect host/user authority and the selected action. Missing required contracts: PACKAGE_ENTRYPOINT_MISSING.\n`;
 }
 export function renderGeminiCommandPrompt(item) {
   return [

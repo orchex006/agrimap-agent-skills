@@ -5,18 +5,16 @@ import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, stat } from "node:fs/promises";
 import { appendRecord as appendFile, writeRecord as writeFile, redactText } from './sensitive-recording.mjs';
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseCliArgs } from "./cli-args.mjs";
 import { readConfirmedIdentity } from "./identity.mjs";
 import { classifyRequest, resolveShortIntent, unquotedIntent } from './governance-policy.mjs';
 import { sessionPointerPath } from './session-state.mjs';
 import { AGRIMAP_OPERATION_ALIASES, AGRIMAP_ROUTER_ALIAS } from "./operation-aliases.mjs";
+import { laneById, loadRouting, recognizedProjectName, repositoryLane, routeLine, routeRequest, supportingLine } from "./skill-routing.mjs";
 
-const AGRIMAP_PROJECT_PATTERNS = Object.freeze([
-  /^agmwa-[a-z]+(?:-[a-z]+)*-ng$/i,
-  /^agm(?:ws|bo)-[a-z]+(?:-[a-z]+)*-netcore$/i,
-  /^agrimap-[a-z]+(?:-[a-z]+)*$/i,
-  /^agrimap\.[a-z]+(?:\.[a-z]+)*$/i,
-]);
+const HOOK_HOSTS = Object.freeze({ claude: "claude", codex: "codex", gemini: "antigravity", antigravity: "antigravity" });
+const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 
 const EXPLICIT_SKILL_ALIASES = Object.freeze([
   AGRIMAP_ROUTER_ALIAS,
@@ -29,11 +27,6 @@ const EXPLICIT_SKILL_PATTERNS = Object.freeze({
   claude: new RegExp(`(?:^|\\s)/agrimap-agent-skills:(?:${EXPLICIT_SKILL_ALTERNATION})(?=$|\\s)`, "i"),
   gemini: new RegExp(`(?:^|\\s)/(?:${EXPLICIT_SKILL_ALTERNATION})(?=$|\\s)`, "i"),
 });
-
-const SQL_META_INTENT_PATTERN = /\bagm-sql\b|\b(?:skill|plugin|package|hook|routing|router)s?\b|(?:สกิล|ปลั๊กอิน|แพ็กเกจ|ฮุก|ไม่ใช้\s*(?:skill|agm-sql))/iu;
-const SQL_ACTION_PATTERN = /\b(?:create|add|write|generate|edit|modify|update|change|fix|refactor|analy[sz]e|explain|review|inspect)\b|(?:สร้าง|เพิ่ม|เขียน|แก้ไข|แก้|ปรับ|รีแฟกเตอร์|วิเคราะห์|อธิบาย|ตรวจ)/iu;
-const SQL_TARGET_PATTERN = /(?:\.sql\b|\b(?:sql|t-?sql|stored\s+procedures?|procedures?|sp|ddl|dml)\b|(?:เอสคิวแอล|สโตร์ดโปรซีเยอร์|โปรซีเยอร์|ตาราง))/iu;
-const SQL_DEFINITION_PATTERN = /\b(?:create|alter|drop)\s+(?:table|view|procedure|function|trigger|index)\b|(?:สร้าง|แก้ไข|ปรับ)\s*(?:ตาราง|วิว|โปรซีเยอร์)/iu;
 
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -104,24 +97,12 @@ function remoteRepositoryName(cwd) {
   }
 }
 
-function recognizedProjectName(value) {
-  const name = String(value || "").trim();
-  return Boolean(name) && AGRIMAP_PROJECT_PATTERNS.some((pattern) => pattern.test(name));
-}
-
 function explicitSkillInvocation(provider, prompt) {
   const value = unquotedIntent(prompt);
   if (/^\s*(?:example|ตัวอย่าง)\s*:/i.test(value)) return false;
   const pattern = EXPLICIT_SKILL_PATTERNS[provider];
   const adapterMarker = new RegExp(`(?:^|\\s)AGRIMAP_EXPLICIT_ALIAS=(?:${EXPLICIT_SKILL_ALTERNATION})(?=$|\\s)`, "i");
   return Boolean(value) && ((Boolean(pattern) && pattern.test(value)) || adapterMarker.test(value));
-}
-
-function primarySqlProductIntent(prompt) {
-  const value = String(prompt || "").trim();
-  if (!value || SQL_META_INTENT_PATTERN.test(value)) return false;
-  if (SQL_DEFINITION_PATTERN.test(value)) return true;
-  return SQL_ACTION_PATTERN.test(value) && SQL_TARGET_PATTERN.test(value);
 }
 
 function projectActivation(cwd, config, children = []) {
@@ -216,23 +197,29 @@ async function isSkillPackageRepository(cwd) {
     && lifecycle.startsWith("# Workflow lifecycle core");
 }
 
-// Domain skill routing from repository evidence (bootstrap AGENTS.md §0). Names
-// and a few root markers only; no directory scan.
-async function domainSkillHint(cwd, prompt) {
-  const names = [path.basename(cwd), remoteRepositoryName(cwd)].filter(Boolean);
-  const exists = async (name) => stat(path.join(cwd, name)).then(() => true, () => false);
-  let lane = null;
-  if (names.some((name) => /^agmws-/i.test(name))) lane = 'agm-be (be-main, backend_profile=agmws, golden/backend-main)';
-  else if (names.some((name) => /^agmbo-/i.test(name))) lane = 'agm-be (be-main, backend_profile=agmbo, golden/backend-main)';
-  else if (names.some((name) => /^agmwa-/i.test(name))) lane = 'agm-fe (fe-main, golden/frontend-main)';
-  else if (await exists('angular.json') && await exists('projects')) lane = 'agm-fe (fe-library, golden/frontend-libraries)';
-  else {
-    const root = await readdir(cwd).catch(() => []);
-    if (root.some((name) => /\.(?:sln|slnx|csproj)$/i.test(name))) lane = 'agm-be (be-library, golden/backend-libraries)';
-  }
+// Skill routing (assets/skill-routing.json, AGENTS.md §0): the repository lane
+// from its name and root entries, then the turn's skill from intent x lane.
+// Names and root entries only; no directory scan.
+async function turnRouting(cwd, prompt, isRepo) {
+  const routing = loadRouting();
+  const names = isRepo ? [path.basename(cwd), remoteRepositoryName(cwd)].filter(Boolean) : [];
+  const repoLane = isRepo ? repositoryLane(routing, { names, rootEntries: await readdir(cwd).catch(() => []) }) : null;
+  return { routing, repoLane, names, decision: routeRequest(routing, { prompt, repoLane }) };
+}
+
+function routingLines({ routing, repoLane, names, decision }, host) {
   const lines = [];
-  if (lane) lines.push('Domain skill (mandatory, AGENTS.md §0): code work here loads ' + lane + ' before the first answer or write, even when the request names no skill. SQL objects/files use agm-sql.');
-  if (primarySqlProductIntent(prompt)) lines.push('SQL intent: load agm-sql now; tables/SP/views follow patterns/sql.md + golden/sql and sql-contract-preflight from the first draft, without waiting to be asked.');
+  const repo = laneById(routing, repoLane);
+  if (repo) {
+    const profile = repo.id === 'be-main' ? names.map((name) => name.match(/^(agmws|agmbo)-/i)?.[1]?.toLowerCase()).find(Boolean) : null;
+    lines.push(`Domain skill (mandatory, AGENTS.md §0): lane work in this repository loads ${repo.skill} (${repo.id}${profile ? `, backend_profile=${profile}` : ''}, ${repo.golden}) before the first answer or write, even when the request names no skill. SQL objects/files use agm-sql; a "Skill for this turn" line below wins for other intents or lanes.`);
+  }
+  if (decision.owner || decision.codeEvidence) {
+    const line = routeLine(routing, decision, host);
+    if (line) lines.push(line);
+    const support = supportingLine(routing, decision);
+    if (support) lines.push(support);
+  }
   return lines;
 }
 
@@ -308,7 +295,12 @@ const children = isRepo ? [] : await childRepositories(cwd);
 const sessionId = safeSessionId(input.session_id || input.sessionId || input.conversation_id || input.conversationId);
 const prompt = input.prompt || '';
 const explicit = explicitSkillInvocation(provider, prompt);
-const selection = classifyRequest({ prompt, explicit, recognized: projectActivation(cwd, config, children).active });
+const packageWork = await isSkillPackageRepository(cwd);
+// Routed code work (lane evidence in the request, or a supporting package's owner
+// request) is relevant even without a change verb, e.g. "ทำไม SP_ORDER_Q ช้า".
+const turn = packageWork ? null : await turnRouting(cwd, prompt, isRepo);
+const relevant = Boolean(turn && (turn.decision.owner || (turn.decision.codeEvidence && (turn.decision.skill || turn.decision.reason === 'lane-unresolved'))));
+const selection = classifyRequest({ prompt, explicit, recognized: projectActivation(cwd, config, children).active, relevant });
 const output = { continue: true, suppressOutput: true };
 
 // Short replies to a stored card or delivered branch (ACG C6). Reads at most two
@@ -369,12 +361,11 @@ if (selection.active || shortReply) {
   if (isRepo && selection.active) await archiveRawPrompt(stateRoot, config, input);
   const active = sessionId ? await readJson(path.join(stateRoot, 'runtime', 'active', sessionId + '.json')) : null;
   const identity = await readConfirmedIdentity(stateRoot, sessionId, {defaultProvider: provider});
-  const packageWork = await isSkillPackageRepository(cwd);
+  const ownerTurn = Boolean(turn?.decision.owner);
   const context = [
-    'AgriMap 3.0: resolve current intent before choosing one operation. Quoted commands are examples, not authorization.',
-    'Questions/explanations use no lifecycle, task files, identity prompt or tests. Start execution only for authorized durable work.',
-    'Supporting skills add relevant evidence; they never grant database writes or release authority.',
-    'SQL context is read-only: managed metadata and SELECT only; no DDL/DML, EXEC, metadata sync or routine deployment.',
+    'AgriMap skills: choose one skill per turn by intent x lane (references/skill-routing.md, AGENTS.md §0). Quoted commands are examples, not authorization.',
+    'Questions about repository code still load the lane skill for its golden references; questions and explanations create no lifecycle, task files, identity prompt or tests. Start execution only for authorized durable work.',
+    ...(ownerTurn ? [] : ['Inside AgriMap operations SQL context is read-only (managed metadata and masked SELECT; no DDL/DML, EXEC, export, metadata sync or routine deployment); supporting skills never grant database writes or release authority.']),
     packageWork ? 'Workspace kind: skill-package. Package work never creates root product FE/BE/SQL artifacts.' : 'Use only the applicable project contracts.',
     identity && !identity.expired ? 'Confirmed requester: ' + identity.requestedBy + '. Identity is not approval authority.'
       : 'For attributed writes, reuse confirmed conversation identity via --requested-by before asking once. Missing local state is not missing human confirmation. Git author alone is not requester evidence; do not ask for ordinary questions.',
@@ -382,11 +373,15 @@ if (selection.active || shortReply) {
     sessionId ? 'Session: ' + sessionId : 'Use a stable session for durable work.'
   ];
   const digest = selection.active ? await sessionDigest(active) : null;
-  if (!packageWork && isRepo) context.push(...await domainSkillHint(cwd, prompt));
+  if (turn) context.push(...routingLines(turn, HOOK_HOSTS[provider] || 'claude'));
   if (digest) context.push(digest);
   if (active) context.push('Existing execution ' + (active.executionId || active.taskId) + ': resume only if this request concerns it; unrelated conversation does not replace it.');
-  if (!isRepo) context.push('Session cwd is outside any Git repository. Before any write run `agm-workspace.mjs context --cwd "' + cwd.replaceAll('\\', '/') + '" --hint "<project>"`, then read and ack the target AGENTS.md chain. Repositories below: ' + (children.slice(0, 5).map((dir) => path.basename(dir)).join(', ') || 'none found') + '.');
-  else {
+  if (!isRepo) {
+    context.push('Session cwd is outside any Git repository. Before any write run `agm-workspace.mjs context --cwd "' + cwd.replaceAll('\\', '/') + '" --hint "<project>"`, then read and ack the target AGENTS.md chain. Repositories below: ' + (children.slice(0, 5).map((dir) => path.basename(dir)).join(', ') || 'none found') + '.');
+    if (children.length && !(await stat(path.join(cwd, 'AGENTS.md')).then(() => true, () => false))) {
+      context.push('Workspace routing: this folder has no AGENTS.md, so hosts without hooks miss the skill matrix. Offer the owner `node "' + path.join(SCRIPT_DIRECTORY, 'skill-routing.mjs').replaceAll('\\', '/') + '" workspace --cwd "' + cwd.replaceAll('\\', '/') + '"` (plan only; --apply writes AGENTS.md and CLAUDE.md).');
+    }
+  } else {
     for (const reference of referencedPaths(prompt)) {
       const other = await nearestRepository(path.resolve(cwd, reference));
       if (other && path.resolve(other).toLowerCase() !== path.resolve(cwd).toLowerCase()) {

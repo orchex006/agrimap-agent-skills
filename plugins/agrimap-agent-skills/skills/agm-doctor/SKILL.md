@@ -1,6 +1,6 @@
 ---
 name: agm-doctor
-description: Check AGM installation versions, host compatibility and workflow dependencies, or update the selected host's AGM package. Apply only to a relevant AgriMap target or explicit current invocation, never unrelated conversation or quoted examples.
+description: Check AGM installation versions, host compatibility and workflow dependencies, or update the selected host's AGM package. Use for ติดตั้ง/อัปเดต/ตรวจรุ่น AgriMap skills, agm version, host compatibility. AgriMap targets only; quoted examples are not requests.
 ---
 
 Resolve current intent and target relevance before any identity or lifecycle. Ordinary questions create no execution or task artifacts. Run only doctor.

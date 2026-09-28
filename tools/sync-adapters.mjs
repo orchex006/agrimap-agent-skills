@@ -19,6 +19,15 @@ import {
   renderOperationAliasesModule,
   renderOperationEntrypoint,
 } from "./operation-entrypoints.mjs";
+import {
+  applyAgentsRoutingSection,
+  applyMarkedBlock,
+  loadRouting,
+  renderRoutingReference,
+  renderSqlContextBlock,
+  SQL_CONTEXT_END,
+  SQL_CONTEXT_START,
+} from "../skills/agrimap-agent-skills/scripts/skill-routing.mjs";
 
 const root = process.cwd();
 const canonicalSkill = path.join(root, "skills", "agrimap-agent-skills");
@@ -41,13 +50,19 @@ if (typeof packageVersion !== "string" || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9
 const bootstrapRoot = path.join(canonicalSkill, 'assets/bootstrap');
 const bootstrapManifestPath = path.join(bootstrapRoot, 'manifest.json');
 const bootstrapManifest = JSON.parse(await readFile(bootstrapManifestPath, 'utf8'));
-// Core AGENTS.md and its release companion carry the same version marker.
+// Core AGENTS.md and its release companion carry the same version marker; the
+// core §0 routing block is generated from assets/skill-routing.json.
+const routing = loadRouting();
 for (const name of ['AGENTS.md', 'AGENTS.release.md']) {
   const bootstrapAgentsPath = path.join(bootstrapRoot, name);
-  const bootstrapAgents = await readFile(bootstrapAgentsPath, 'utf8');
+  let bootstrapAgents = await readFile(bootstrapAgentsPath, 'utf8');
   if (!/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/.test(bootstrapAgents)) throw new Error(`BOOTSTRAP_VERSION_MARKER_MISSING: ${name}`);
+  if (name === 'AGENTS.md') bootstrapAgents = applyAgentsRoutingSection(bootstrapAgents.replaceAll('\r\n', '\n'), routing);
   await writeFile(bootstrapAgentsPath, bootstrapAgents.replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/, `<!-- AGRIMAP BOOTSTRAP VERSION: ${packageVersion} -->`).replaceAll('\r\n', '\n'), 'utf8');
 }
+await writeFile(path.join(canonicalSkill, 'references', 'skill-routing.md'), renderRoutingReference(routing), 'utf8');
+const sqlContextPath = path.join(canonicalSkill, 'references', 'sql-context-readonly.md');
+await writeFile(sqlContextPath, applyMarkedBlock((await readFile(sqlContextPath, 'utf8')).replaceAll('\r\n', '\n'), SQL_CONTEXT_START, SQL_CONTEXT_END, renderSqlContextBlock(routing)), 'utf8');
 for (const item of bootstrapManifest.files) {
   const nextHash = createHash('sha256').update(await readFile(path.join(bootstrapRoot, item.source))).digest('hex');
   if (bootstrapManifest.version !== packageVersion && item.sha256 !== nextHash) {
@@ -207,6 +222,10 @@ function providerHooks(provider, pluginRootToken) {
           {
             matcher: "Bash|PowerShell",
             hooks: [{ type: "command", command: `node \"${pluginRootToken}/skills/agrimap-agent-skills/scripts/git-guard.mjs\" --provider ${provider}` }],
+          },
+          {
+            matcher: "Edit|Write|MultiEdit|NotebookEdit",
+            hooks: [{ type: "command", command: `node \"${pluginRootToken}/skills/agrimap-agent-skills/scripts/skill-gate.mjs\" --provider ${provider}` }],
           },
         ],
         Stop: [

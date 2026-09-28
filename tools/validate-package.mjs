@@ -20,6 +20,15 @@ import {
   renderOperationIndex,
   renderOperationEntrypoint,
 } from "./operation-entrypoints.mjs";
+import {
+  applyAgentsRoutingSection,
+  applyMarkedBlock,
+  loadRouting,
+  renderRoutingReference,
+  renderSqlContextBlock,
+  SQL_CONTEXT_END,
+  SQL_CONTEXT_START,
+} from "../skills/agrimap-agent-skills/scripts/skill-routing.mjs";
 
 const root = process.cwd();
 const errors = [];
@@ -107,6 +116,12 @@ for (const required of [
   "skills/agrimap-agent-skills/scripts/mcp-server.mjs",
   "skills/agrimap-agent-skills/assets/task-artifact-schema.json",
   "skills/agrimap-agent-skills/assets/passive-skill-map.json",
+  "skills/agrimap-agent-skills/assets/skill-routing.json",
+  "skills/agrimap-agent-skills/scripts/skill-routing.mjs",
+  "skills/agrimap-agent-skills/scripts/skill-gate.mjs",
+  "skills/agrimap-agent-skills/references/skill-routing.md",
+  "tests/unit/skill-routing.test.mjs",
+  "tests/unit/skill-gate.test.mjs",
   "skills/agrimap-agent-skills/assets/token-coverage-scenarios.json",
   "skills/agrimap-agent-skills/assets/templates/service-ownership.yaml",
   "skills/agrimap-agent-skills/assets/templates/execution-report.md",
@@ -206,6 +221,28 @@ if (operations) {
       if (await readFile(commandPath, "utf8") !== expected) errors.push(`${path.relative(root, commandPath)}: generated compact Gemini command is stale; run npm run sync.`);
     }
   }
+}
+
+// Skill routing registry (4.9.5): one source for the reference, bootstrap §0 and sql-context recipes.
+try {
+  const routing = loadRouting();
+  const raw = routing.raw;
+  const skills = new Set([raw.router, ...(operations?.operations || []).map((item) => item.name)]);
+  if (raw.schemaVersion !== 1) errors.push("skill-routing.json must use schemaVersion 1.");
+  for (const host of ["claude", "codex", "antigravity"]) if (!raw.hosts.some((item) => item.id === host && item.pattern.includes("{skill}"))) errors.push(`skill-routing.json: host ${host} needs a {skill} pattern.`);
+  for (const lane of raw.lanes) if (!skills.has(lane.skill)) errors.push(`skill-routing.json: lane ${lane.id} names unknown skill ${lane.skill}.`);
+  for (const intent of raw.intents) {
+    for (const skill of [intent.single, intent.cross].filter((value) => value !== "{lane}")) if (!skills.has(skill)) errors.push(`skill-routing.json: intent ${intent.id} names unknown skill ${skill}.`);
+  }
+  if (JSON.stringify([...raw.displayOrder].sort()) !== JSON.stringify(raw.intents.map((intent) => intent.id).sort())) errors.push("skill-routing.json: displayOrder must list every intent once.");
+  const referencePath = path.join(root, "skills/agrimap-agent-skills/references/skill-routing.md");
+  if (!(await exists(referencePath)) || await readFile(referencePath, "utf8") !== renderRoutingReference(routing)) errors.push("references/skill-routing.md is missing or stale; run npm run sync.");
+  const coreAgents = await readFile(path.join(root, "skills/agrimap-agent-skills/assets/bootstrap/AGENTS.md"), "utf8");
+  if (applyAgentsRoutingSection(coreAgents, routing) !== coreAgents) errors.push("Bootstrap AGENTS.md §0 routing block is stale; run npm run sync.");
+  const sqlContext = await readFile(path.join(root, "skills/agrimap-agent-skills/references/sql-context-readonly.md"), "utf8");
+  if (applyMarkedBlock(sqlContext, SQL_CONTEXT_START, SQL_CONTEXT_END, renderSqlContextBlock(routing)) !== sqlContext) errors.push("sql-context-readonly.md recipe block is stale; run npm run sync.");
+} catch (error) {
+  errors.push(`Skill routing registry invalid: ${error.message}`);
 }
 
 if (passiveSkillMap) {
@@ -310,6 +347,7 @@ if (await exists(path.join(root, "plugins", "agrimap-agent-skills", "hooks", "ho
 if (!codexHooks?.hooks?.SessionStart || !codexHooks?.hooks?.UserPromptSubmit || !codexHooks?.hooks?.SubagentStart) errors.push("Codex context hooks are incomplete.");
 if (!claudeHooks?.hooks?.SessionStart || !claudeHooks?.hooks?.UserPromptSubmit || !claudeHooks?.hooks?.SubagentStart) errors.push("Claude context hooks are incomplete.");
 if (!claudeHooks?.hooks?.PreToolUse?.some((entry) => entry.matcher === "Bash|PowerShell" && JSON.stringify(entry).includes("git-guard.mjs")) || !JSON.stringify(claudeHooks?.hooks?.Stop || []).includes("delivery-reminder.mjs")) errors.push("Claude guard hooks (PreToolUse Bash|PowerShell git-guard, Stop delivery-reminder) are missing.");
+if (!claudeHooks?.hooks?.PreToolUse?.some((entry) => entry.matcher === "Edit|Write|MultiEdit|NotebookEdit" && JSON.stringify(entry).includes("skill-gate.mjs"))) errors.push("Claude skill gate hook (PreToolUse Edit|Write|MultiEdit|NotebookEdit skill-gate) is missing.");
 // Guards stay off hosts whose pre-tool format is unconfirmed (spec §20.4 step 0).
 if (codexHooks?.hooks?.PreToolUse || codexHooks?.hooks?.Stop) errors.push("Codex guard hooks are not confirmed for this host; do not install them.");
 if (geminiHooks?.hooks?.BeforeTool) errors.push("Gemini BeforeTool guard is not confirmed for this host; do not install it.");

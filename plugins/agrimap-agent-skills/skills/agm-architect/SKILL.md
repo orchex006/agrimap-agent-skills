@@ -1,6 +1,6 @@
 ---
 name: agm-architect
-description: Design boundaries, contracts, and migration trade-offs. Apply only to a relevant AgriMap target or explicit current invocation, never unrelated conversation or quoted examples.
+description: Design boundaries, contracts, and migration trade-offs. Use for ออกแบบระบบ, สถาปัตยกรรม, boundary/contract ข้าม service, migration strategy. AgriMap targets only; quoted examples are not requests.
 ---
 
 Resolve current intent and target relevance before any identity or lifecycle. Ordinary questions create no execution or task artifacts. Run only architect.
