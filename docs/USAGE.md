@@ -64,7 +64,7 @@
 
 <a id="agent-commit-style"></a>
 
-## Agent เขียน commit แบบไหน (4.9.4)
+## Agent เขียน commit แบบไหน (บังคับตั้งแต่ 4.9.6)
 
 ทุก commit ที่ Agent เขียนใน project ใช้รูปแบบเดียวกัน: `<type>: <คำอธิบายภาษาคน>` ไม่มี scope ยาวไม่เกิน 100 ตัวอักษร เขียนให้ App Leader, BA หรือลูกค้าอ่าน header แล้วรู้ว่าเปลี่ยนอะไร รายละเอียดเทคนิค (ชื่อ class, ไฟล์, route) ใส่ใน body ได้ ไม่ใส่ใน header กติกาเต็มอยู่ใน canonical AGENTS §10.6
 
@@ -79,7 +79,26 @@
 
 - ตอน release ที่รวมงานค้าง Agent แยกเป็น content commit ตามชนิดงานจริง (`feature:`/`fix:`/`comment:`) ก่อน แล้วค่อย `bump:` เป็น commit แยก
 - `changelog.md` ยังเป็นภาษาอังกฤษตาม AGENTS §5 ไม่คัดลอก header ไทยไปลง changelog
-- Commit แบบ Conventional Commits ภาษาอังกฤษ (`feat(scope): ...`) ที่ส่งเข้ามาเองยังผ่านการตรวจ แต่ Agent จะไม่สร้างแบบนั้นเอง
+- งานต่างชนิดแยกคนละ commit เช่น ความสามารถใหม่กับแก้ bug ในรอบเดียวกันเป็น `feature:` หนึ่ง commit และ `fix:` อีกหนึ่ง commit
+- บังคับจริงตั้งแต่ 4.9.6: `deliver` แปลง type แบบ Conventional ที่ส่งเข้ามาให้เป็นของทีมและตัด scope (`feat(orders): …` → `feature: …`, `docs:`/`refactor:` → `comment:`, `chore:`/`build:` → `ci:`) และ Claude Code ปฏิเสธ `git commit -m` ที่ Agent พิมพ์เองถ้า header ไม่ตรงรูปแบบ (guard G7) พร้อมบอก header ที่ควรใช้ ข้อความ merge/revert ที่ Git เขียนเองไม่ถูกตรวจ
+- ทีมที่ต้องการ Conventional Commits จริง ๆ ตั้ง `"delivery": { "commitConvention": "conventional" }` ใน `.agrimap-agent/policy/workflow.json`
+
+<a id="release-gather"></a>
+
+## ทำงานเสร็จหลาย branch แล้วสั่ง release (4.9.6)
+
+ไม่ต้องสั่ง merge ทีละ branch: `agm-release prepare|pipeline|release …` รวม work branch ที่ส่งงานแล้ว (`feature/*`, `fix/*`, `hotfix/*`, `refactor/*`, `docs/*`, `chore/*` ตาม policy) เข้า `develop` ก่อนเตรียม version (ขั้น M ใน `AGENTS.release.md` §6.4)
+
+| สถานะ branch | Agent ทำอะไร |
+| --- | --- |
+| `ready` ส่งผ่าน deliver และ test ผ่าน | รวมเข้า develop ให้เลย ไม่ถาม |
+| `unverified` test ไม่ผ่าน หรือ `manual` คนแก้เองหลังส่งงาน | ถามครั้งเดียว: รวมเฉพาะที่พร้อม (แนะนำ) / รวมทั้งหมดที่ไม่ชน / ไม่รวม |
+| ชนกับ develop | ไม่รวม รายงานใน `⚠️ ต้องตามต่อ` พร้อมวิธีแก้ |
+
+- ไฟล์ที่ยังไม่ commit บน branch ปัจจุบันถูก `deliver` ก่อน ประวัติ `.agrimap-agent` ที่เขียนหลังส่งงานถูก commit เป็น `audit:` บน branch นั้น จึงไม่มี changes ค้างขวางการ switch ไป develop
+- รวมด้วย merge commit ของ Git ใน local `develop` โดยไม่ switch และไม่ push แล้ว test develop ก่อน index/changelog/prepare; merge ไปกับการ push develop ครั้งเดียวของ release
+- `pipeline` ที่ prepare ไว้แล้วตรวจอย่างเดียว ถ้ามี branch ใหม่จะถามว่าจะเตรียมใหม่ด้วย version เดิมหรือไว้รอบหน้า; `promote` รวมเข้า develop หลังขึ้น Production แล้ว เพื่อไปกับรอบถัดไป (ไม่แตะ candidate ที่ยืนยันแล้ว)
+- ไม่ rebase, squash, force, stash และไม่ลบ branch เอง
 
 ## Passive recommendations
 

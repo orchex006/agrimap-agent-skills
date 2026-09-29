@@ -61,10 +61,10 @@ BOOTSTRAP_BUNDLE_HASH_MISMATCH หมายถึง source bundle ไม่ต�
 
 ## คำสั่ง git ถูก deny ด้วย "AGM guard G…" (4.9.0)
 
-Claude Code มี hook `PreToolUse` ที่ตรวจคำสั่ง git ที่ Agent พิมพ์เอง: force push (G1), push เข้า protected branch นอก release (G2), `git add -A/.` หรือ `.agrimap-agent/local` (G3), ลบ protected branch/tag (G5) ถูก deny; `reset --hard`, `clean -f`, `checkout -- .`, `restore .` (G4) และ `stash` (G6) ถามก่อน งาน release (active operation `release`) push develop/jenkins ได้ตาม `AGENTS.release.md`
+Claude Code มี hook `PreToolUse` ที่ตรวจคำสั่ง git ที่ Agent พิมพ์เอง: force push (G1), push เข้า protected branch นอก release (G2), `git add -A/.` หรือ `.agrimap-agent/local` (G3), ลบ protected branch/tag (G5) ถูก deny; `reset --hard`, `clean -f`, `checkout -- .`, `restore .` (G4) และ `stash` (G6) ถามก่อน งาน release (active operation `release`) push develop/jenkins ได้ตาม `AGENTS.release.md` ตั้งแต่ 4.9.6 `git commit -m/-F` ที่ header ไม่ใช่ `feature|fix|comment|bump|audit|ci: …` ถูก deny (G7) พร้อม header ที่แนะนำ เช่น `feat(x): y` → `feature: y` ใช้เฉพาะ repo AgriMap (มี policy, `.agrimap-agent/` หรือ bootstrap AGENTS) ไม่ใช้กับ merge/revert ที่ Git เขียนเอง และปิดได้ด้วย policy `delivery.commitConvention: "conventional"`
 
 - ใช้ `deliver`/`integrate` ของ AGM แทน (script ไม่ผ่าน guard)
-- Hook `Stop` เตือนครั้งเดียวเมื่อ test ผ่านแล้วแต่ยังไม่ deliver ตาม policy
+- Hook `Stop` เตือนครั้งเดียวเมื่อ test แล้ว (ผ่านหรือไม่ผ่าน) แต่ยังไม่ deliver ตาม policy; test ไม่ผ่านก็ยังส่งเข้า work branch พร้อม `AGM-Verification: failed`
 - ปิดต่อ project: ตั้ง `"governance": { "guards": false }` ใน `.agrimap-agent/config.json` (ทั้ง guard และ Stop reminder เป็น no-op)
 - Codex, Gemini/Antigravity: ยังไม่ติดตั้ง guard (host ยังยืนยันรูปแบบ hook ไม่ได้) — doctor รายงาน `guards: not-supported-on-host`
 

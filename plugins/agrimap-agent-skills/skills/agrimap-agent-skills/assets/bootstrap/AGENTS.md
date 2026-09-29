@@ -1,6 +1,6 @@
 # กติกากลาง: Skill routing, Workflow และ Release
 
-<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.5 -->
+<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.6 -->
 
 ไฟล์นี้เป็น canonical instruction ของ repository สำหรับ Codex, Claude Code, Gemini CLI, Cursor และผู้พัฒนา โดยไม่ต้องมี AgriMap skills หรือ local Git hook กติกา Markdown ช่วยกำกับพฤติกรรม; Agent ใช้ .NET Global Tool `agm-release` ตรวจ local gate และตรวจหลักฐาน Git ตามไฟล์นี้ ห้ามอนุมานว่า Jenkins บังคับ release gate อยู่ ส่วน GitLab Protected Branch/Tag ต้องตั้งค่าฝั่ง server แยกต่างหาก
 
@@ -177,7 +177,7 @@
 1. ก่อนเขียน: บันทึก `git status --porcelain` ไว้เป็นรายการไฟล์ที่ค้างก่อนเริ่ม
 2. ถ้าอยู่บน protected branch: `git fetch origin`, ถ้า tree สะอาดให้ `git merge --ff-only origin/<base>` แล้ว `git switch -c <prefix><english-kebab-slug>`; ถ้า tree ไม่สะอาดให้ `git switch -c` จาก HEAD เดิมโดยไม่ pull ห้าม stash/reset/สร้าง worktree
 3. Branch ที่ host สร้างเอง (เช่น `claude/*`, `codex/*`) ไม่ต้องเปลี่ยนชื่อ local แต่ push ด้วยชื่อทีม: `git push -u origin HEAD:refs/heads/<prefix><slug>`
-4. เมื่อ verification ผ่าน: เติม changelog ตาม §5, stage เฉพาะไฟล์ของงานนี้ด้วย `git add -- <paths>` (ห้ามรวมไฟล์ที่ค้างก่อนเริ่มโดยไม่ถาม), `git diff --cached --check`, commit ตามรูปแบบ commit ของทีมใน §10.6, push work branch แล้วตรวจ `git ls-remote --heads origin <branch>` ให้ SHA ตรง
+4. เมื่อ verification ผ่าน: เติม changelog ตาม §5, stage เฉพาะไฟล์ของงานนี้ด้วย `git add -- <paths>` (ห้ามรวมไฟล์ที่ค้างก่อนเริ่มโดยไม่ถาม), `git diff --cached --check`, commit ตาม §10.6, push work branch แล้วตรวจ `git ls-remote --heads origin <branch>` ให้ SHA ตรง
 5. สรุปจบงานไม่เกิน 12 บรรทัด: branch/commit/remote, ไฟล์และผลทดสอบ, สิ่งที่ตัดสินใจแทน, ไฟล์ที่ไม่ได้รวม แล้วปิดด้วยตัวเลือกถัดไปแบบมีเลข (ข้อ 1 คือที่แนะนำ)
 6. หยุดถามเฉพาะเรื่องที่ย้อนไม่ได้หรือไม่ปลอดภัย (push/merge branch หลัก, ข้อมูลลับ, conflict, สิทธิ์); ปัญหาอื่น เช่น test ไม่ผ่าน หรืออัปเดต spec ไม่ได้ ให้ส่งงานเข้า work branch ต่อ (commit ระบุ `AGM-Verification: failed` เมื่อ test ไม่ผ่าน) แล้วสรุปใน section `⚠️ ต้องตามต่อ` ที่บอกสิ่งที่เกิด ผลกระทบ และวิธีแก้ — ห้ามเสนอ merge จนกว่า test ผ่าน
 
@@ -206,11 +206,10 @@
 - `code-first`: ยึด code และ test; ไม่แก้ spec หรือเอกสารเองนอกจาก changelog/README ตาม §5; เจอเอกสารขัด code ให้บอกบรรทัดเดียว
 - ผู้ใช้สั่งเรื่อง spec ครั้งเดียว (เช่น "อัปเดต spec ด้วย") ให้ถามว่าจะทำทุกงานไหม แล้วบันทึกลง `project.json` เพื่อไม่ต้องสั่งซ้ำ
 
-### 10.6 รูปแบบ commit ของทีม
+### 10.6 รูปแบบ commit ของทีม (บังคับ)
 
-- Header `<type>: <คำอธิบายภาษาคน>` ≤ 100 ตัวอักษร ไม่มี scope เขียนให้ App Leader/BA/ลูกค้าอ่านรู้เรื่อง เทคนิคใส่ body
-- งานพัฒนา: `feature:` ความสามารถใหม่, `fix:` แก้สิ่งที่ผิด, `comment:` ปรับตาม comment/ปรับปรุง (หน้าตา ข้อความ โครงสร้าง เอกสาร); agm-release: `bump:` version, `audit:` บันทึก `.agrimap-agent`, `ci:` pipeline/governance/bootstrap
-- ตัวอย่าง: `feature: เพิ่มรับ User หลายช่องทาง`, `fix: แก้ dynamic form เพิ่มวันที่ ช่วงเวลา`
+- ทุก commit ที่ Agent สร้าง (deliver/release/commit เอง): `<type>: <คำอธิบายภาษาคน>` ≤ 100 ตัวอักษร ไม่มี scope ให้ App Leader/BA อ่านรู้เรื่อง เช่น `fix: แก้ dynamic form เพิ่มวันที่` เทคนิคใส่ body; ห้าม `feat(x):`/`docs:`/`chore:` (guard G7) ยกเว้น merge ของ Git
+- งาน: `feature:` ใหม่, `fix:` แก้ที่ผิด, `comment:` ปรับตาม comment/หน้าตา/ข้อความ/โครงสร้าง/เอกสาร; agm-release: `bump:` version, `audit:` บันทึก `.agrimap-agent`, `ci:` pipeline/governance/bootstrap; ต่างชนิดแยก commit
 
 ## Bootstrap contract freshness
 

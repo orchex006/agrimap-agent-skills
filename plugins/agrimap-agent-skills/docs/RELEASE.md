@@ -57,7 +57,9 @@ $agm-release release production --silent
 $agm-release release full --flash --silent
 ```
 
-**รูปแบบ commit ของทีม:** `feature:`, `fix:`, `comment:` สำหรับงานพัฒนา และ `bump:`, `audit:`, `ci:` สำหรับ commit ที่ agm-release สร้างเอง ดูตารางว่า Agent ใช้แบบไหนเมื่อไรใน [Usage](USAGE.md#agent-commit-style)
+**รูปแบบ commit ของทีม (บังคับตั้งแต่ 4.9.6):** `feature:`, `fix:`, `comment:` สำหรับงานพัฒนา และ `bump:`, `audit:`, `ci:` สำหรับ commit ที่ agm-release สร้างเอง ดูตารางว่า Agent ใช้แบบไหนเมื่อไรใน [Usage](USAGE.md#agent-commit-style)
+
+**รวมงานที่เสร็จก่อน release (4.9.6):** prepare, pipeline และ release รวม work branch ที่ส่งงานแล้วและ test ผ่านเข้า `develop` ให้ก่อนเตรียม version ดู [Usage](USAGE.md#release-gather)
 
 ## การตัดสินใจและขอคำยืนยัน
 

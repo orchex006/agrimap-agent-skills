@@ -22,6 +22,21 @@ Integration needs no human review (owner decision 2026-09-25, 4.9.3): the gate i
 
 PR into main accepts develop, release/* or hotfix/* in this repository; PR into develop accepts feature/*, fix/* and release/hotfix synchronization. Direct develop-to-main integration still requires the normal PR checks and does not publish a release automatically. Review scope and verification; no blind conflict resolutions or history rewrites. Main/develop protection and required checks must also be configured on the server: Markdown alone cannot enforce them.
 
+## Commit style
+
+This repository uses the same team header as the product projects it governs (bootstrap AGENTS.md §10.6): `<type>: <plain description>`, at most 100 characters, no scope. Thai or English is fine; technical detail goes in the body. End the header with the target version in parentheses when the work belongs to one, for example `fix: บังคับรูปแบบ commit ของทีม (4.9.6)`.
+
+| Type | Use for |
+| --- | --- |
+| `feature:` | New skill, command, script capability or contract rule |
+| `fix:` | Behavior that was wrong in a skill, script, hook or contract |
+| `comment:` | Review follow-up, wording, docs, refactor or tests without new behavior |
+| `bump:` | Version bump with its changelog finalization and generated sync output |
+| `audit:` | Release history or `.agrimap-agent` records only |
+| `ci:` | `.github/workflows`, `tools/`, hooks wiring or repository governance |
+
+Split work of different types into separate commits. Merge and revert messages that Git writes stay as they are. Package CI (`tools/check-commit-style.mjs`) rejects any other header among the non-merge commits a PR adds; the Claude guard G7 denies them locally once the installed plugin is 4.9.6 or later. Commits already on main before 4.9.6 are not rewritten.
+
 ## Version lifecycle
 
 Use package.json as the version authority; edit canonical files and run npm run sync. During development use Unreleased changelog notes; published previews require distinct prerelease numbers (for example 4.2.0-rc.1). Finalization changes to the approved version, removes its unreleased heading marker, regenerates and rechecks the exact final commit. A bump to 4.1.0 in a working branch does not claim that 4.1.0 is published.

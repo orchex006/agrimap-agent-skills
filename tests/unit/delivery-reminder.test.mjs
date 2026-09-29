@@ -27,7 +27,7 @@ async function verifiedWork(t){
 test('verified but undelivered work blocks Stop once per execution (AC31)',async t=>{
   const {stop}=await verifiedWork(t);
   const first=stop();
-  assert.deepEqual(JSON.parse(first.stdout),{decision:'block',reason:'AGM: work is verified but not delivered. Run deliver plan/apply per workflow policy, or tell the user why delivery is skipped.'});
+  assert.deepEqual(JSON.parse(first.stdout),{decision:'block',reason:'AGM: work is verified but not delivered. Run deliver plan/apply per workflow policy (failed tests still deliver with AGM-Verification), or tell the user why delivery is skipped.'});
   assert.equal(stop().stdout,'','second stop in the same execution does not block');
 });
 
