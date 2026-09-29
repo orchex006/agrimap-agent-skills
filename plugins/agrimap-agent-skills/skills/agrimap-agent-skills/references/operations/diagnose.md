@@ -35,6 +35,7 @@
 - When the backend symptom may involve cookie, header, query, form, JSON body, or device-ID resolution: [patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md](../patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md) — expected extraction, normalization, and precedence
 - When the symptom may involve a stored procedure, SQL error, or persisted data: [db-schema-context.md](../db-schema-context.md) — SP → table tracing from error code to the failing condition
 - When FE/BE URL, domain, redirect, or callback logic may contribute to the symptom: [application-url-matrix.md](../application-url-matrix.md) — authoritative environment-specific URL behavior
+- When a service/job URL, gateway route, Pod-to-Pod call, base path or health endpoint is in scope: [service-url-matrix.md](../service-url-matrix.md) — service gateway keys, Kubernetes Services and health; no DB or IP data
 - When material intent remains unresolved: [elicitation.md](../elicitation.md) — resolve only consequential ambiguity
 - When database context is needed: [sql-context-readonly.md](../sql-context-readonly.md) — managed read-only metadata and SELECT; never database writes
 - When you are about to ask the requester a question: [autonomy.md](../autonomy.md) — ask only requester-owned material choices, with a decision card
