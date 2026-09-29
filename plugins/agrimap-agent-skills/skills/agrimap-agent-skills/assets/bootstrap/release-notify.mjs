@@ -91,9 +91,21 @@ async function checkHealth(url) {
   }
 }
 
+// A machine that never set the URL gets a ready question for the host's question tool (4.9.9).
+const STANDARD_URL = 'https://appserv2.cdg.co.th/agrimap-notify/release-description';
+const missingUrlQuestion = {
+  header: 'Notify URL',
+  question: 'เครื่องนี้ยังไม่ได้ตั้ง URL แจ้งเตือน Release Description จะใช้ URL ไหน',
+  options: [
+    { label: 'ใช้ URL มาตรฐาน (แนะนำ)', description: STANDARD_URL, command: `node tools/agrimap/release-notify.mjs set-url ${STANDARD_URL}` },
+    { label: 'ระบุ URL อื่น', description: 'URL ที่ลงท้ายด้วย /agrimap-notify/release-description', command: 'node tools/agrimap/release-notify.mjs set-url <url>' },
+    { label: 'ข้ามการแจ้งเตือนรอบนี้', description: 'release ยังสำเร็จ รายงาน notify เป็น skipped', command: null },
+  ],
+};
+
 function requireUrl(options) {
   const resolved = resolveUrl(options);
-  if (!resolved) fail('NOTIFY_WEBHOOK_URL_MISSING', 2, { next: 'Ask the requester for the notify URL, then run: set-url <url>' });
+  if (!resolved) fail('NOTIFY_WEBHOOK_URL_MISSING', 2, { next: 'Ask question with the host question tool (not plain text), run the chosen set-url command, then send again', question: missingUrlQuestion });
   if (!validUrl(resolved.url)) fail('NOTIFY_WEBHOOK_URL_INVALID', 1, { source: resolved.source });
   return resolved;
 }

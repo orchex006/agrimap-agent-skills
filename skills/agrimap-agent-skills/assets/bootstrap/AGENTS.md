@@ -1,6 +1,6 @@
 # กติกากลาง: Skill routing, Workflow และ Release
 
-<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.8 -->
+<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.9 -->
 
 ไฟล์นี้เป็น canonical instruction ของ repository สำหรับ Codex, Claude Code, Gemini CLI, Cursor และผู้พัฒนา โดยไม่ต้องมี AgriMap skills หรือ local Git hook กติกา Markdown ช่วยกำกับพฤติกรรม; Agent ใช้ .NET Global Tool `agm-release` ตรวจ local gate และตรวจหลักฐาน Git ตามไฟล์นี้ ห้ามอนุมานว่า Jenkins บังคับ release gate อยู่ ส่วน GitLab Protected Branch/Tag ต้องตั้งค่าฝั่ง server แยกต่างหาก
 
@@ -213,7 +213,7 @@
 
 ## Bootstrap contract freshness
 
-Before relevant durable project work, compare the AGRIMAP BOOTSTRAP VERSION marker and `.agrimap-agent/runtime/bootstrap.json` with the active skill bootstrap manifest. Missing markers mean legacy/untracked, not current. Use the active skill project-bootstrap plan/apply to update recognized unmodified installed templates automatically, with backup and receipt; do not require a separate bootstrap invocation. Preserve project-specific rules: unknown or modified content requires a scoped merge from the actual prior/current templates, never blanket replacement or merely changing the version marker. Verify the installed contract after update before continuing. Read-only questions do not write files. Explicit owner version targets remain authoritative during migration.
+Before durable project work compare the AGRIMAP BOOTSTRAP VERSION marker with the active skill manifest. A different or missing version is a warning, never a stop and never needs `bootstrap upgrade`: run the skill's project-bootstrap apply in the same invocation (unmodified templates are replaced; customized files merge automatically with project lines kept in PROJECT CUSTOM blocks and a backup), then continue the requested work; a file still pending goes under ⚠️. Read-only questions write nothing. Explicit owner version targets stay authoritative.
 
 ### Host recording example
 

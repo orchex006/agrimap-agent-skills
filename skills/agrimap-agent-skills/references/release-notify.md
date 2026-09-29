@@ -27,7 +27,7 @@ The script checks `GET …/healthz` before POST. Missing `tools/agrimap/release-
 | Exit | Meaning | Action |
 | --- | --- | --- |
 | 0 | `sent: true` | Report `notify: sent`; never send again |
-| 2 | `NOTIFY_WEBHOOK_URL` (…/agrimap-notify/release-description) not set | Ask the requester once for the URL, run `set-url <url>`, then `send` again in this invocation |
+| 2 | `NOTIFY_WEBHOOK_URL` (…/agrimap-notify/release-description) not set | Ask once with the host question tool (Claude AskUserQuestion, the Codex/Antigravity equivalent; plain text only when none) using the script's `question`, standard URL first; run the chosen `set-url`, then `send` again in this invocation |
 | 3 | Health failed | Report `notify: pending (health HTTP <status>)` and the resend command; no POST was made |
 | 4 | POST failed or unknown | Report `notify: pending` with the status; if `sent` is `unknown`, ask before resending |
 

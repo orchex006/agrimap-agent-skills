@@ -385,7 +385,7 @@ async function integrateCommand(ctx, sub, args, root) {
   // Release M (4.9.6): finished work branches into the local integration branch.
   if (sub === "pending") return pendingWork({ root, policy, target: text(args.target) });
   if (sub === "gather") {
-    const gather = { root, policy, target: text(args.target), mode: text(args.mode), include: list(args.branches), exclude: list(args.exclude) };
+    const gather = { root, policy, target: text(args.target), mode: text(args.mode), include: list(args.branches), exclude: list(args.exclude), scope: text(args.scope) || "release", sessionBranches: [delivery?.branch, active?.branch].filter(Boolean) };
     if (args._action === "plan") {
       const plan = await planGather(gather);
       return plan.card ? { ...plan, ...(await storeAndRender(state, session, plan.card, active?.executionId)) } : plan;
@@ -460,14 +460,15 @@ async function releaseCommand(ctx, sub, args, root) {
   const { active } = await activeFor(ctx, state, session);
   const loaded = await loadPolicy(root);
   const policy = loaded.validation?.ok ? loaded.policy : null;
+  const lastDelivery = (await readSessionState(state, session)).lastDelivery;
   if (sub === "preflight") {
-    const result = await releasePreflight({ root, policy });
+    const result = await releasePreflight({ root, policy, include: list(args.branches), sessionBranches: [lastDelivery?.branch, active?.branch].filter(Boolean) });
     const cards = [];
     for (const card of result.questions || []) cards.push(await storeAndRender(state, session, card, active?.executionId));
     return cards.length ? { ...result, cards } : result;
   }
   if (sub !== "sync") return { ok: false, message: "Use release preflight|sync plan|sync apply." };
-  const options = { root, allow: list(args.allow) };
+  const options = { root };
   if (args._action === "plan") {
     const plan = await planReleaseSync(options);
     return plan.card ? { ...plan, ...(await storeAndRender(state, session, plan.card, active?.executionId)) } : plan;
