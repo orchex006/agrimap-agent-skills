@@ -1,6 +1,6 @@
 # กติกากลาง: Skill routing, Workflow และ Release
 
-<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.7 -->
+<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.8 -->
 
 ไฟล์นี้เป็น canonical instruction ของ repository สำหรับ Codex, Claude Code, Gemini CLI, Cursor และผู้พัฒนา โดยไม่ต้องมี AgriMap skills หรือ local Git hook กติกา Markdown ช่วยกำกับพฤติกรรม; Agent ใช้ .NET Global Tool `agm-release` ตรวจ local gate และตรวจหลักฐาน Git ตามไฟล์นี้ ห้ามอนุมานว่า Jenkins บังคับ release gate อยู่ ส่วน GitLab Protected Branch/Tag ต้องตั้งค่าฝั่ง server แยกต่างหาก
 
@@ -42,7 +42,7 @@
 
 - ทำตาม system/developer/owner instruction ที่มี authority สูงกว่า หากขัด contract อย่างมีนัยสำคัญให้หยุดพร้อมหลักฐาน
 - ใช้ไฟล์มาตรฐาน: `changelog.md`, `release.md`, `release-notes/<VERSION>.md` ที่ root และ `.agrimap-agent/memory/project.md` เป็น project memory/index กลาง; ห้ามสร้าง root `project.md` หรือไฟล์ต่าง case ซ้ำ
-- `CLAUDE.md` (Claude Code), `GEMINI.md` (Gemini CLI) และ `CURSOR.md` (Cursor) เป็น pointer file บาง ๆ ที่ชี้กลับมาที่ `AGENTS.md` เท่านั้น ห้าม copy กติกาลงไปซ้ำหรือเขียนกติกาเฉพาะ tool ที่ขัดกับไฟล์นี้ แก้กติกาให้แก้ที่ `AGENTS.md` จุดเดียว
+- `CLAUDE.md`, `GEMINI.md`, `CURSOR.md` เป็น pointer บาง ๆ มาที่ `AGENTS.md` เท่านั้น ห้าม copy หรือเขียนกติกาเฉพาะ tool ที่ขัดไฟล์นี้ แก้กติกาที่ `AGENTS.md` จุดเดียว
 - Mapping ห้ามเปลี่ยนหรือสลับกัน:
   - Inhouse: `Jenkinsfile` เป็น version owner และ target branch คือ `jenkins`
   - Production: `Jenkinsfile_Production` เป็น version owner และ target branch คือ `jenkins-release`
@@ -57,7 +57,7 @@
 
 | Intent | ทำอย่างไร |
 | --- | --- |
-| changelog, diff, backfill, project memory, version, prepare, deploy, Inhouse/Production/Both, release, tag, `นำขึ้น Jenkins` ทุกคำ | อ่าน `AGENTS.release.md` ทั้งไฟล์ก่อนเริ่ม แล้วทำตาม §2 ในไฟล์นั้น (§2, §4–§8 ของ contract นี้อยู่ในไฟล์นั้น เลข § คงเดิม) |
+| changelog, diff, backfill, project memory, version, prepare, deploy, Inhouse/Production/Both, release, tag, `นำขึ้น Jenkins` ทุกคำ | อ่าน `AGENTS.release.md` ทั้งไฟล์ก่อนเริ่ม (`--flash` อ่าน §2.3, §5.2, §6, §7, §8.2) แล้วทำตาม §2 ในไฟล์นั้น (§2, §4–§8 ของ contract นี้อยู่ในไฟล์นั้น เลข § คงเดิม) |
 | `integrate`: `merge`, `รวม`, `รวมเข้า <branch>`, `pr`, `เปิด PR`, เลขตัวเลือกจาก Next-step card | ทำตาม §10.4 กับ work branch ปัจจุบัน; ห้าม promote `jenkins`/`jenkins-release`, tag, force push |
 
 งานอื่นที่ไม่ใช่ release ใช้ §0, §1, §3, §9 และ §10 ของไฟล์นี้ (งาน code/SQL เริ่มจาก §0 เสมอ); การยก keyword เป็นตัวอย่างในคำขอตรวจ/แก้เอกสารไม่ใช่คำสั่ง release
@@ -208,7 +208,7 @@
 
 ### 10.6 รูปแบบ commit ของทีม (บังคับ)
 
-- ทุก commit ที่ Agent สร้าง (deliver/release/commit เอง): `<type>: <คำอธิบายภาษาคน>` ≤ 100 ตัวอักษร ไม่มี scope ให้ App Leader/BA อ่านรู้เรื่อง เช่น `fix: แก้ dynamic form เพิ่มวันที่` เทคนิคใส่ body; ห้าม `feat(x):`/`docs:`/`chore:` (guard G7) ยกเว้น merge ของ Git
+- ทุก commit ที่ Agent สร้าง (deliver/release/commit เอง): `<type>: <คำอธิบายภาษาไทย>` ≤ 100 ตัวอักษร ไม่มี scope ให้ BA/ทีมอ่านรู้เรื่อง ศัพท์เทคนิคเป็นอังกฤษได้ เช่น `fix: แก้ dynamic form เพิ่มวันที่` รายละเอียดใส่ body; ห้าม `feat(x):`/`docs:`/`chore:` (guard G7) ยกเว้น merge ของ Git
 - งาน: `feature:` ใหม่, `fix:` แก้ที่ผิด, `comment:` ปรับตาม comment/หน้าตา/ข้อความ/โครงสร้าง/เอกสาร; agm-release: `bump:` version, `audit:` บันทึก `.agrimap-agent`, `ci:` pipeline/governance/bootstrap; ต่างชนิดแยก commit
 
 ## Bootstrap contract freshness

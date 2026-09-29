@@ -17,7 +17,7 @@ async function verifiedWork(t){
   git(['add','--','.agrimap-agent']);git(['commit','-q','-m','chore: policy']);
   const cli=args=>JSON.parse(h.spawn(h.scripts.workspace,[...args,'--cwd',repo]).stdout);
   const c=cli(['context','--session','s1']);cli(['context','--session','s1','--ack',c.chain.filter(e=>c.readRequired.includes(e.relative)).map(e=>e.sha12).join(',')]);
-  const started=cli(['start','--operation','execute','--session','s1','--requested-by','Tester','--title','Add export']);
+  const started=cli(['start','--operation','execute','--session','s1','--requested-by','Tester','--title','เพิ่มการส่งออก']);
   await writeFile(path.join(repo,'export.js'),'x\n');
   cli(['checkpoint','--session','s1','--execution',started.activeTask.executionId,'--event','verified','--summary','ok','--status','passed']);
   const stop=(extra={})=>spawnSync(process.execPath,[REMINDER,'--provider','claude'],{input:JSON.stringify({hook_event_name:'Stop',session_id:'s1',cwd:repo,stop_hook_active:false,...extra}),encoding:'utf8'});

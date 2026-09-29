@@ -18,7 +18,7 @@ Before requester lookup, run `node <bundle>/scripts/release-timing.mjs <action> 
 | `output` | After `finish`; open timeline: IN-PROGRESS, exit 0 |
 | `unavailable <reason>` | Print UNKNOWN fields with the actual missing-measurement reason |
 
-Name actual steps: readiness, gather, indexing, hash, changelog, preparation, verification, commit-push-inhouse, commit-push-production, tag, final-audit. Split separately reported work. Tools, builds, network and retries count as active; concurrent work counts once. While awaiting answers, measure ongoing independent work; waiting starts when work stops. Reused checkpoints count only recheck time.
+Name actual steps: readiness, preflight, gather, indexing, hash, changelog, preparation, verification, commit-push-inhouse, commit-push-production, tag, final-audit. Split separately reported work. Tools, builds, network and retries count as active; concurrent work counts once. While awaiting answers, measure ongoing independent work; waiting starts when work stops. Reused checkpoints count only recheck time.
 
 **Elapsed** = start to finish; **Active** = non-overlapping measured work. Elapsed = Active + human Waiting + Unmeasured. Sum milliseconds before rounding. Resume the same timeline; pause known interruptions. Late collection/crashes require partial/unknown disclosure, never fabricated boundaries or uncorrected totals. This measures execution wall time, not CPU time.
 

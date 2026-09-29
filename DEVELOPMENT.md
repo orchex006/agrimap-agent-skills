@@ -24,14 +24,14 @@ PR into main accepts develop, release/* or hotfix/* in this repository; PR into 
 
 ## Commit style
 
-This repository uses the same team header as the product projects it governs (bootstrap AGENTS.md §10.6): `<type>: <plain description>`, at most 100 characters, no scope. Thai or English is fine; technical detail goes in the body. End the header with the target version in parentheses when the work belongs to one, for example `fix: บังคับรูปแบบ commit ของทีม (4.9.6)`.
+This repository uses the same team header as the product projects it governs (bootstrap AGENTS.md §10.6): `<type>: <plain description>`, at most 100 characters, no scope. The description is Thai so the BA and team can read it (4.9.8); English only for technical names, and technical detail goes in the body. End the header with the target version in parentheses when the work belongs to one, for example `fix: บังคับรูปแบบ commit ของทีม (4.9.6)`.
 
 | Type | Use for |
 | --- | --- |
 | `feature:` | New skill, command, script capability or contract rule |
 | `fix:` | Behavior that was wrong in a skill, script, hook or contract |
 | `comment:` | Review follow-up, wording, docs, refactor or tests without new behavior |
-| `bump:` | Version bump with its changelog finalization and generated sync output |
+| `bump:` | Version bump with its changelog finalization and generated sync output, for example `bump: ขึ้นเวอร์ชัน 4.9.8` |
 | `audit:` | Release history or `.agrimap-agent` records only |
 | `ci:` | `.github/workflows`, `tools/`, hooks wiring or repository governance |
 

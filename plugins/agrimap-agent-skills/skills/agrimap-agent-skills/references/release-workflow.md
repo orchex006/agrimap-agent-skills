@@ -77,9 +77,13 @@ Do not carry unrelated dirty changes across branch switches. Classify their actu
 
 Pulling origin/jenkins-release into local jenkins-release only synchronizes the same branch; it is not promotion from jenkins. Preflight never merges develop into jenkins or jenkins into jenkins-release, pushes a branch/tag, or grants Production confirmation. Re-fetch before each publication stage to detect races; same-directory pull checks reduce stale-state failures but cannot guarantee conflict-free future merges. On resume preserve the exact prepared candidate and re-evaluate remote movement before any pull over candidate changes; do not prepare a replacement or bump again.
 
+### Preflight and automatic sync
+
+Follow AGENTS.release.md §6.5 with `release preflight` and `release sync` from [git-workflow.md](git-workflow.md): one question round at R, automatic clean syncs at R and before the D push, and a resumed release keeps its starting rules.
+
 ### Finished work branches (M)
 
-Delivered work ships without a merge request per branch (AGENTS.release.md §6.4). prepare, pipeline and release gather finished work into local develop before preparing; promote gathers after T. First deliver leftovers on the current work branch; commit post-delivery `.agrimap-agent` logs there as `audit: บันทึกประวัติงาน` when they block a switch. Then run `integrate pending` and `integrate gather plan`/`apply` ([git-workflow.md](git-workflow.md)): ready branches merge without a question, unverified/manual ones need one card, conflicting ones are reported, never merged. Merges are local Git merge commits without a worktree switch; verify develop, and they ship with the single D push (promote: F). A pipeline with a prepared candidate only checks pending work and asks once: re-prepare with `release <env>` at the same version, or leave it for the next release. Never rebase, squash, force, stash or delete branches.
+Delivered work ships without a merge request per branch (AGENTS.release.md §6.4). prepare, pipeline and release gather finished work into local develop before preparing; promote gathers after T. First deliver leftovers on the current work branch; commit post-delivery `.agrimap-agent` logs there as `audit: บันทึกประวัติงาน` when they block a switch. Then run `integrate pending` and `integrate gather plan`/`apply` ([git-workflow.md](git-workflow.md)): ready branches merge without a question, unverified/manual ones need one card, conflicting ones are reported, never merged. Conflicting branches never stop the release and need no question. Merges are local Git merge commits without a worktree switch; verify develop, and they ship with the single D push (promote: F). A pipeline with a prepared candidate only checks pending work and asks once: re-prepare with `release <env>` at the same version, or leave it for the next release. Never rebase, squash, force, stash or delete branches.
 
 ## Indexing includes Project Backfill
 

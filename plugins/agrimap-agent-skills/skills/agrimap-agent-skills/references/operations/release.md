@@ -36,7 +36,7 @@ Select bootstrap upgrade (preserve custom rules), legacy upgrade (replacement wi
 - When --flash is explicit: [release-flash.md](../release-flash.md) — delta-only release
 - When release production|full: [release-notify.md](../release-notify.md) — Release Description and notify
 - When bootstrap upgrade or legacy upgrade is selected: [release-bootstrap-upgrade.md](../release-bootstrap-upgrade.md) — local preserving upgrade and explicit replacement procedures
-- When the selected action is one of the nine release actions, not bootstrap upgrade or legacy upgrade: [release-steps.md](../release-steps.md) — mandatory exact nine-command sequences and Production artifact ownership
-- When the selected action is one of the nine release actions, not bootstrap upgrade or legacy upgrade: [release-tools.md](../release-tools.md) — mandatory .NET tool discovery and proven CLI compatibility before writes
+- When one of the nine release actions (with --flash only for recovery or conflicts): [release-steps.md](../release-steps.md) — mandatory exact nine-command sequences and Production artifact ownership
+- When a release action without --flash, or flash tool evidence is missing, stale or incompatible: [release-tools.md](../release-tools.md) — mandatory .NET tool discovery and proven CLI compatibility before writes
 
 Do not read the router `SKILL.md` during operation execution. If this generated entrypoint is missing or corrupt, stop with `PACKAGE_ENTRYPOINT_MISSING` and ask for package sync/reinstallation; never broaden into the router.
