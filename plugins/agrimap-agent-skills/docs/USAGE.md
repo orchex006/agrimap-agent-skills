@@ -66,7 +66,7 @@
 
 ## Agent เขียน commit แบบไหน (บังคับตั้งแต่ 4.9.6)
 
-ทุก commit ที่ Agent เขียนใน project ใช้รูปแบบเดียวกัน: `<type>: <คำอธิบายภาษาไทย>` ไม่มี scope ยาวไม่เกิน 100 ตัวอักษร เขียนให้ BA และทีมอ่าน header แล้วรู้ว่าเปลี่ยนอะไร (ตั้งแต่ 4.9.8 คำอธิบายต้องเป็นภาษาไทย ศัพท์เทคนิคหรือชื่อ API/SP ใช้อังกฤษได้; `feature: add export` ไม่ผ่าน ต้องเป็น `feature: เพิ่มปุ่มส่งออก`; policy `delivery.commitLanguage` เปลี่ยนได้) รายละเอียดเทคนิค (ชื่อ class, ไฟล์, route) ใส่ใน body ได้ ไม่ใส่ใน header กติกาเต็มอยู่ใน canonical AGENTS §10.6
+ทุก commit ที่ Agent เขียนใน project ใช้รูปแบบเดียวกัน: `<type>: <คำอธิบายภาษาไทย>` ไม่มี scope ยาวไม่เกิน 100 ตัวอักษร เขียนให้ BA และทีมอ่าน header แล้วรู้ว่าเปลี่ยนอะไร (ตั้งแต่ 4.9.8 คำอธิบายต้องเป็นภาษาไทย ศัพท์เทคนิคหรือชื่อ API/SP ใช้อังกฤษได้; `feature: add export` ไม่ผ่าน ต้องเป็น `feature: เพิ่มปุ่มส่งออก`; ศัพท์เทคนิคที่ทีมรู้จักเขียนทับศัพท์ตรงตัว เช่น `feature: ปรับเพิ่มการส่งรหัส x-correlation-id ใน header เพื่อให้ทีมตรวจสอบปัญหาได้ตรงจุด` เข้าใจง่ายกว่าแปลเป็น "รหัสติดตามคำขอ"; policy `delivery.commitLanguage` เปลี่ยนได้) รายละเอียดเทคนิค (ชื่อ class, ไฟล์, route) ใส่ใน body ได้ ไม่ใส่ใน header กติกาเต็มอยู่ใน canonical AGENTS §10.6
 
 | Type | Agent ใช้เมื่อ | ตัวอย่าง |
 | --- | --- | --- |
@@ -84,40 +84,34 @@
 - ทีมที่ต้องการ Conventional Commits จริง ๆ ตั้ง `"delivery": { "commitConvention": "conventional" }` ใน `.agrimap-agent/policy/workflow.json`
 
 <a id="release-gather"></a>
-
-## ทำงานเสร็จหลาย branch แล้วสั่ง release (4.9.6)
-
-ไม่ต้องสั่ง merge ทีละ branch: `agm-release prepare|pipeline|release …` รวม work branch ที่ส่งงานแล้ว (`feature/*`, `fix/*`, `hotfix/*`, `refactor/*`, `docs/*`, `chore/*` ตาม policy) เข้า `develop` ก่อนเตรียม version (ขั้น M ใน `AGENTS.release.md` §6.4)
-
-| สถานะ branch | Agent ทำอะไร |
-| --- | --- |
-| `ready` ส่งผ่าน deliver และ test ผ่าน | รวมเข้า develop ให้เลย ไม่ถาม |
-| `unverified` test ไม่ผ่าน หรือ `manual` คนแก้เองหลังส่งงาน | ถามครั้งเดียว: รวมเฉพาะที่พร้อม (แนะนำ) / รวมทั้งหมดที่ไม่ชน / ไม่รวม |
-| ชนกับ develop | ไม่รวม รายงานใน `⚠️ ต้องตามต่อ` พร้อมวิธีแก้ |
-
-- ไฟล์ที่ยังไม่ commit บน branch ปัจจุบันถูก `deliver` ก่อน ประวัติ `.agrimap-agent` ที่เขียนหลังส่งงานถูก commit เป็น `audit:` บน branch นั้น จึงไม่มี changes ค้างขวางการ switch ไป develop
-- รวมด้วย merge commit ของ Git ใน local `develop` โดยไม่ switch และไม่ push แล้ว test develop ก่อน index/changelog/prepare; merge ไปกับการ push develop ครั้งเดียวของ release
-- `pipeline` ที่ prepare ไว้แล้วตรวจอย่างเดียว ถ้ามี branch ใหม่จะถามว่าจะเตรียมใหม่ด้วย version เดิมหรือไว้รอบหน้า; `promote` รวมเข้า develop หลังขึ้น Production แล้ว เพื่อไปกับรอบถัดไป (ไม่แตะ candidate ที่ยืนยันแล้ว)
-- ไม่ rebase, squash, force, stash และไม่ลบ branch เอง
-- ตั้งแต่ 4.9.8 branch ที่ชนกับ develop **ไม่ทำให้ release หยุด** และไม่ถาม แค่รายงานใน ⚠️
-
 <a id="release-preflight"></a>
 
-## Release จบในการสั่งครั้งเดียว (4.9.8)
+## สั่ง release แล้วงานของเราไปด้วย (4.9.9)
 
-ทุก `prepare|pipeline|release` เริ่มด้วย `release preflight` ที่ตรวจ branch ทั้งสาม, เลข version, tag, ไฟล์ค้าง และ branch งานที่เสร็จ ในครั้งเดียว แล้ว**ถามทุกเรื่องที่ต้องตัดสินในรอบเดียว** ก่อนเตรียม version
+release สนใจแค่ `develop`, `jenkins`, `jenkins-release` และ **branch ของงานนี้** เท่านั้น คือ branch ที่อยู่ตอนสั่ง, branch ที่ส่งงานใน session นี้ หรือที่ระบุด้วย `--branches` ส่วน branch อื่นที่ใครแตกไว้ Agent ไม่ดู ไม่รายงาน และไม่ถาม
 
 | เจอสถานการณ์ | Agent ทำ |
 | --- | --- |
-| มีคน push develop ระหว่าง release | merge `origin/develop` เข้า candidate เอง (ถ้าไม่ชน) แล้ว push ใหม่ ไม่เกิน 2 ครั้ง ไม่ถาม |
-| `jenkins-release` มีแต่ merge commit ที่ develop ไม่มี | back-merge เข้า develop เองเพื่อให้ promote แบบ ff ได้ ไม่ถาม |
-| `jenkins-release` มีงานที่ develop ไม่มี (hotfix) | ถามรอบเดียวตอนเริ่ม (แนะนำรวมแล้วไปต่อ) |
-| work branch ชนกับ develop | ข้ามและรายงาน ไม่ถาม |
-| ชนจริงกับ candidate | หยุดเฉพาะขั้นนั้นพร้อม path |
+| อยู่บน `feature/xxx` หรือ `fix/xxx` แล้วสั่ง release | deliver ไฟล์ที่ค้าง แล้วรวม branch นั้นเข้า develop และ release ต่อ |
+| branch ของงานนี้ชนกับ develop | merge develop เข้า branch นั้น **แก้ conflict ให้เอง** รัน test แล้ว commit ไม่ถาม |
+| มีคน push develop ระหว่าง release | merge `origin/develop` เข้ามาเองแล้ว push ใหม่ ไม่เกิน 2 ครั้ง |
+| `jenkins`/`jenkins-release` มีประวัติหรือ hotfix ที่ develop ไม่มี | back-merge เข้า develop เองแล้วรายงานไฟล์ที่ได้มา ถ้าชนก็แก้ให้เอง |
+| branch อื่นที่ไม่ใช่ของงานนี้ | ไม่ยุ่ง (ถ้าอยากรวมทุก branch ให้สั่ง `--scope all`) |
 
-- คำถามที่เหลือหลังจากนี้มีแค่ยืนยัน Production ครั้งเดียวตามเดิม
-- release ที่ค้างแล้วสั่งต่อ ใช้กติกาชุดเดิมจนจบ ไม่อัปเดต bootstrap กลางทาง
-- `--flash` อ่านเฉพาะส่วนที่ต้องใช้ ใช้ผล preflight แทนการตรวจทีละคำสั่ง ใช้ผลตรวจเครื่องมือ .NET ที่บันทึกไว้ได้ 7 วัน และไม่สร้าง audit commit ย่อยระหว่างทาง เป้าหมายประมาณ 5 นาทีเมื่อไม่มีคำถาม
+- คำถามที่เหลือมีแค่ยืนยัน Production ครั้งเดียว ถามเพิ่มเฉพาะเมื่อสองฝั่งแก้ business logic เดียวกันขัดกันจนต้องให้คนเลือก
+- merge ทุกตัวเป็น merge commit ของ Git ใน local ไม่ rebase, squash, force, stash หรือลบ branch และขึ้น remote พร้อมการ push develop ครั้งเดียวของ release
+- release ที่ค้างแล้วสั่งต่อใช้กติกาชุดเดิมจนจบ
+- `--flash` อ่านเฉพาะส่วนที่ต้องใช้ ใช้ผล preflight แทนการตรวจทีละคำสั่ง ใช้ผลตรวจเครื่องมือ .NET ที่บันทึกไว้ได้ 7 วัน และไม่สร้าง audit commit ย่อยระหว่างทาง
+
+<a id="bootstrap-auto-merge"></a>
+
+## AGENTS.md คนละ version กับ skill ไม่ทำให้งานหยุด (4.9.9)
+
+ไม่ต้องสั่ง `agm-release bootstrap upgrade` ก่อน เมื่อ version ใน `AGENTS.md` ไม่ตรงกับ skill Agent อัปเดตให้ในงานที่สั่งอยู่แล้วทำต่อ
+
+- ไฟล์ที่ไม่เคยแก้: แทนด้วย template ใหม่ (มี backup)
+- ไฟล์ที่ทีมเคยแก้เอง: **merge ให้อัตโนมัติ** เนื้อหากลางเป็นของ template ใหม่ บรรทัดที่ทีมเพิ่มเองถูกเก็บไว้ในบล็อก `PROJECT CUSTOM` ใต้หัวข้อเดิม และเก็บ backup ไว้ใน `.agrimap-agent/runtime/bootstrap-backups/`
+- ถ้ายังมีไฟล์ที่ merge ไม่ได้ (เช่น README ที่แก้ส่วน Deployment เอง) Agent ทำงานต่อและรายงานใน ⚠️
 
 <a id="service-url-matrix"></a>
 

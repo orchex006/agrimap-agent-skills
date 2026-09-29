@@ -582,11 +582,11 @@ test('release gather merges verified work branches into local develop without sw
   const originDevelop=p.git(['rev-parse','origin/develop']);
   const pending=p.cli(['integrate','pending','--session','s1']);
   assert.deepEqual(pending.counts,{ready:2,unverified:1,manual:1,conflict:0,merged:0});
-  const card=p.cli(['integrate','gather','plan','--session','s1']);
+  const card=p.cli(['integrate','gather','plan','--session','s1','--scope','all']);
   assert.equal(card.card.topic,'git/release-gather');assert.equal(card.planHash,null);
-  const plan=p.cli(['integrate','gather','plan','--session','s1','--mode','ready']);
+  const plan=p.cli(['integrate','gather','plan','--session','s1','--mode','ready','--scope','all']);
   assert.deepEqual(plan.selected.map(item=>item.name),['feature/ready-a','feature/ready-b']);
-  const applied=p.cli(['integrate','gather','apply','--session','s1','--mode','ready','--plan-hash',plan.planHash]);
+  const applied=p.cli(['integrate','gather','apply','--session','s1','--mode','ready','--scope','all','--plan-hash',plan.planHash]);
   assert.equal(applied.ok,true,JSON.stringify(applied));assert.equal(applied.pushed,false);
   assert.equal(p.git(['branch','--show-current']),'fix/by-hand','gather never switches the worktree');
   assert.equal(p.git(['rev-parse','origin/develop']),originDevelop,'the release D stage pushes develop, not gather');
@@ -603,7 +603,7 @@ test('release gather reports a branch that conflicts with develop and never merg
   await deliveredBranch(p,{session:'s1',slug:'clash',file:'README.md',content:'# mine\n'});
   commitCarriedAudit(p);p.git(['switch','-q','develop']);await writeFile(path.join(p.repo,'README.md'),'# theirs\n');
   p.git(['add','--','README.md']);p.git(['commit','-q','-m','fix: ปรับ README']);p.git(['push','-q','origin','develop']);
-  const plan=p.cli(['integrate','gather','plan','--session','s1']);
+  const plan=p.cli(['integrate','gather','plan','--session','s1','--scope','all']);
   assert.equal(plan.card,null);assert.deepEqual(plan.selected,[]);
   assert.equal(plan.skipped[0].conflict,true);
   assert.ok(plan.warnings.some(w=>w.code==='GATHER_CONFLICT'&&w.subject==='feature/clash'));
@@ -657,15 +657,63 @@ test('release preflight syncs a clean origin/develop and merge-only jenkins-rele
   assert.deepEqual(p.cli(['release','sync','plan']).merges,[],'second sync has nothing left');
 });
 
-test('a jenkins-release hotfix that develop lacks becomes one preflight question; --allow merges it (4.9.8)',async t=>{
+test('a jenkins-release hotfix that develop lacks is back-merged without a question (4.9.9)',async t=>{
   const h=await fixture(t);const {p,push}=await releaseRepo(h);
   p.git(['switch','-q','jenkins-release']);await writeFile(path.join(p.repo,'hotfix.js'),'prod\n');
   p.git(['add','--','hotfix.js']);p.git(['commit','-q','-m','fix: แก้ด่วนบน production']);push(p.repo,'jenkins-release');p.git(['switch','-q','develop']);
   const pre=p.cli(['release','preflight']);
-  assert.equal(pre.questions.length,1);assert.equal(pre.questions[0].topic,'git/release-backmerge-jenkins-release');
-  assert.match(pre.questions[0].question,/1 ไฟล์/);
-  assert.equal(p.cli(['release','sync','plan']).card.topic,'git/release-backmerge-jenkins-release');
-  const plan=p.cli(['release','sync','plan','--allow','jenkins-release']);
-  const applied=p.cli(['release','sync','apply','--allow','jenkins-release','--plan-hash',plan.planHash]);
+  assert.deepEqual(pre.questions,[]);
+  const backMerge=pre.autoActions.find(item=>item.action==='merge origin/jenkins-release into develop');
+  assert.equal(backMerge.changed,1);assert.equal(backMerge.reason,'content already on jenkins-release');
+  const plan=p.cli(['release','sync','plan']);assert.equal(plan.card,null);
+  const applied=p.cli(['release','sync','apply','--plan-hash',plan.planHash]);
   assert.equal(applied.ok,true,JSON.stringify(applied));assert.equal(await readFile(path.join(p.repo,'hotfix.js'),'utf8'),'prod\n');
+});
+
+test('release gather takes only the release own branch; other branches are ignored, not reported (4.9.9)',async t=>{
+  const h=await fixture(t);const p=await project(h,{method:'local-merge'});
+  await deliveredBranch(p,{session:'s1',slug:'someone-else',file:'a.js'});
+  commitCarriedAudit(p);p.git(['switch','-q','-c','fix/by-hand','develop']);await writeFile(path.join(p.repo,'d.js'),'x\n');
+  p.git(['add','--','d.js']);p.git(['commit','-q','-m','fix: แก้ด้วยมือ']);p.git(['push','-q','-u','origin','fix/by-hand']);
+  p.git(['switch','-q','develop']);
+  const mine=await deliveredBranch(p,{session:'s2',slug:'mine',file:'b.js'});
+  const plan=p.cli(['integrate','gather','plan','--session','s2']);
+  assert.equal(plan.scope,'release');assert.equal(plan.card,null);assert.deepEqual(plan.warnings,[]);
+  assert.deepEqual(plan.selected.map(item=>item.name),['feature/mine']);assert.equal(plan.ignored,2);
+  const applied=p.cli(['integrate','gather','apply','--session','s2','--plan-hash',plan.planHash]);
+  assert.equal(applied.ok,true,JSON.stringify(applied));
+  p.git(['merge-base','--is-ancestor',mine.commit,'develop']);
+  assert.throws(()=>p.git(['merge-base','--is-ancestor','feature/someone-else','develop']),'another session branch stays out');
+  const pre=p.cli(['release','preflight','--session','s2']);
+  assert.deepEqual(pre.questions,[]);assert.deepEqual(pre.resolve,[]);assert.equal(pre.work.ignoredOtherBranches,2);
+});
+
+test('a conflict between the release own branch and develop is a resolve step for the agent, not a question (4.9.9)',async t=>{
+  const h=await fixture(t);const p=await project(h,{method:'local-merge'});
+  await deliveredBranch(p,{session:'s1',slug:'clash',file:'README.md',content:'# mine\n'});
+  commitCarriedAudit(p);p.git(['switch','-q','develop']);await writeFile(path.join(p.repo,'README.md'),'# theirs\n');
+  p.git(['add','--','README.md']);p.git(['commit','-q','-m','fix: ปรับ README']);p.git(['push','-q','origin','develop']);
+  p.git(['switch','-q','feature/clash']);p.git(['fetch','-q','origin']);
+  const plan=p.cli(['integrate','gather','plan','--session','s1']);
+  assert.equal(plan.card,null);assert.equal(plan.next.action,'resolve');
+  assert.equal(plan.resolve[0].branch,'feature/clash');assert.deepEqual(plan.resolve[0].paths,['README.md']);
+  assert.ok(plan.resolve[0].steps.some(step=>/git merge (origin\/)?develop/.test(step)));
+  assert.throws(()=>p.git(['merge','-q','origin/develop']));
+  await writeFile(path.join(p.repo,'README.md'),'# mine and theirs\n');
+  p.git(['add','--','README.md']);p.git(['commit','-q','--no-edit']);p.git(['push','-q','origin','feature/clash']);
+  const again=p.cli(['integrate','gather','plan','--session','s1']);
+  assert.deepEqual(again.resolve,[]);assert.deepEqual(again.selected.map(item=>item.name),['feature/clash']);
+  assert.equal(p.cli(['integrate','gather','apply','--session','s1','--plan-hash',again.planHash]).ok,true);
+});
+
+test('a conflicting jenkins-release hotfix is a resolve step on develop, never a blocker (4.9.9)',async t=>{
+  const h=await fixture(t);const {p,push}=await releaseRepo(h);
+  p.git(['switch','-q','jenkins-release']);await writeFile(path.join(p.repo,'app.js'),'prod\n');
+  p.git(['add','--','app.js']);p.git(['commit','-q','-m','fix: แก้ด่วนบน production']);push(p.repo,'jenkins-release');
+  p.git(['switch','-q','develop']);await writeFile(path.join(p.repo,'app.js'),'v2\n');
+  p.git(['add','--','app.js']);p.git(['commit','-q','-m','feature: ปรับหน้าแรก']);push(p.repo,'develop');p.git(['fetch','-q','origin']);
+  const pre=p.cli(['release','preflight']);
+  assert.equal(pre.ok,true);assert.deepEqual(pre.blockers,[]);assert.deepEqual(pre.questions,[]);
+  assert.equal(pre.resolve[0].ref,'origin/jenkins-release');assert.deepEqual(pre.resolve[0].paths,['app.js']);assert.equal(pre.next.action,'resolve');
+  assert.equal(p.cli(['release','sync','plan']).next.action,'resolve');
 });

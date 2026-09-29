@@ -1136,8 +1136,22 @@ export async function pendingWork({ root, policy = null, target = null, run = de
 
 const gatherSummary = item => ({ name: item.name, ref: item.ref, sha: item.sha, status: item.status, ahead: item.ahead, conflict: item.conflict, reasons: item.reasons, subjects: item.subjects });
 
-export async function planGather({ root, policy = null, target = null, mode = null, include = [], exclude = [], run = defaultRun, fetch = true } = {}) {
+// Release scope (4.9.9 default): only the release's own work branch — the current
+// branch, --branches, or this session's delivered branch. Other people's branches are
+// ignored, and a conflict on an own branch is resolved by the agent on that branch.
+function releaseScopePlan(pending, { include, exclude, sessionBranches }) {
+  const own = new Set([...(pending.current && pending.current !== pending.target ? [pending.current] : []), ...include, ...sessionBranches].filter(name => !exclude.includes(name)));
+  const inScope = pending.branches.filter(item => own.has(item.name));
+  const resolve = inScope.filter(item => item.conflict === true).map(item => ({
+    branch: item.name, paths: item.conflictPaths,
+    steps: [`git switch ${item.name}`, `git merge ${pending.base}`, "resolve every conflict keeping both intents, run the project tests", "git commit (Git's merge message)", "deliver apply --push-only", "integrate gather plan"],
+  }));
+  return { selected: inScope.filter(item => item.conflict !== true), resolve, ignored: pending.branches.length - inScope.length };
+}
+
+export async function planGather({ root, policy = null, target = null, mode = null, include = [], exclude = [], scope = "release", sessionBranches = [], run = defaultRun, fetch = true } = {}) {
   if (mode && !["ready", "all", "none"].includes(mode)) return stop("MODE_INVALID", "--mode must be ready|all|none.");
+  if (!["release", "all"].includes(scope)) return stop("SCOPE_INVALID", "--scope must be release|all.");
   const pending = await pendingWork({ root, policy, target, run, fetch });
   if (!pending.ok) return pending;
   const { target: integration, current } = pending;
@@ -1149,6 +1163,17 @@ export async function planGather({ root, policy = null, target = null, mode = nu
       : `${current || "HEAD"} has uncommitted changes; deliver them first, then gather.`, {
       paths: dirty.slice(0, 50), next: { action: "run", command: onTarget ? "content commit per AGENTS.release.md §6.3, then integrate gather plan" : "deliver plan, deliver apply, then integrate gather plan" },
     });
+  }
+  if (scope === "release") {
+    const own = mode === "none" ? { selected: [], resolve: [], ignored: pending.branches.length } : releaseScopePlan(pending, { include, exclude, sessionBranches });
+    const merges = own.selected.map(item => ({ name: item.name, ref: item.ref, sha: item.sha }));
+    const planHash = planHashOf({ integration, baseSha: pending.baseSha, current, merges: merges.map(item => [item.name, item.sha]) });
+    return {
+      ok: true, scope, target: integration, base: pending.base, baseSha: pending.baseSha, current, counts: pending.counts,
+      selected: own.selected.map(gatherSummary), resolve: own.resolve, ignored: own.ignored, skipped: [], merges, warnings: pending.warnings, card: null, planHash,
+      next: own.resolve.length ? { action: "resolve", command: "resolve the conflict on each resolve[].branch by following its steps, then integrate gather plan again" }
+        : merges.length ? { action: "run", command: `integrate gather apply --plan-hash ${planHash}` } : { action: "report", command: `nothing of this release to gather into ${integration}; continue` },
+    };
   }
   const unknown = [...include, ...exclude].filter(name => !pending.branches.some(item => item.name === name));
   if (unknown.length) return stop("BRANCH_NOT_PENDING", `Not an unmerged work branch: ${unknown.join(", ")}.`, { pending: pending.branches.map(gatherSummary) });
@@ -1241,10 +1266,9 @@ export async function applyGather(options) {
 }
 
 // ---------------------------------------- release preflight and sync (4.9.8)
-// R reads every branch fact once and returns the automatic actions plus at most
-// one round of questions, so a release never stops for a branch surprise after
-// the candidate exists (AGENTS.release.md §6.5). Sync makes only history-
-// preserving merges into local develop; pushes stay with the release D/J/T steps.
+// R reads every branch fact once and returns automatic actions and resolve steps,
+// so a release never stops for a branch surprise (AGENTS.release.md §6.5). Sync
+// makes history-preserving merges into local develop; pushes stay with D/J/T.
 
 const RELEASE_BRANCHES = ["develop", "jenkins", "jenkins-release"];
 const refSha = (run, root, ref) => (refExists(run, root, ref) ? out(git(run, root, ["rev-parse", ref])) : null);
@@ -1293,90 +1317,77 @@ function releaseFacts(run, root) {
 }
 
 // Merges that bring local develop up to date and restore fast-forward ancestry for
-// jenkins and jenkins-release. `allow` names content-bearing merges the owner accepted.
-function releaseMerges(run, root, facts, allow = []) {
+// jenkins and jenkins-release. All are automatic (owner decision 2026-09-29, 4.9.9):
+// content already on a release branch belongs in develop. A conflict becomes a
+// resolve step the agent performs on develop, never a question.
+function releaseMerges(run, root, facts) {
   const { branches, base } = facts;
   const merges = [];
-  const questions = [];
+  const resolve = [];
   const blockers = [];
   // Each merge is judged against the tip that already holds the earlier ones; the
   // unreferenced commit-tree object moves no ref.
   let tip = base;
   const advance = (effect, sha) => { const made = git(run, root, ["commit-tree", effect.tree, "-p", tip, "-p", sha, "-m", "preflight"]); if (made.ok) tip = made.stdout.trim(); };
-  if (branches.develop.state === "diverged") {
-    const effect = mergeEffect(run, root, base, branches.develop.remote);
-    if (effect.conflict === false) { merges.push({ ref: "origin/develop", sha: branches.develop.remote, reason: "origin/develop advanced", changed: effect.changed.length }); advance(effect, branches.develop.remote); }
-    else blockers.push({ code: "DEVELOP_CONFLICT", subject: "origin/develop", paths: effect.paths.slice(0, 20) });
+  const conflictSteps = ref => ["git switch develop", `git merge ${ref}`, "resolve every conflict keeping both intents, run the project tests", "git commit (Git's merge message)", "release sync plan"];
+  const candidates = [
+    ...(branches.develop.state === "diverged" ? [{ ref: "origin/develop", sha: branches.develop.remote, reason: "origin/develop advanced" }] : []),
+    ...["jenkins", "jenkins-release"].map(name => ({ ref: `origin/${name}`, sha: branches[name].remote, reason: null })),
+  ];
+  for (const item of candidates) {
+    if (!item.sha || isAncestor(run, root, item.sha, tip)) continue;
+    const effect = mergeEffect(run, root, tip, item.sha);
+    if (effect.conflict === null) { blockers.push({ code: "GIT_MERGE_TREE_UNSUPPORTED", subject: item.ref, paths: [] }); continue; }
+    if (effect.conflict === true) { resolve.push({ ref: item.ref, paths: effect.paths.slice(0, 20), steps: conflictSteps(item.ref) }); continue; }
+    const reason = item.reason || (effect.changed.length ? `content already on ${item.ref.slice(7)}` : "merge-only history, no file changes");
+    merges.push({ ref: item.ref, sha: item.sha, reason, changed: effect.changed.length, files: effect.changed.slice(0, 20) });
+    advance(effect, item.sha);
   }
-  for (const name of ["jenkins", "jenkins-release"]) {
-    const remote = branches[name].remote;
-    if (!remote || isAncestor(run, root, remote, tip)) continue;
-    const effect = mergeEffect(run, root, tip, remote);
-    if (effect.conflict === true) { blockers.push({ code: "RELEASE_BRANCH_CONFLICT", subject: `origin/${name}`, paths: effect.paths.slice(0, 20) }); continue; }
-    if (effect.conflict === null) { blockers.push({ code: "GIT_MERGE_TREE_UNSUPPORTED", subject: `origin/${name}`, paths: [] }); continue; }
-    const neutral = !effect.changed.length;
-    if (neutral || allow.includes(name)) { merges.push({ ref: `origin/${name}`, sha: remote, reason: neutral ? "merge-only history, no file changes" : "owner accepted its content", changed: effect.changed.length }); advance(effect, remote); }
-    else {
-      questions.push({
-        kind: "integration", topic: `git/release-backmerge-${name}`, risk: "R2", confidence: "high",
-        question: `origin/${name} มีงาน ${effect.changed.length} ไฟล์ที่ develop ยังไม่มี จะรวมเข้า develop ก่อน release ไหม`,
-        impact: `ถ้าไม่รวม ${name} จะ fast-forward ไม่ได้และ release หยุดที่ขั้นนั้น`,
-        checked: effect.changed.slice(0, 5),
-        options: [
-          { id: "1", label: `รวม ${name} เข้า develop แล้ว release ต่อ`, effect: `release sync plan --allow ${name}`, value: "merge" },
-          { id: "2", label: "หยุด release ไว้ตรวจเอง", effect: "ไม่แตะ branch ใดเพิ่ม", value: "stop" },
-        ],
-        recommended: "1", recommendedReason: "เก็บงานที่ขึ้น server ไปแล้วไว้ใน develop และทำให้ promote ต่อได้", blocking: true, default: null, recordAs: "none", paths: effect.changed.slice(0, 20), expiresHours: 24,
-      });
-    }
-  }
-  return { merges, questions, blockers };
+  return { merges, resolve, blockers };
 }
 
-export async function releasePreflight({ root, policy = null, run = defaultRun, fetch = true } = {}) {
+export async function releasePreflight({ root, policy = null, include = [], sessionBranches = [], run = defaultRun, fetch = true } = {}) {
   const warnings = [];
   if (fetch && git(run, root, ["remote", "get-url", "origin"]).ok && !git(run, root, ["fetch", "--prune", "--tags", "origin"]).ok) warnings.push(warning("OFFLINE_FETCH_FAILED", "origin", "preflight uses the last fetched refs"));
   const facts = releaseFacts(run, root);
   if (!facts.base) return stop("DEVELOP_MISSING", "develop does not exist locally or on origin.");
-  const { merges, questions, blockers } = releaseMerges(run, root, facts);
-  const pending = await pendingWork({ root, policy, run, fetch: false });
+  const { merges, resolve, blockers } = releaseMerges(run, root, facts);
+  const gather = await planGather({ root, policy, include, sessionBranches, run, fetch: false });
   const dirty = dirtyInventory(root, { run });
+  const own = gather.ok ? gather.selected || [] : [];
   const autoActions = [
     ...(facts.branches.develop.state === "behind" ? [{ action: "fast-forward develop", ref: "origin/develop" }] : []),
     ...merges.map(item => ({ action: `merge ${item.ref} into develop`, reason: item.reason, changed: item.changed })),
-    ...(pending.ok && pending.counts.ready ? [{ action: `gather ${pending.counts.ready} ready work branches`, command: "integrate gather plan --mode ready" }] : []),
+    ...(own.length ? [{ action: `gather ${own.map(item => item.name).join(", ")}`, command: "integrate gather plan, integrate gather apply" }] : []),
+    ...(!gather.ok && gather.code === "DELIVER_FIRST" ? [{ action: `deliver the uncommitted work on ${gather.current || "the current branch"} first`, command: "deliver plan, deliver apply" }] : []),
   ];
-  const undecided = pending.ok ? pending.branches.filter(item => item.status !== "ready" && item.conflict !== true) : [];
-  if (undecided.length) {
-    const plan = await planGather({ root, policy, run, fetch: false });
-    if (plan.card) questions.push(plan.card);
-  }
-  if (pending.ok) for (const item of pending.branches.filter(branch => branch.conflict === true)) warnings.push(warning("GATHER_CONFLICT", item.name, "not part of this release; update the branch and deliver it again"));
   const latestTag = lines(git(run, root, ["tag", "--list", "v*", "--sort=-v:refname"]).stdout)[0] || null;
+  const allResolve = [...resolve, ...(gather.ok ? gather.resolve || [] : [])];
   return {
     ok: blockers.length === 0, code: blockers.length ? blockers[0].code : undefined, current: out(git(run, root, ["branch", "--show-current"])),
     branches: facts.branches, base: facts.base,
     owners: { inhouse: ownerVersion(run, root, facts.base, "Jenkinsfile"), production: ownerVersion(run, root, facts.base, "Jenkinsfile_Production") },
     latestTag, dirty: { product: dirty.filter(item => !item.path.startsWith(".agrimap-agent/")).map(item => item.path), agent: dirty.filter(item => item.path.startsWith(".agrimap-agent/")).length },
-    pending: pending.ok ? { counts: pending.counts, conflicts: pending.branches.filter(item => item.conflict === true).map(item => item.name) } : null,
-    autoActions, blockers, questions: questions.slice(0, 3), warnings,
-    next: blockers.length ? { action: "report", command: "stop only the affected publication and report the blocker paths" }
-      : questions.length ? { action: "ask", command: "ask these questions together in one round, then release sync plan (with --allow for accepted branches) and integrate gather" }
-      : { action: "run", command: "release sync plan, release sync apply, integrate gather plan --mode ready, then prepare" },
+    work: gather.ok ? { own: own.map(item => item.name), ignoredOtherBranches: gather.ignored || 0 } : { code: gather.code },
+    autoActions, resolve: allResolve, blockers, questions: [], warnings,
+    next: blockers.length ? { action: "report", command: "stop only the affected publication and report the blocker" }
+      : allResolve.length ? { action: "resolve", command: "resolve each conflict by its steps (no question), then run release preflight again" }
+      : { action: "run", command: "release sync plan, release sync apply, integrate gather plan/apply, then prepare" },
   };
 }
 
-export async function planReleaseSync({ root, allow = [], run = defaultRun, fetch = true } = {}) {
+export async function planReleaseSync({ root, run = defaultRun, fetch = true } = {}) {
   if (fetch && git(run, root, ["remote", "get-url", "origin"]).ok) git(run, root, ["fetch", "--prune", "origin"]);
   const facts = releaseFacts(run, root);
   if (!facts.base) return stop("DEVELOP_MISSING", "develop does not exist locally or on origin.");
-  const { merges, questions, blockers } = releaseMerges(run, root, facts, allow);
-  if (blockers.length) return stop(blockers[0].code, `${blockers[0].subject} conflicts with develop; nothing was merged.`, { blockers, next: { action: "report" } });
+  const { merges, resolve, blockers } = releaseMerges(run, root, facts);
+  if (blockers.length) return stop(blockers[0].code, `${blockers[0].subject} cannot be checked; nothing was merged.`, { blockers, next: { action: "report" } });
+  if (resolve.length) return { ok: true, base: facts.base, resolve, merges: [], planHash: null, card: null, next: { action: "resolve", command: "merge each resolve[].ref into develop, resolve the conflicts, run the tests, commit, then release sync plan" } };
   const current = out(git(run, root, ["branch", "--show-current"]));
   const planHash = planHashOf({ base: facts.base, local: facts.branches.develop.local, merges: merges.map(item => [item.ref, item.sha]), current });
   return {
-    ok: true, base: facts.base, current, merges, questions, planHash, card: questions[0] || null,
-    next: questions.length ? { action: "ask" } : merges.length || facts.base !== facts.branches.develop.local ? { action: "run", command: `release sync apply --plan-hash ${planHash}${allow.length ? ` --allow ${allow.join(",")}` : ""}` } : { action: "report", command: "develop is already in sync" },
+    ok: true, base: facts.base, current, merges, resolve: [], planHash, card: null,
+    next: merges.length || facts.base !== facts.branches.develop.local ? { action: "run", command: `release sync apply --plan-hash ${planHash}` } : { action: "report", command: "develop is already in sync" },
   };
 }
 

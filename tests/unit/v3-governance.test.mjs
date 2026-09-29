@@ -107,7 +107,7 @@ test('reviewed bootstrap merges preserve custom rules, require backup, and detec
  const digest=value=>createHash('sha256').update(value).digest('hex');
  const backupHash=digest(before),merged=Buffer.concat([before,Buffer.from('\nProject-specific rule: retain the custom API naming convention.\n')]);
  await writeFile(file,merged);
- assert.equal((await planBootstrap(opts)).ok,false);
+ assert.equal((await planBootstrap(opts)).entries.find(e=>e.target==='AGENTS.md').status,'merge');
  const reviewedMerges=[{target:'AGENTS.md',sha256:digest(merged),backupHash,reason:'Reviewed bundle rules and retained project API naming.'}];
  await assert.rejects(applyBootstrap({...opts,reviewedMerges}),/BACKUP_REQUIRED/);
  const backup=path.join(h.temp,'.agrimap-agent/runtime/bootstrap-backups',backupHash,'AGENTS.md');
@@ -118,13 +118,13 @@ test('reviewed bootstrap merges preserve custom rules, require backup, and detec
  assert.equal((await planBootstrap(opts)).freshness,'current');
  assert.equal((await applyBootstrap(opts)).entries.every(e=>e.status==='unchanged'),true);
  await writeFile(file,Buffer.concat([merged,Buffer.from('\nUnreviewed edit\n')]));
- assert.equal((await planBootstrap(opts)).ok,false);
+ assert.equal((await planBootstrap(opts)).entries.find(e=>e.target==='AGENTS.md').status,'merge');
  const receiptPath=path.join(h.temp,'.agrimap-agent/runtime/bootstrap.json');
  const receipt=JSON.parse(await readFile(receiptPath,'utf8'));
  await writeFile(file,merged);receipt.version='0.0.0';await writeFile(receiptPath,JSON.stringify(receipt));
- assert.equal((await planBootstrap(opts)).ok,false);
+ assert.equal((await planBootstrap(opts)).entries.find(e=>e.target==='AGENTS.md').status,'merge');
  receipt.version=(await planBootstrap(opts)).version;receipt.files={invalid:'receipt'};await writeFile(receiptPath,JSON.stringify(receipt));
- assert.equal((await planBootstrap(opts)).ok,false);
+ assert.equal((await planBootstrap(opts)).entries.find(e=>e.target==='AGENTS.md').status,'merge');
  for(const reviewedMerges of [[null],[{target:'../outside',sha256:backupHash,backupHash,reason:'invalid target'}]]) {
   await assert.rejects(planBootstrap({...opts,reviewedMerges}),/MERGE_REVIEW_INVALID/);
  }
@@ -233,11 +233,11 @@ test('bootstrap is exact, scoped, idempotent and preserves README/versions',asyn
  assert.equal(await readFile(path.join(h.temp,'Jenkinsfile'),'utf8'),"PROJECT_VERSION = '1.0.42'\n");
  for(const file of ['.gitignore','changelog.md','Jenkinsfile_Production','release-notes/1.0.0.md'])assert.equal(await present(path.join(h.temp,file)),false);
 });
-test('bootstrap conflicts do not overwrite or partially install',async t=>{
+test('a hand-written AGENTS.md is merged, never blocking the install (4.9.9)',async t=>{
  const h=await fixture(t);await writeFile(path.join(h.temp,'AGENTS.md'),'User instructions\n');
- const r=await applyBootstrap({target:h.temp,kind:'be-main'});assert.equal(r.applied,false);
- assert.equal(await readFile(path.join(h.temp,'AGENTS.md'),'utf8'),'User instructions\n');
- assert.equal(await present(path.join(h.temp,'CLAUDE.md')),false);
+ const r=await applyBootstrap({target:h.temp,kind:'be-main'});assert.equal(r.applied,true);assert.deepEqual(r.pending,[]);
+ assert.match(await readFile(path.join(h.temp,'AGENTS.md'),'utf8'),/PROJECT CUSTOM[\s\S]*User instructions/);
+ assert.equal(await present(path.join(h.temp,'CLAUDE.md')),true);
  await assert.rejects(()=>planBootstrap({target:projectRoot,kind:'be-main'}),/PACKAGE_PRODUCT_BOOTSTRAP_FORBIDDEN/);
 });
 test('init only installs project documents on explicit bootstrap',async t=>{
@@ -268,14 +268,15 @@ test('legacy 3.2.2 bootstrap upgrades with backup and preserves surrounding READ
  const receipt=JSON.parse(await readFile(path.join(h.temp,'.agrimap-agent/runtime/bootstrap.json'),'utf8'));assert.equal(receipt.version,result.version);
 });
 
-test('modified legacy contract is preserved and not falsely marked current',async t=>{
+test('modified legacy contract merges automatically and keeps the owner rule (4.9.9)',async t=>{
  const h=await fixture(t);
  const legacy=await readFile(path.join(projectRoot,'tests/fixtures/bootstrap-3.2.2/AGENTS.md'),'utf8');
  const custom=legacy+'\nOwner-specific build rule.\n';await writeFile(path.join(h.temp,'AGENTS.md'),custom);
  const result=await applyBootstrap({target:h.temp,kind:'be-main'});
- assert.equal(result.applied,false);assert.equal(result.freshness,'update-required');
- assert.equal(await readFile(path.join(h.temp,'AGENTS.md'),'utf8'),custom);
- assert.equal(await present(path.join(h.temp,'.agrimap-agent/runtime/bootstrap.json')),false);
+ assert.equal(result.applied,true);
+ assert.match(await readFile(path.join(h.temp,'AGENTS.md'),'utf8'),/PROJECT CUSTOM[\s\S]*Owner-specific build rule\./);
+ assert.equal(await present(path.join(h.temp,'.agrimap-agent/runtime/bootstrap.json')),true);
+ assert.equal((await planBootstrap({target:h.temp,kind:'be-main'})).freshness,'current');
 });
 
 
@@ -295,11 +296,13 @@ test('explicit upgrade replaces only contract targets with backups and stays ide
  assert.equal((await planBootstrap(opts)).freshness,'current');
 });
 
-test('upgrade refuses ambiguous README blocks without partial writes',async t=>{
+test('ambiguous README blocks stay pending while the rest installs (4.9.9)',async t=>{
  const h=await fixture(t);await writeFile(path.join(h.temp,'AGENTS.md'),'Keep old contract');
  await writeFile(path.join(h.temp,'README.md'),'<!-- BEGIN AGRIMAP DEPLOYMENT -->\nOne\n<!-- END AGRIMAP DEPLOYMENT -->\n<!-- BEGIN AGRIMAP DEPLOYMENT -->\nTwo\n<!-- END AGRIMAP DEPLOYMENT -->');
- assert.equal((await applyBootstrap({target:h.temp,kind:'be-main',upgrade:true})).applied,false);
- assert.equal(await readFile(path.join(h.temp,'AGENTS.md'),'utf8'),'Keep old contract');
+ const readme=await readFile(path.join(h.temp,'README.md'),'utf8');
+ const r=await applyBootstrap({target:h.temp,kind:'be-main',upgrade:true});
+ assert.equal(r.applied,true);assert.deepEqual(r.pending,['README.md']);
+ assert.equal(await readFile(path.join(h.temp,'README.md'),'utf8'),readme);
 });
 
 
