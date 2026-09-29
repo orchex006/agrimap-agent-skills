@@ -100,6 +100,23 @@
 - `pipeline` ที่ prepare ไว้แล้วตรวจอย่างเดียว ถ้ามี branch ใหม่จะถามว่าจะเตรียมใหม่ด้วย version เดิมหรือไว้รอบหน้า; `promote` รวมเข้า develop หลังขึ้น Production แล้ว เพื่อไปกับรอบถัดไป (ไม่แตะ candidate ที่ยืนยันแล้ว)
 - ไม่ rebase, squash, force, stash และไม่ลบ branch เอง
 
+<a id="service-url-matrix"></a>
+
+## Agent รู้ URL ของ service เอง (4.9.7)
+
+งาน BE, งานข้าม lane, หาสาเหตุ 500/404 หรือวิเคราะห์ที่แตะ URL ของ service, route ของ gateway, การเรียกแบบ Pod-to-Pod, base path หรือ `/health` จะโหลด `references/service-url-matrix.md` เองโดยไม่ต้องสั่ง (งาน FE อ่านผ่าน checklist `fe-main` และ `application-url-matrix.md`)
+
+| ข้อมูลในตาราง | ตัวอย่าง |
+| --- | --- |
+| Gateway ต่อ environment | Inhouse `https://appserv2.cdg.co.th/agmws-gateway`, K8s.dev `https://agrimap-api.cdg.co.th/gw`, Production `https://agrimap-api.ldd.go.th/gw` |
+| Gateway key ของทุก service/proxy | `agmws-license-management` → `<gateway>/agmws-license-management/…` |
+| Kubernetes Service และ namespace | `agmbo-cleansing-file-netcore-svc` ใน `agrimap-job` |
+| กติกา health/port | `/health` ที่ root แบบ anonymous, svc 80 → container 5000 |
+
+- ไม่มีข้อมูล database, IP, connection string หรือรหัสผ่านในตารางนี้โดยเจตนา Agent อ่านค่าเหล่านั้นจาก config ของ project ตอนทำงานเท่านั้น
+- service ใหม่ต้องเพิ่ม route ใน `ocelot.<environment>.json` ทุกไฟล์, manifest ของ Kubernetes, environment ของ FE และแถวในตารางนี้ในงานเดียวกัน
+- ช่องว่างที่ตรวจพบ ณ 2026-09-29 (เช่น license-management ยังไม่มี route Staging, cleansing jobs ยังไม่มี manifest) ระบุไว้ท้ายไฟล์ Agent จะรายงานแทนการเดา
+
 ## Passive recommendations
 
 Design ไม่ใช่คำสั่งแยกอีกต่อไป Agent เสนอคำแนะนำที่เกี่ยวข้องกับงานปัจจุบันได้เองเมื่อมีหลักฐานเพียงพอ โดยบอกเหตุผลและระดับความมั่นใจ ถ้าข้อมูลไม่พอต้องระบุสิ่งที่ขาด แยก facts/assumptions และแจ้ง limitations; คำแนะนำชั่วคราวต้องมีเงื่อนไขและ confidence ชัดเจน ห้ามเติมข้อเท็จจริงขึ้นเอง

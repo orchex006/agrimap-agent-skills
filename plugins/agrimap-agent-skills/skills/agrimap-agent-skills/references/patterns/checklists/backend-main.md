@@ -87,9 +87,11 @@ preserved unless the owner approved the change. Do not relocate existing reposit
 models across layers during a feature or bug task unless architecture correction is explicitly in scope.
 
 - Stored procedure naming is `{ENTITY}_{ACTION}` (`022-9-stored-procedure-naming.txt`).
-- Cross-service calls use the pod-to-pod URLs in `030-13-container-communication-rule.txt`; for
-  outward URL, domain, redirect, or callback values use
-  [application-url-matrix.md](../../application-url-matrix.md), never a guessed host.
+- Cross-service calls use the gateway keys and Pod-to-Pod Services in
+  [service-url-matrix.md](../../service-url-matrix.md) (`030-13-container-communication-rule.txt` shows
+  the call flow only); for outward URL, domain, redirect, or callback values use
+  [application-url-matrix.md](../../application-url-matrix.md), never a guessed host. Every service and
+  job keeps an anonymous `/health` at the container root.
 
 ## MUST — data and error gates
 

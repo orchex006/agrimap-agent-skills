@@ -28,6 +28,7 @@
 | `agm:subagents` | `subagents-and-branches.md` | delegation / workspace mode |
 | `agm:prompt` | `prompt.md` | สร้าง immutable versioned Prompt Result |
 | `agm:url-matrix` | `application-url-matrix.md` | exact FE/BE application and callback URL decisions |
+| `agm:service-matrix` | `service-url-matrix.md` | service/job gateway keys, Kubernetes Services, namespaces, health; no DB or IP data |
 | `agm:service-ownership` | `service-ownership.md` | งานข้าม service/ownership |
 | `agm:platform-syntax` | `platform-syntax.md` | provider detection / invocation syntax |
 | `agm:skill-routing` | `skill-routing.md` (จาก `assets/skill-routing.json`) | เลือก skill เดียวจาก intent × lane และ supporting package |

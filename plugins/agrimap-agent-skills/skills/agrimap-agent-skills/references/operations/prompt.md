@@ -38,6 +38,7 @@
 - When target_kind is sql-table, sql-procedure, or sql-table-and-procedure: [patterns/sql.md](../patterns/sql.md) — SQL fundamentals that every generated handoff must carry
 - When the handoff touches a stored procedure, table, or persisted data: [db-schema-context.md](../db-schema-context.md) — schema evidence the executor must carry
 - When FE/BE URL, domain, redirect, or callback logic is in scope: [application-url-matrix.md](../application-url-matrix.md) — authoritative environment-specific Prompt Result inputs
+- When a service/job URL, gateway route, Pod-to-Pod call, base path or health endpoint is in scope: [service-url-matrix.md](../service-url-matrix.md) — service gateway keys, Kubernetes Services and health; no DB or IP data
 - When material intent remains unresolved: [elicitation.md](../elicitation.md) — resolve only consequential ambiguity
 - When database context is needed: [sql-context-readonly.md](../sql-context-readonly.md) — managed read-only metadata and SELECT; never database writes
 - When project bootstrap, versioning, branches or release are requested: [release-and-bootstrap.md](../release-and-bootstrap.md) — project-specific adoption and release knowledge
