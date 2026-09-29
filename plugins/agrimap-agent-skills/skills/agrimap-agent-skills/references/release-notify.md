@@ -9,10 +9,18 @@ Applies to `release production`, `release full` (with or without `--flash`) and 
 ## Write the description
 
 1. Source: the verified Production notes and reviewed baseline-to-candidate diff. One plain-Thai bullet per change a user can notice; merge small related changes; omit bump/audit/ci.
-2. Header `# <project name> / <Production version>`; project name from README/project memory, else the repository name.
+2. Header `# <project name> / <Production version>`; project name from README/project memory, else the repository name. Fixed shape: the header line, then `- ` bullets immediately; no blank line, sub-heading, table, bold or intro/outro text.
 3. An item that comes from or requires changes in other projects (generated `agmws-*` API client, `@agrimap/*` package, `AgriMap.*` NuGet, another service's endpoint, a project that must be updated or deployed with it) ends with `(เกี่ยวข้อง: <repo>, <repo>)`. Describe the visible effect, not the mechanism.
 4. No class, file, route, SHA or ticket text. Keep technical terms the team knows as they are (header, `x-correlation-id`, API names) instead of vague Thai paraphrases: "ปรับเพิ่มการส่งรหัส x-correlation-id ใน header เพื่อให้ทีมงานตรวจสอบและประสานงานแก้ปัญหาได้ตรงจุด". A BA must be able to paste it to a customer unchanged.
-5. Save to `.agrimap-agent/reports/YYYY-MM/<RUN_ID>-release-description.md` so the F `audit:` commit carries it, and always show the full text in the final answer, including under `--silent`.
+5. Save to `.agrimap-agent/reports/YYYY-MM/<RUN_ID>-release-description.md` so the F `audit:` commit carries it.
+6. The final answer always has a `description-released` heading followed by the full text in a `markdown` code block, whether notify is sent, pending or skipped (`--silent`). Missing it means the release is not `completed`.
+
+```markdown
+# <project> / <version>
+- xxx
+- yyy
+- zzz
+```
 
 ## Send
 
