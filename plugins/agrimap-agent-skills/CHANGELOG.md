@@ -2,6 +2,15 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.9.7 — 2026-09-29
+
+The skills know the AgriMap service matrix without being told.
+
+- New `references/service-url-matrix.md`: gateway base per environment (Development/Inhouse `appserv2.cdg.co.th/agmws-gateway`, K8s.dev `agrimap-api.cdg.co.th/gw`, Production `agrimap-api.ldd.go.th/gw`, Staging unknown), tiers and namespaces, and every service, proxy and job with its gateway key and Kubernetes Service, including `agmws-plus-netcore`, `agmws-license-management-netcore`, `agmbo-cleansing-service-netcore` and `agmbo-cleansing-file-netcore`. Verified against the gateway `ocelot.<environment>.json` routes, FE environment files, service Jenkinsfiles and the infra Kubernetes base.
+- The matrix deliberately holds no database endpoints, IP addresses, credentials or connection strings; a test fails if an IPv4 address or a database/storage endpoint appears in it.
+- It loads automatically as a conditional reference of `agm-be`, `agm-exec`, `agm-diagnose`, `agm-analyze`, `agm-architect`, `agm-plan` and `agm-prompt` whenever a service/job URL, gateway route, Pod-to-Pod call, base path or health endpoint is in scope. The `be-main` checklist uses it for cross-service calls instead of the stale golden 030-13 table (whose job Service names were wrong); the `fe-main` checklist and `application-url-matrix.md` point to it. `agm-fe` and `agm-qa` reach it through those links to stay within their token budgets.
+- Known gaps are recorded at the end of the matrix: no Staging route for license-management, no Kubernetes manifests yet for license-management and the cleansing jobs, no gateway route for `agmws-plus-proxy`, and no verified Staging public gateway.
+
 ## 4.9.6 — 2026-09-29
 
 Team commit style is enforced, and releases gather finished work branches into develop.
