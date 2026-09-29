@@ -35,13 +35,25 @@ export function teamHeader(header) {
   return type && match[2].trim() ? `${type}: ${match[2].trim()}` : null;
 }
 
-export function checkCommitHeader(header, convention = "agrimap") {
+// With policy delivery.commitLanguage "th" (the default) the description is Thai so a BA
+// and the team can read it: at least 30% of its letters are Thai; English stays only for
+// technical names such as an API, SP or version (4.9.8).
+const THAI_MIN_SHARE = 0.3;
+export function isThaiDescription(text) {
+  const thai = (String(text).match(/[ก-๛]/gu) || []).length;
+  const latin = (String(text).match(/[A-Za-z]/g) || []).length;
+  return thai > 0 && thai / (thai + latin) >= THAI_MIN_SHARE;
+}
+
+export function checkCommitHeader(header, convention = "agrimap", language = "th") {
   const value = String(header || "").trim();
   if (GIT_GENERATED.test(value)) return { ok: true, generated: true };
-  if (TEAM_HEADER.test(value) && value.length <= TEAM_HEADER_MAX) return { ok: true };
+  const thai = text => language !== "th" || isThaiDescription(text.slice(text.indexOf(":") + 1));
+  if (TEAM_HEADER.test(value) && value.length <= TEAM_HEADER_MAX) return thai(value) ? { ok: true } : { ok: false, reason: "thai", suggestion: null };
   if (convention === "conventional" && HEADER.test(value) && value.length <= 72 && !/[^\x20-\x7e]/.test(value)) return { ok: true };
   const suggestion = teamHeader(value);
-  return { ok: false, suggestion: suggestion && suggestion.length <= TEAM_HEADER_MAX ? suggestion : null };
+  const usable = suggestion && suggestion.length <= TEAM_HEADER_MAX && thai(suggestion);
+  return { ok: false, reason: suggestion && !thai(suggestion) ? "type+thai" : "type", suggestion: usable ? suggestion : null };
 }
 const SLUG = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 const toSlash = value => String(value || "").replaceAll("\\", "/");
@@ -494,8 +506,11 @@ export async function planDelivery({
   if (!verified) warnings.push(warning("DELIVERED_UNVERIFIED", active.executionId, "run the tests, fix them, deliver again; merge is not offered until verification passes"));
   const convention = policy?.delivery?.commitConvention || "agrimap";
   const message = commitMessage({ input, workType: active.workType || workTypeOf(policy, branch), objective: active.objective, own: groups.own, executionId: active.executionId, verificationTrailer: verified ? null : verification === "failed" ? "failed" : "not-run", bodyFallback, convention });
-  if (!pushOnly && groups.own.length && !checkCommitHeader(message.header, convention).ok) {
-    return stop("MESSAGE_INVALID", `Header must be "<feature|fix|comment|ci|bump|audit>: <plain description>" (at most ${TEAM_HEADER_MAX} characters): ${message.header}`, { next: { action: "run", command: "deliver plan --input message.json" } });
+  const language = policy?.delivery?.commitLanguage || "th";
+  const headerCheck = checkCommitHeader(message.header, convention, language);
+  if (!pushOnly && groups.own.length && !headerCheck.ok) {
+    const thai = headerCheck.reason !== "type" ? " with a Thai description (English only for technical names)" : "";
+    return stop("MESSAGE_INVALID", `Header must be "<feature|fix|comment|ci|bump|audit>: <plain description>"${thai}, at most ${TEAM_HEADER_MAX} characters: ${message.header}`, { next: { action: "run", command: "deliver plan --input message.json with {\"subject\":\"<คำอธิบายภาษาไทย>\"}" } });
   }
   const head = facts.head;
   const headMessage = head ? out(git(run, root, ["log", "-1", "--format=%B", head])) : "";
