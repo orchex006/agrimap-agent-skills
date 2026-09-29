@@ -621,3 +621,51 @@ test('commit descriptions are Thai by default; English stays for technical names
   const plan=p.cli(['deliver','plan','--session','s1']);
   assert.equal(plan.code,'MESSAGE_INVALID');assert.match(plan.message,/Thai description/);assert.match(plan.next.command,/subject/);
 });
+
+// A product repository with the three release branches, as agm-release sees it.
+async function releaseRepo(h){
+  const f=await createGitFixture(h,{name:'rel',jenkins:true,branches:['develop','jenkins','jenkins-release'],files:{'AGENTS.md':'# Rules\n'}});
+  const p=bind(h,f.repo,f.remote);
+  const push=(dir,ref)=>gitIn(dir,['push','-q','origin',ref]);
+  p.git(['switch','-q','develop']);await writeFile(path.join(p.repo,'app.js'),'v1\n');
+  p.git(['add','--','app.js']);p.git(['commit','-q','-m','feature: เพิ่มหน้าแรก']);push(p.repo,'develop');
+  p.git(['switch','-q','jenkins']);p.git(['merge','-q','--ff-only','develop']);push(p.repo,'jenkins');
+  // Someone promoted with a merge commit: jenkins-release holds history develop lacks, but no new file.
+  p.git(['switch','-q','jenkins-release']);p.git(['merge','-q','--no-ff','jenkins','-m',"Merge branch 'jenkins' into jenkins-release"]);push(p.repo,'jenkins-release');
+  p.git(['switch','-q','develop']);p.git(['fetch','-q','origin']);
+  return {p,push};
+}
+
+test('release preflight syncs a clean origin/develop and merge-only jenkins-release history without a question (4.9.8)',async t=>{
+  const h=await fixture(t);const {p}=await releaseRepo(h);
+  await writeFile(path.join(p.repo,'Jenkinsfile_Production'),"IMAGE_TAG = 'v1.0.1'\nPROJECT_VERSION = '1.0.1'\n");
+  p.git(['add','--','Jenkinsfile_Production']);p.git(['commit','-q','-m','bump: ขึ้นเวอร์ชัน Production 1.0.1']);
+  const other=await cloneRemote(h,p.remote,'other');
+  gitIn(other,['switch','-q','develop']);await writeFile(path.join(other,'other.js'),'x\n');
+  gitIn(other,['add','--','other.js']);gitIn(other,['commit','-q','-m','fix: แก้งานของอีกคน']);gitIn(other,['push','-q','origin','develop']);
+  const pre=p.cli(['release','preflight']);
+  assert.equal(pre.ok,true,JSON.stringify(pre.blockers));assert.equal(pre.branches.develop.state,'diverged');
+  assert.deepEqual(pre.questions,[]);assert.deepEqual(pre.owners.production,{imageTag:'v1.0.1',projectVersion:'1.0.1'});
+  assert.deepEqual(pre.autoActions.map(item=>item.action),['merge origin/develop into develop','merge origin/jenkins-release into develop']);
+  const originDevelop=p.git(['rev-parse','origin/develop']);
+  const plan=p.cli(['release','sync','plan']);assert.equal(plan.card,null);
+  const applied=p.cli(['release','sync','apply','--plan-hash',plan.planHash]);
+  assert.equal(applied.ok,true,JSON.stringify(applied));assert.equal(applied.pushed,false);
+  for(const ref of ['origin/develop','origin/jenkins','origin/jenkins-release'])p.git(['merge-base','--is-ancestor',ref,'develop']);
+  assert.equal(p.git(['rev-parse','origin/develop']),originDevelop,'sync never pushes');
+  assert.equal(await readFile(path.join(p.repo,'other.js'),'utf8'),'x\n','checked-out develop moved forward');
+  assert.deepEqual(p.cli(['release','sync','plan']).merges,[],'second sync has nothing left');
+});
+
+test('a jenkins-release hotfix that develop lacks becomes one preflight question; --allow merges it (4.9.8)',async t=>{
+  const h=await fixture(t);const {p,push}=await releaseRepo(h);
+  p.git(['switch','-q','jenkins-release']);await writeFile(path.join(p.repo,'hotfix.js'),'prod\n');
+  p.git(['add','--','hotfix.js']);p.git(['commit','-q','-m','fix: แก้ด่วนบน production']);push(p.repo,'jenkins-release');p.git(['switch','-q','develop']);
+  const pre=p.cli(['release','preflight']);
+  assert.equal(pre.questions.length,1);assert.equal(pre.questions[0].topic,'git/release-backmerge-jenkins-release');
+  assert.match(pre.questions[0].question,/1 ไฟล์/);
+  assert.equal(p.cli(['release','sync','plan']).card.topic,'git/release-backmerge-jenkins-release');
+  const plan=p.cli(['release','sync','plan','--allow','jenkins-release']);
+  const applied=p.cli(['release','sync','apply','--allow','jenkins-release','--plan-hash',plan.planHash]);
+  assert.equal(applied.ok,true,JSON.stringify(applied));assert.equal(await readFile(path.join(p.repo,'hotfix.js'),'utf8'),'prod\n');
+});

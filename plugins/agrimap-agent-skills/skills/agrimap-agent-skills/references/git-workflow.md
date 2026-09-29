@@ -17,7 +17,7 @@ After verification, add the changelog entry required by the project AGENTS, then
 
 ## Release gather
 
-agm-release only (AGENTS.release.md §6.4): `integrate pending` lists work branches not in develop with status ready|unverified|manual and conflicts. `integrate gather plan [--mode ready|all|none] [--branches a,b] [--exclude a]` then `integrate gather apply --plan-hash <hash>` builds Git merge commits into local develop without switching or pushing; the release D stage pushes develop once. A card appears only for unverified/manual branches; conflicts are reported, never merged.
+agm-release only (AGENTS.release.md §6.4–§6.5): `release preflight` reads branch pairs, owners, tag, dirty paths and M once and returns auto actions, at most three questions and blockers; `release sync plan [--allow jenkins|jenkins-release]` then `release sync apply --plan-hash <hash>` merges a clean `origin/develop` and history-only `jenkins`/`jenkins-release` into local develop without pushing. `integrate pending` lists work branches not in develop with status ready|unverified|manual and conflicts. `integrate gather plan [--mode ready|all|none] [--branches a,b] [--exclude a]` then `integrate gather apply --plan-hash <hash>` builds Git merge commits into local develop without switching or pushing; the release D stage pushes develop once. A card appears only for unverified/manual branches; conflicts are reported, never merged.
 
 ## Short replies
 

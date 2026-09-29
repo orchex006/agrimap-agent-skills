@@ -99,6 +99,25 @@
 - รวมด้วย merge commit ของ Git ใน local `develop` โดยไม่ switch และไม่ push แล้ว test develop ก่อน index/changelog/prepare; merge ไปกับการ push develop ครั้งเดียวของ release
 - `pipeline` ที่ prepare ไว้แล้วตรวจอย่างเดียว ถ้ามี branch ใหม่จะถามว่าจะเตรียมใหม่ด้วย version เดิมหรือไว้รอบหน้า; `promote` รวมเข้า develop หลังขึ้น Production แล้ว เพื่อไปกับรอบถัดไป (ไม่แตะ candidate ที่ยืนยันแล้ว)
 - ไม่ rebase, squash, force, stash และไม่ลบ branch เอง
+- ตั้งแต่ 4.9.8 branch ที่ชนกับ develop **ไม่ทำให้ release หยุด** และไม่ถาม แค่รายงานใน ⚠️
+
+<a id="release-preflight"></a>
+
+## Release จบในการสั่งครั้งเดียว (4.9.8)
+
+ทุก `prepare|pipeline|release` เริ่มด้วย `release preflight` ที่ตรวจ branch ทั้งสาม, เลข version, tag, ไฟล์ค้าง และ branch งานที่เสร็จ ในครั้งเดียว แล้ว**ถามทุกเรื่องที่ต้องตัดสินในรอบเดียว** ก่อนเตรียม version
+
+| เจอสถานการณ์ | Agent ทำ |
+| --- | --- |
+| มีคน push develop ระหว่าง release | merge `origin/develop` เข้า candidate เอง (ถ้าไม่ชน) แล้ว push ใหม่ ไม่เกิน 2 ครั้ง ไม่ถาม |
+| `jenkins-release` มีแต่ merge commit ที่ develop ไม่มี | back-merge เข้า develop เองเพื่อให้ promote แบบ ff ได้ ไม่ถาม |
+| `jenkins-release` มีงานที่ develop ไม่มี (hotfix) | ถามรอบเดียวตอนเริ่ม (แนะนำรวมแล้วไปต่อ) |
+| work branch ชนกับ develop | ข้ามและรายงาน ไม่ถาม |
+| ชนจริงกับ candidate | หยุดเฉพาะขั้นนั้นพร้อม path |
+
+- คำถามที่เหลือหลังจากนี้มีแค่ยืนยัน Production ครั้งเดียวตามเดิม
+- release ที่ค้างแล้วสั่งต่อ ใช้กติกาชุดเดิมจนจบ ไม่อัปเดต bootstrap กลางทาง
+- `--flash` อ่านเฉพาะส่วนที่ต้องใช้ ใช้ผล preflight แทนการตรวจทีละคำสั่ง ใช้ผลตรวจเครื่องมือ .NET ที่บันทึกไว้ได้ 7 วัน และไม่สร้าง audit commit ย่อยระหว่างทาง เป้าหมายประมาณ 5 นาทีเมื่อไม่มีคำถาม
 
 <a id="service-url-matrix"></a>
 

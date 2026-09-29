@@ -75,6 +75,8 @@ $agm-release production --flash
 
 ชื่อย่อ `full --flash`, `inhouse --flash`, `production --flash` เท่ากับ `release full|inhouse|production --flash` ตามลำดับ ใช้กับ `prepare inhouse|production` และ `pipeline inhouse|production` ได้ด้วย (pipeline ไม่สร้าง candidate ที่ยังไม่ได้เตรียม) โหมดไม่มี flag ยังทำงานเหมือนเดิม ไม่รองรับ flag นี้กับ promote/indexing/bootstrap
 
+ตั้งแต่ 4.9.8 `--flash` ใช้ `release preflight` ตรวจทุกอย่างครั้งเดียว ถามรอบเดียว sync branch ที่ไม่ชนเอง และไม่อ่านเอกสาร release ส่วนที่ไม่เกี่ยว เป้าหมายราว 5 นาทีเมื่อไม่มีคำถาม ดู [Usage](USAGE.md#release-preflight)
+
 | ส่วนงาน | --flash |
 | --- | --- |
 | Index | ตรวจ baseline → candidate และ dirty files ไม่ backfill ทั้งโครงการหรือสร้าง README/catalog ใหม่ |

@@ -18,9 +18,10 @@ test('bootstrap preserves the complete owner-submitted canonical contract',async
   // 4.9.5: owner-requested intent x lane routing; §0 is generated from assets/skill-routing.json, heading renamed,
   // host recording example compacted to stay within the 24,000-character diet.
   // 4.9.6: owner-requested mandatory §10.6 team commit style for every Agent commit (guard G7).
+  // 4.9.8: owner-requested Thai commit descriptions (§10.6) and the --flash read scope in §2.
   // Package bumps only change the generated version marker; freeze every other byte.
   const sourceBytes=Buffer.from(bytes.toString('utf8').replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/,'<!-- AGRIMAP BOOTSTRAP VERSION: 3.6.1 -->'));
-  assert.equal(createHash('sha256').update(sourceBytes).digest('hex'),'2b5bc0aa9db220d92d10984479d1be7f04c4bcc1caa2d751111a52ec400282e7');
+  assert.equal(createHash('sha256').update(sourceBytes).digest('hex'),'50bfc5a312018080d3118ebb811f59718d1695a07e8b510121096073caf9da0a');
   const manifest=JSON.parse(await readFile(path.join(bundle,'manifest.json'),'utf8'));
   assert.ok(bytes.toString('utf8').includes(`<!-- AGRIMAP BOOTSTRAP VERSION: ${manifest.version} -->`));
   assert.equal(manifest.files.find(f=>f.source==='AGENTS.md').sha256,createHash('sha256').update(bytes).digest('hex'));
@@ -104,7 +105,7 @@ test('instruction diet: core AGENTS.md at most 24,000 chars; core + release keep
   const entry=manifest.files.find(f=>f.source==='AGENTS.release.md');
   assert.equal(entry.target,'AGENTS.release.md');assert.equal(entry.sha256,createHash('sha256').update(release).digest('hex'));
   const frozen=release.replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/,'<!-- AGRIMAP BOOTSTRAP VERSION: 3.6.1 -->');
-  assert.equal(createHash('sha256').update(frozen).digest('hex'),'3432997d9888fdd318c98c27ff3a5d3b7b4ac0c1c0c6eb1143987dfcab566412');
+  assert.equal(createHash('sha256').update(frozen).digest('hex'),'04d36960b8c150e255e93f425ca439031db69d4495b5063992c0b36c1c9d6ca2');
   const headings=['## 0.','## 1.','## 2.','### 2.1','### 2.2','### 2.3','## 3.','## 4.','## 5.','### 5.1','### 5.2','## 6.','### 6.1','### 6.2','### 6.3','## 7.','## 8.','### 8.1','## 9.','### 9.1','### 9.5','## 10.','### 10.5','## Bootstrap contract freshness'];
   const all=(core+'\n'+release).split('\n');
   for(const h of headings)assert.ok(all.some(line=>line.startsWith(h)),h);
