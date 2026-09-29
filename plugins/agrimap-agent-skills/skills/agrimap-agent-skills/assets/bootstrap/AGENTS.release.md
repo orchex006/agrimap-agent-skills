@@ -64,7 +64,8 @@ Normalize ได้เฉพาะ case/whitespace และ semantic phrase bou
 | `Version Production` | `develop -> jenkins -> jenkins-release` | `Jenkinsfile_Production` เท่านั้น (`jenkins` ไหลผ่านโดยไม่ขึ้นเลข Inhouse) | ไม่ |
 | `Version + Tags` | `develop -> jenkins -> jenkins-release` | `Jenkinsfile_Production` เท่านั้น | สร้างและ push annotated tag โดยใช้ Production release notes เป็น description |
 
-- **`Version + Tags` เป็นแบบเดียวที่สร้าง tag** แบบอื่นทั้งหมดรายงาน tag เป็น `not requested`
+- **`Version + Tags` เป็นแบบเดียวในกลุ่ม keyword ที่สร้าง tag** แบบอื่นทั้งหมดรายงาน tag เป็น `not requested`
+- **คำสั่ง agm-release `release production`, `release full` และ `promote` เทียบเท่า `Version + Tags` เสมอ:** ต้องสร้างและ push annotated tag ตาม §7 และส่ง Release Description ตาม §8.2 ไม่ใช่ intent `production`/`both` ที่ไม่มี tag; `release inhouse`, `pipeline`, `prepare` ไม่มี tag
 - ทั้ง 7 แบบ **แก้เลข version ที่ `develop` เท่านั้น** แล้ว commit/push `develop` ก่อน จากนั้น promote ด้วย `--ff-only` ให้เลขเดินทางไปกับ merge ห้ามไปแก้ `Jenkinsfile` หรือ `Jenkinsfile_Production` บน branch `jenkins` หรือ `jenkins-release` โดยตรง
 - กลุ่ม A จบที่ push `develop` สำเร็จ ต้องรายงาน branch promotion และ pipeline เป็น `not requested` และแจ้ง exact verified develop SHA ให้คนเอาไป promote ต่อ ห้าม promote เองแม้จะเห็นว่า branch ตามหลังอยู่
 - กลุ่ม B ทุกแบบที่ไปถึง `jenkins-release` ต้องผ่าน `jenkins` ก่อนเสมอตาม §6.2 แม้กรณี `Version Production` ที่ไม่ขึ้นเลข Inhouse ก็ยังต้อง promote `jenkins` ให้ทันก่อน
@@ -308,13 +309,13 @@ Owner decision 2026-09-29 (4.9.8): release ต้องจบในการส�
 2. **ถามรอบเดียว:** รวมทุก `questions` (ไม่เกิน 3) เป็นข้อความเดียวพร้อมตัวเลือกและค่าแนะนำ แล้วทำต่อจนจบ ห้ามพบคำถามเรื่อง branch หลังสร้าง candidate แล้ว ยกเว้น remote เปลี่ยนจนชนจริงระหว่างทาง คำยืนยัน Production ตาม §7 ยังเป็นคำถามแยกหนึ่งครั้งตามเดิม
 3. **Sync อัตโนมัติ (ไม่ต้องถาม):** `release sync plan/apply` merge `origin/develop` ที่ไม่ชนเข้า local `develop` และ back-merge `origin/jenkins`/`origin/jenkins-release` ที่ไม่ใช่ ancestor เมื่อผล merge **ไม่เปลี่ยนไฟล์ใดเลย** (มีแต่ประวัติ merge) เพื่อให้ promote แบบ `--ff-only` ได้ ทั้งหมดเป็น merge commit ของ Git ใน local ไม่ push; ถ้า back-merge พาเนื้อหาใหม่มา script ส่ง card ใน preflight (แนะนำให้รวมแล้วไปต่อ) ถ้าชนจริงให้หยุดเฉพาะขั้นนั้นพร้อม path
 4. **ก่อน push develop (D):** หลัง commit candidate รัน `release sync plan/apply` อีกครั้งแล้ว push ทันที ถ้า push ถูกปฏิเสธเพราะมีคน push เข้ามา ให้ sync แล้ว push ใหม่เองได้สูงสุด 2 ครั้งโดยไม่ถาม ถ้า merge นำเนื้อหาใหม่เข้ามาให้เติม changelog/notes ของ delta นั้นและตรวจ owner pair ใหม่ ห้าม bump ซ้ำ
-5. **ไม่เปลี่ยนกติกากลางทาง:** ตรวจ bootstrap freshness ที่ R เท่านั้น release ที่ resume ใช้กติกาชุดเดิมจนจบ แล้วค่อยอัปเดต bootstrap ใน release ถัดไปหรือเมื่อสั่ง
+5. **ไม่เปลี่ยนกติกากลางทาง:** ตรวจ bootstrap freshness ที่ R เท่านั้น release ที่ resume ใช้กติกาชุดเดิมจนจบ bootstrap ที่ใหม่กว่า**ไม่ขวาง** promote/tag/notify ของ candidate ที่ freeze แล้ว และห้าม refresh candidate เพราะ bootstrap ให้อัปเดตใน final audit (F) หรือ release ถัดไป
 6. **บันทึก:** เขียนไฟล์ log/memory/report ด้วย file tool หรือ script ห้ามใช้ `echo`/here-string ของ shell ที่ทำอักขระเพี้ยน; ระหว่างทางไม่สร้าง audit commit ย่อย ให้รวมใน final audit commit เดียวของ F
 7. **`--flash`:** อ่านไฟล์นี้เฉพาะ §2.3, §5.2, §6, §7, §8.2; ใช้ผล preflight แทนการตรวจทีละคำสั่ง; ใช้ผลตรวจเครื่องมือ .NET ที่บันทึกไว้ไม่เกิน 7 วันเมื่อ `dotnet tool list -g` ยังเป็นเวอร์ชันเดิม; ตรวจเฉพาะ delta; เป้าหมายเวลา active ไม่เกิน 5 นาทีเมื่อไม่มีคำถาม
 
 ## 7. Production annotated tag
 
-- Section นี้ทำงานเฉพาะ mode `version-with-tags` (`Version + Tags` และ alias ใน §2) เท่านั้น; `production`/`both` ไม่มี tag เช่นเดียวกับ version mode ที่ไม่ขอ tag
+- Section นี้ทำงานกับ mode `version-with-tags` (`Version + Tags` และ alias ใน §2) และคำสั่ง agm-release `release production`, `release full`, `promote` (§2.2); keyword `production`/`both` ไม่มี tag เช่นเดียวกับ version mode ที่ไม่ขอ tag
 - `Version + Tags` มี terminal checkpoint ที่ remote annotated tag ไม่ใช่ที่ branch push: หลัง push และ remote-verify `jenkins-release` สำเร็จ Agent ต้องสร้าง ตรวจ annotation และ push `refs/tags/v<VERSION>` ใน run เดียวกัน ห้ามรายงาน `completed` หรือหยุดรอคำยืนยันซ้ำก่อน tag push ถ้าไม่มี stop condition จริง
 - mode อื่นทั้งหมดห้ามสร้าง tag และต้องรายงาน tag เป็น `not requested` ได้แก่ `prepare-inhouse`, `prepare-production`, `prepare-both`, `version-inhouse`, `version-both`, `version-only`, `release-baseline`, `project-backfill`, `diff-only` และ `develop-complete`
 - Production `<VERSION>` ต้องอ่านจาก pair ใน `Jenkinsfile_Production`; `<production-sha>` ต้องเท่ากับ remote `jenkins-release`
@@ -359,6 +360,7 @@ Owner decision 2026-09-29 (4.9.8): release ต้องจบในการส�
 | `inhouse`, `version-inhouse` | local gates และ remote develop -> jenkins SHA ตรงกันตามลำดับ; Production/tag เป็น `not requested` |
 | `production`, `both`, `version-only`, `version-both` | local gates และ remote develop -> jenkins -> jenkins-release SHA ตรงกันตามลำดับ; tag เป็น `not requested` |
 | `version-with-tags` | ทุก gate ของ `version-only` แล้ว annotation equality, tag push และ remote tag object/peeled SHA ผ่าน §7 |
+| agm-release `release production`, `release full`, `promote` | ทุก gate ของ `version-with-tags` และ Release Description ตาม §8.2 เป็น `sent`, `pending` (พร้อมคำสั่งส่งซ้ำ) หรือ `skipped (--silent)`; ขาด tag หรือ notify ยังไม่ `completed` |
 
 - เลือก mode และทำรายการ required checkpoints ก่อน mutation; บันทึกผลจริงต่อ checkpoint และขั้นถัดไป ถ้าขั้นที่จำเป็นยังไม่ทำและไม่มี blocker ให้ดำเนินการต่อ ไม่ตอบ final ว่าสำเร็จบางส่วน
 - `completed` ของ report/lifecycle ต้องเกิดหลัง gate ของงานจริง ไม่ใช่ใช้การมี report/checklist หรือ helper exit 0 มาแทน gate; หากหยุดเพราะ failure ให้รายงาน `blocked` พร้อม exact command/exit code, checkpoint ที่ผ่านแล้วและ next action
@@ -366,7 +368,7 @@ Owner decision 2026-09-29 (4.9.8): release ต้องจบในการส�
 
 ### 8.2 Release Description และแจ้งเตือนทีม
 
-ใช้กับ `release production` และ `release full` (รวม `--flash`) หลัง Production branch/tag checkpoint ผ่านแล้วเท่านั้น; `release inhouse`, `pipeline`, `prepare`, `promote` และกลุ่ม A/B ไม่ส่ง
+ใช้กับ `release production`, `release full` (รวม `--flash`) และ `promote` ทุกครั้งที่ Production tag checkpoint ผ่าน รวม release ที่หยุดรอยืนยันแล้วจบด้วย `promote` หรือ resume; ส่งครั้งเดียวต่อ version; `release inhouse`, `pipeline`, `prepare` และกลุ่ม A/B ไม่ส่ง
 
 แจ้งเตือนมี 2 แบบแยกกัน: **Jenkins build card** (`POST …/release`) ส่งจาก `post { always }` ของ `Jenkinsfile`/`Jenkinsfile_Production` พร้อม metadata ของ build ส่วน Agent ไม่แก้ไข; **Release Description** (`POST …/release-description`) คือสรุปจาก AI ตามหัวข้อนี้ ส่งเฉพาะชื่อ project, version และรายการที่แก้พร้อม project ที่เกี่ยวข้อง
 
