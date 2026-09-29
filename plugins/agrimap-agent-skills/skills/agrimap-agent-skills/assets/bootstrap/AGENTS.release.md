@@ -1,6 +1,6 @@
 # กติกา Release, Version, Changelog และ Deployment
 
-<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.5 -->
+<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.6 -->
 
 ไฟล์นี้ใช้ร่วมกับ `AGENTS.md` (core) ของ repository เดียวกัน: เก็บ §2 Intent routing ฉบับเต็มและ §4–§8 โดยคงเลข § เดิม เพื่อให้การอ้างอิงข้ามไฟล์ไม่เปลี่ยน §1, §3, §9 และ §10 อยู่ใน `AGENTS.md` และยังบังคับใช้กับงาน release ทุกงาน
 
@@ -76,6 +76,7 @@ Normalize ได้เฉพาะ case/whitespace และ semantic phrase bou
 - Exact intent กลุ่ม B ที่ owner สั่งเองเป็นการยืนยัน branch push ตลอด flow รวม final audit commit; tag push อนุญาตเฉพาะ `Version + Tags` ไม่ถามย้ำในแต่ละ checkpoint
 - การอ้าง keyword ในคำขอแก้เอกสารไม่ใช่คำสั่ง release; กลุ่ม A และ deploy aliases อื่นคงขอบเขตเดิม
 - คำสั่ง publish อื่นที่ไม่ใช่กลุ่ม B (เช่น `release inhouse|production|full`, `pipeline inhouse|production`) รวมงานค้างทั้งหมดโดยอัตโนมัติเหมือนกลุ่ม B: dirty path และ local `develop` commit ที่ยังไม่ขึ้น remote นอก candidate ถูกรวมเป็น content commit ตาม §6.3 ก่อน version commit โดยไม่ถาม เก็บไว้ local เฉพาะเมื่อ owner สั่งยกเว้นชัดเจน ข้อมูลลับ ignored/runtime state และ nested repository ถูกตัดออกอัตโนมัติพร้อมรายงาน
+- ทุกคำสั่ง prepare/pipeline/release และกลุ่ม B รวม work branch ที่ทำเสร็จแต่ยังไม่อยู่ใน `develop` เข้า local `develop` ก่อนเตรียม version ตาม §6.4 (M) ส่วน promote รวมเข้า `develop` ตอนจบโดยไม่แตะ candidate Production ที่ freeze แล้ว
 - เมื่อจบ release ให้ commit audit ที่เหลือและ push `develop` หนึ่งครั้ง แล้วตรวจ remote SHA ให้ `develop` สะอาดและเท่ากับ origin (ไม่ promote audit commit ไป `jenkins`/`jenkins-release` และไม่ย้าย tag)
 
 ## 4. Shared CLI commands
@@ -280,11 +281,22 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 1. ก่อน prepare บันทึก branch/HEAD/upstream และ inventory จาก `git status --short`, `git diff`, `git diff --cached`, `git ls-files --others --exclude-standard` ให้ครบ รวม file deletion และไฟล์ที่มีทั้ง staged/unstaged hunks อ่านเนื้อหาไฟล์ใหม่ด้วย จัดทุก path เป็น publish หรือ blocked พร้อมเหตุผล ห้ามข้ามไฟล์เพียงเพราะเป็นงานก่อนหน้า/unrelated ต่อ version
 2. รวม final working-copy content ของทุก path ที่ตรวจแล้ว รวม application, tests, config, pipeline และ governance ที่มีอยู่ก่อนเริ่มงาน ตรวจ secret, credential, generated/build output, ignored files, nested repository และ path นอก allowlist; ห้าม force-add ignored files หรือ publish ข้อมูลลับ ถ้าจัดการไม่ได้ให้หยุดพร้อม exact paths และ owner decision ไม่ stash แล้วรายงานว่าส่งครบ
 3. Reconcile committed + working-copy changes กับ changelog และ project index ตรวจ tests/build ที่เหมาะกับงานที่รวมจริง Stage ด้วย exact paths เท่านั้น (`git add -- <reviewed-paths>`) รวม deletion ห้าม `git add .`, `git add -A`, `git commit --only` ที่ทำให้งานค้างตกหล่น หรือ stash เพื่อซ่อนงานจาก coverage gate
-4. Commit งานเดิมทั้งหมดเป็น content commit บน `develop` ก่อน prepare (ข้ามเมื่อไม่มี delta) โดย pipeline/governance ที่ค้างเป็นประวัติของ content commit จากนั้นบันทึก SHA นี้เป็น pre-prepare/source candidate ตรวจ baseline และ resume ก่อน bump version ตาม owner file และ commit release metadata แยกต่างหาก ดังนั้น version commit ยังแก้ Jenkins ได้เฉพาะ version pair แต่ promotion/tag รวม content commit ด้วย
+4. Commit งานเดิมทั้งหมดเป็น content commit บน `develop` ก่อน prepare (ข้ามเมื่อไม่มี delta) ข้อความตามชนิดงานจริงใน AGENTS.md §10.6 (`feature:`/`fix:`/`comment:` แยก commit เมื่อต่างชนิด) โดย pipeline/governance ที่ค้างเป็นประวัติของ content commit จากนั้นบันทึก SHA นี้เป็น pre-prepare/source candidate ตรวจ baseline และ resume ก่อน bump version ตาม owner file และ commit release metadata แยกต่างหาก ดังนั้น version commit ยังแก้ Jenkins ได้เฉพาะ version pair แต่ promotion/tag รวม content commit ด้วย
 5. ก่อน push ตรวจ combined diff เทียบ initial HEAD, changelog coverage, staged diff check และ inventory อีกครั้ง ต้องไม่มี publishable path ตกหล่น แล้ว push `develop` และตรวจ remote SHA ก่อน promote ตาม §6.2 และทำ tag ตาม §7 เมื่อขอ หากพบการแก้ใหม่ระหว่าง freeze/promotion ให้หยุดและรายงาน ไม่แทรกเข้า candidate ที่ตรวจแล้วเงียบ ๆ
-6. หลัง remote release/tag checkpoint ให้ finalize report, recent memory, terminal event และ project index โดยบันทึก release SHA ที่ตรวจแล้วตามจริง จากนั้นทำ final audit commit เฉพาะ artifacts ที่ตรวจแล้วบน `develop` และ push/verify `origin/develop` อีกครั้ง การ push นี้อยู่ใน intent กลุ่ม B; ห้าม bump ซ้ำ, promote audit commit หรือย้าย tag ให้บันทึก release SHA กับ final develop SHA แยกกัน
+6. หลัง remote release/tag checkpoint ให้ finalize report, recent memory, terminal event และ project index โดยบันทึก release SHA ที่ตรวจแล้วตามจริง จากนั้นทำ final audit commit (`audit: บันทึกประวัติ release <VERSION>`) เฉพาะ artifacts ที่ตรวจแล้วบน `develop` และ push/verify `origin/develop` อีกครั้ง การ push นี้อยู่ใน intent กลุ่ม B; ห้าม bump ซ้ำ, promote audit commit หรือย้าย tag ให้บันทึก release SHA กับ final develop SHA แยกกัน
 7. Final audit payload บันทึกว่า release checkpoint ผ่านและ audit publication ยัง pending จน push ผ่าน; รายงานผล push/remote verification ของ audit commit ในคำตอบสุดท้าย ไม่เขียน SHA ของ audit commit ลงตัวมันเองและไม่สร้าง artifact/commit วนซ้ำหลัง freeze หาก push fail ให้คง commit เดิมและ resume push SHA นั้นโดยไม่ bump/promote/tag ใหม่
 8. จบได้เมื่อ publishable staged/unstaged/untracked inventory เป็นศูนย์, remote release branches/tag ผ่าน checkpoint และ remote develop ตรง final audit SHA (หรือ release SHA ถ้าไม่มี audit delta) Final report ต้องแจกแจง exclusions/blocked paths, release SHA, final develop SHA และสถานะ pipeline ห้ามอ้างทุก branch เท่ากันหลัง audit follow-up
+
+### 6.4 รวมงานที่ทำเสร็จเข้า develop ก่อน release (M)
+
+งานที่ส่งเข้า work branch แล้วต้องไปกับ release โดยไม่ต้องสั่ง merge ทีละ branch ขั้นนี้ใช้กับ prepare, pipeline, release ทุกแบบและกลุ่ม B (หลัง pending-work gate ก่อน I/H/P) ส่วน promote ทำหลัง T เพื่อให้ `develop` ครบสำหรับรอบถัดไป
+
+1. ไฟล์ที่ยังไม่ commit บน work branch ปัจจุบันต้อง `deliver plan/apply` ก่อน (commit ตาม AGENTS.md §10.6 และ push work branch); ประวัติ `.agrimap-agent` ที่เขียนหลังส่งงาน (log/recent memory) ซึ่งขวางการ switch ให้ commit บน work branch นั้นเป็น `audit: บันทึกประวัติงาน`; ไฟล์ค้างบน `develop` เป็น content commit ตาม §6.3
+2. `integrate pending` แสดง work branch (prefix ตาม policy) ที่ยังไม่อยู่ใน `develop` พร้อมสถานะ: `ready` = ส่งผ่าน deliver และ test ผ่าน, `unverified`, `manual` (ไม่มี AGM-Execution หรือมี commit หลังส่งงาน) และ branch ที่ชนกับ `develop`
+3. `integrate gather plan` แล้ว `integrate gather apply --plan-hash <hash>`: รวมทุก branch `ready` ด้วย merge commit (ข้อความ Merge ของ Git) เข้า local `develop` โดยไม่ switch worktree และไม่ push; มี branch `unverified`/`manual` ให้ตอบ card หนึ่งครั้ง (ค่าแนะนำคือรวมเฉพาะ `ready`) branch ที่ชนไม่ถูกรวมและรายงานใน `⚠️ ต้องตามต่อ` พร้อมวิธีแก้
+4. ตรวจ build/test ของ `develop` หลังรวม แล้วจึง index/changelog/prepare; merge commit ไปกับการ push `develop` ครั้งเดียวของขั้น D (promote ไปกับ final audit push)
+5. pipeline ที่มี candidate จาก prepare ค้างอยู่ (prepare รวมงานไว้แล้ว): ใช้ `integrate pending` ตรวจอย่างเดียว ถ้ามี branch `ready` ใหม่ให้ถามครั้งเดียวว่าจะเตรียมใหม่ด้วย `release <env>` version เดิม (รวมแล้ว reconcile changelog/notes) หรือปล่อยไปรอบหน้า ห้ามแทรกงานเข้า candidate ที่ตรวจแล้วเงียบ ๆ
+6. ห้าม rebase, squash, force, stash หรือลบ branch อัตโนมัติ; รายงานชื่อ branch และ SHA ที่รวม, ที่ข้ามพร้อมเหตุผล และ merge SHA ใน final report
 
 ## 7. Production annotated tag
 

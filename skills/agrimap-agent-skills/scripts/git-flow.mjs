@@ -12,13 +12,37 @@ import { isProtected, workTypeOf } from "./workflow-policy.mjs";
 
 const AUDIT_DIRECTORIES = new Set(["decisions", "instructions", "knowledge", "logs", "memory", "reports", "policy"]);
 const SECRET_KINDS = new Set(["CREDENTIAL", "TOKEN", "AUTH", "PRIVATE_KEY"]);
-// Team commit style (bootstrap AGENTS.md §10.3): "<type>: <plain description>" that an
+// Team commit style (bootstrap AGENTS.md §10.6): "<type>: <plain description>" that an
 // App Leader, BA or customer can read. Work: feature|fix|comment; agm-release: bump|audit|ci.
 const TYPE_BY_WORK = { feature: "feature", fix: "fix", hotfix: "fix", refactor: "comment", docs: "comment", chore: "ci" };
 export const TEAM_HEADER = /^(feature|fix|comment|ci|bump|audit): \S.*$/u;
 const TEAM_HEADER_MAX = 100;
-// Legacy English Conventional Commits stay valid for explicit input.
+// Conventional or habitual types map onto the team type and lose their scope (4.9.6).
+const TEAM_TYPE_OF = {
+  feat: "feature", feature: "feature", fix: "fix", bugfix: "fix", hotfix: "fix",
+  comment: "comment", refactor: "comment", docs: "comment", doc: "comment", style: "comment", perf: "comment", test: "comment", tests: "comment",
+  chore: "ci", build: "ci", ci: "ci", bump: "bump", release: "bump", version: "bump", audit: "audit",
+};
+const PREFIXED = /^([A-Za-z]+)(?:\([^)]*\))?!?:\s*(.*)$/u;
+// Headers Git writes itself keep Git's wording.
+const GIT_GENERATED = /^(?:Merge (?:branch|remote-tracking branch|pull request|tag|commit) |Revert "|(?:fixup|squash|amend)! )/;
+// English Conventional Commits pass only when the policy selects commitConvention "conventional".
 const HEADER =/^(feat|fix|refactor|docs|chore|test|perf|build|ci)(\([a-z0-9._/-]+\))?: \S.*$/;
+
+export function teamHeader(header) {
+  const match = String(header || "").trim().match(PREFIXED);
+  const type = match && TEAM_TYPE_OF[match[1].toLowerCase()];
+  return type && match[2].trim() ? `${type}: ${match[2].trim()}` : null;
+}
+
+export function checkCommitHeader(header, convention = "agrimap") {
+  const value = String(header || "").trim();
+  if (GIT_GENERATED.test(value)) return { ok: true, generated: true };
+  if (TEAM_HEADER.test(value) && value.length <= TEAM_HEADER_MAX) return { ok: true };
+  if (convention === "conventional" && HEADER.test(value) && value.length <= 72 && !/[^\x20-\x7e]/.test(value)) return { ok: true };
+  const suggestion = teamHeader(value);
+  return { ok: false, suggestion: suggestion && suggestion.length <= TEAM_HEADER_MAX ? suggestion : null };
+}
 const SLUG = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 const toSlash = value => String(value || "").replaceAll("\\", "/");
 // Append-only audit written after a delivery (delivered/completed/integrated,
@@ -340,11 +364,17 @@ function lines(value) {
   return String(value || "").split(/\r?\n/).map(line => line.trim()).filter(Boolean);
 }
 
-function commitMessage({ input, workType, objective, own, executionId, verificationTrailer, bodyFallback = [] }) {
-  const type = input?.type || TYPE_BY_WORK[workType] || "ci";
+function commitMessage({ input, workType, objective, own, executionId, verificationTrailer, bodyFallback = [], convention = "agrimap" }) {
+  let subject = String(input?.subject || objective || "").trim();
+  let type = input?.type ? String(input.type).trim() : null;
+  // A subject that already carries a prefix ("feat(x): ...") supplies the type once.
+  const embedded = subject.match(PREFIXED);
+  if (embedded && TEAM_TYPE_OF[embedded[1].toLowerCase()] && embedded[2].trim()) { type ||= embedded[1]; subject = embedded[2].trim(); }
+  type ||= TYPE_BY_WORK[workType] || "ci";
   let scope = input?.scope;
-  // The team style carries no scope; only legacy Conventional input derives one.
-  if (scope === undefined && !TEAM_HEADER.test(`${type}: x`)) {
+  // The team style carries no scope; only a "conventional" policy derives one.
+  if (convention !== "conventional") { type = TEAM_TYPE_OF[type.toLowerCase()] || type; scope = null; }
+  else if (scope === undefined && !TEAM_HEADER.test(`${type}: x`)) {
     const counts = {};
     for (const entry of own) {
       const top = entry.path.includes("/") ? entry.path.split("/")[0] : null;
@@ -352,7 +382,6 @@ function commitMessage({ input, workType, objective, own, executionId, verificat
     }
     scope = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]?.toLowerCase().replace(/[^a-z0-9._/-]+/g, "-") || null;
   }
-  const subject = String(input?.subject || objective || "").trim();
   const header = `${type}${scope ? `(${scope})` : ""}: ${subject}`;
   const body = (Array.isArray(input?.body) && input.body.length ? input.body : bodyFallback).slice(0, 5).map(item => `- ${String(item).replace(/^-\s*/, "")}`);
   const trailers = [`AGM-Execution: ${executionId}`, ...(verificationTrailer ? [`AGM-Verification: ${verificationTrailer}`] : [])];
@@ -463,11 +492,10 @@ export async function planDelivery({
   const verification = active.verificationStatus;
   const verified = ["passed", "not-applicable"].includes(verification);
   if (!verified) warnings.push(warning("DELIVERED_UNVERIFIED", active.executionId, "run the tests, fix them, deliver again; merge is not offered until verification passes"));
-  const message = commitMessage({ input, workType: active.workType || workTypeOf(policy, branch), objective: active.objective, own: groups.own, executionId: active.executionId, verificationTrailer: verified ? null : verification === "failed" ? "failed" : "not-run", bodyFallback });
-  if (!pushOnly && groups.own.length) {
-    const team = TEAM_HEADER.test(message.header) && message.header.length <= TEAM_HEADER_MAX;
-    const legacy = HEADER.test(message.header) && message.header.length <= 72 && !/[^\x20-\x7e]/.test(message.header);
-    if (!team && !legacy) return stop("MESSAGE_INVALID", `Header must be "<feature|fix|comment|ci|bump|audit>: <plain description>" (at most ${TEAM_HEADER_MAX} characters): ${message.header}`, { next: { action: "run", command: "deliver plan --input message.json" } });
+  const convention = policy?.delivery?.commitConvention || "agrimap";
+  const message = commitMessage({ input, workType: active.workType || workTypeOf(policy, branch), objective: active.objective, own: groups.own, executionId: active.executionId, verificationTrailer: verified ? null : verification === "failed" ? "failed" : "not-run", bodyFallback, convention });
+  if (!pushOnly && groups.own.length && !checkCommitHeader(message.header, convention).ok) {
+    return stop("MESSAGE_INVALID", `Header must be "<feature|fix|comment|ci|bump|audit>: <plain description>" (at most ${TEAM_HEADER_MAX} characters): ${message.header}`, { next: { action: "run", command: "deliver plan --input message.json" } });
   }
   const head = facts.head;
   const headMessage = head ? out(git(run, root, ["log", "-1", "--format=%B", head])) : "";
@@ -995,5 +1023,204 @@ export async function applyIntegration(options) {
     ok: true, intent: "integrate", method: "local-merge", source: plan.source, target: plan.target, mergeSha: result.mergeSha, sourceSha: result.sourceSha,
     remoteVerified: result.remoteVerified, backMerge: plan.backMerge, warnings: [...warnings, ...result.warnings],
     next: plan.backMerge.length ? { action: "run", command: `integrate plan --intent integrate --target ${plan.backMerge[0]} --confirm-target` } : { action: "report" },
+  };
+}
+
+// ------------------------------------------------------ release gather (M)
+// agm-release merges finished work branches into the local integration branch
+// before it prepares a version (release-steps.md M, 4.9.6). Merges stay local:
+// the release D stage pushes develop once. Never rebase, squash, stash or force.
+
+const DEFAULT_WORK_PREFIXES = ["feature/", "fix/", "hotfix/", "refactor/", "docs/", "chore/"];
+
+function trailerValue(message, key) {
+  const match = String(message || "").match(new RegExp(`^${key}:\\s*(.+)$`, "m"));
+  return match ? match[1].trim() : null;
+}
+
+// Newest delivery commit (AGM-Execution) on base..tip and how many product
+// commits follow it; carried audit committed afterwards (.agrimap-agent only) does not count.
+function lastDelivery(run, root, base, tip) {
+  const log = git(run, root, ["log", "--no-merges", "-n", "50", "--format=%H%x00%B%x1e", `${base}..${tip}`]).stdout || "";
+  const commits = log.split("\x1e").map(item => item.trim()).filter(Boolean).map(item => ({ sha: item.split("\0")[0], body: item.split("\0").slice(1).join("\n") }));
+  const index = commits.findIndex(item => trailerValue(item.body, "AGM-Execution"));
+  if (index < 0) return { delivered: false, after: commits.length };
+  const auditOnly = sha => lines(git(run, root, ["diff-tree", "--no-commit-id", "--name-only", "-r", sha]).stdout).every(file => file.startsWith(".agrimap-agent/"));
+  const after = commits.slice(0, index).filter(item => !auditOnly(item.sha)).length;
+  return { delivered: true, after, verification: trailerValue(commits[index].body, "AGM-Verification") || "passed" };
+}
+
+// Conflict preview without touching the worktree (git >= 2.38); null = unknown.
+function mergePreview(run, root, into, tip) {
+  const result = git(run, root, ["merge-tree", "--write-tree", "--name-only", "--no-messages", into, tip]);
+  if (result.ok) return { conflict: false, paths: [] };
+  if (result.status === 1) return { conflict: true, paths: lines(result.stdout).slice(1) };
+  return { conflict: null, paths: [] };
+}
+
+export async function pendingWork({ root, policy = null, target = null, run = defaultRun, fetch = true } = {}) {
+  const integration = target || policy?.branching?.integrationBranch || "develop";
+  const warnings = [];
+  if (fetch && git(run, root, ["remote", "get-url", "origin"]).ok && !git(run, root, ["fetch", "--prune", "origin"]).ok) warnings.push(warning("OFFLINE_FETCH_FAILED", "origin", "gather uses the last fetched refs"));
+  const remoteRef = `origin/${integration}`;
+  const hasRemote = refExists(run, root, `refs/remotes/${remoteRef}`);
+  const hasLocal = refExists(run, root, `refs/heads/${integration}`);
+  if (!hasRemote && !hasLocal) return stop("TARGET_MISSING", `${integration} does not exist locally or on origin.`);
+  if (hasLocal && hasRemote && !isAncestor(run, root, remoteRef, integration) && !isAncestor(run, root, integration, remoteRef)) {
+    return stop("TARGET_DIVERGED", `Local ${integration} and ${remoteRef} diverged; diagnose before gathering (AGENTS.release.md §6.2).`);
+  }
+  // Local develop may already hold unpushed merges from an earlier gather.
+  const base = hasLocal && (!hasRemote || isAncestor(run, root, remoteRef, integration)) ? integration : remoteRef;
+  const prefixes = [...new Set(Object.values(policy?.branching?.workTypes || {}).map(value => value?.prefix).filter(Boolean))];
+  const workPrefixes = prefixes.length ? prefixes : DEFAULT_WORK_PREFIXES;
+  const byName = new Map();
+  for (const line of lines(git(run, root, ["for-each-ref", "--format=%(refname)%09%(objectname)", "refs/heads", "refs/remotes/origin"]).stdout)) {
+    const [ref, sha] = line.split("\t");
+    const local = ref.startsWith("refs/heads/");
+    const name = local ? ref.slice("refs/heads/".length) : ref.slice("refs/remotes/origin/".length);
+    if (name === "HEAD" || !workPrefixes.some(prefix => name.startsWith(prefix))) continue;
+    const entry = byName.get(name) || { name, local: null, remote: null };
+    entry[local ? "local" : "remote"] = sha;
+    byName.set(name, entry);
+  }
+  const current = out(git(run, root, ["branch", "--show-current"]));
+  const branches = [];
+  let merged = 0;
+  for (const entry of [...byName.values()].sort((a, b) => a.name.localeCompare(b.name))) {
+    let ref = entry.local ? entry.name : `origin/${entry.name}`;
+    let sha = entry.local || entry.remote;
+    let status = null;
+    const reasons = [];
+    if (entry.local && entry.remote && entry.local !== entry.remote) {
+      if (isAncestor(run, root, entry.local, entry.remote)) { ref = `origin/${entry.name}`; sha = entry.remote; }
+      else if (isAncestor(run, root, entry.remote, entry.local)) reasons.push("มี commit ในเครื่องที่ยังไม่ push");
+      else { status = "manual"; reasons.push(`local กับ origin/${entry.name} แยกกัน`); }
+    }
+    if (isAncestor(run, root, sha, base)) { merged += 1; continue; }
+    const delivery = lastDelivery(run, root, base, sha);
+    if (!status && !delivery.delivered) { status = "manual"; reasons.push("ไม่ได้ส่งผ่าน deliver (ไม่มี AGM-Execution)"); }
+    if (!status && delivery.after) { status = "manual"; reasons.push(`มี ${delivery.after} commit หลังส่งงานล่าสุด`); }
+    if (!status && delivery.verification !== "passed") { status = "unverified"; reasons.push(`AGM-Verification: ${delivery.verification}`); }
+    const preview = mergePreview(run, root, base, sha);
+    if (preview.conflict) reasons.push(`ชนกับ ${integration} ${preview.paths.length} ไฟล์`);
+    branches.push({
+      name: entry.name, ref, sha, status: status || "ready", current: entry.name === current,
+      ahead: Number(out(git(run, root, ["rev-list", "--count", `${base}..${sha}`]))) || 0,
+      conflict: preview.conflict, conflictPaths: preview.paths.slice(0, 20),
+      lastCommit: out(git(run, root, ["log", "-1", "--format=%cI", sha])),
+      subjects: lines(git(run, root, ["log", "--no-merges", "-n", "3", "--format=%s", `${base}..${sha}`]).stdout),
+      reasons,
+    });
+  }
+  const count = predicate => branches.filter(predicate).length;
+  return {
+    ok: true, target: integration, base, baseSha: out(git(run, root, ["rev-parse", base])), current, branches, warnings,
+    counts: { ready: count(item => item.status === "ready" && item.conflict !== true), unverified: count(item => item.status === "unverified"), manual: count(item => item.status === "manual"), conflict: count(item => item.conflict === true), merged },
+  };
+}
+
+const gatherSummary = item => ({ name: item.name, ref: item.ref, sha: item.sha, status: item.status, ahead: item.ahead, conflict: item.conflict, reasons: item.reasons, subjects: item.subjects });
+
+export async function planGather({ root, policy = null, target = null, mode = null, include = [], exclude = [], run = defaultRun, fetch = true } = {}) {
+  if (mode && !["ready", "all", "none"].includes(mode)) return stop("MODE_INVALID", "--mode must be ready|all|none.");
+  const pending = await pendingWork({ root, policy, target, run, fetch });
+  if (!pending.ok) return pending;
+  const { target: integration, current } = pending;
+  const dirty = dirtyInventory(root, { run }).filter(entry => !entry.path.startsWith(".agrimap-agent/")).map(entry => entry.path);
+  if (dirty.length) {
+    const onTarget = current === integration;
+    return stop(onTarget ? "DIRTY_TARGET" : "DELIVER_FIRST", onTarget
+      ? `${integration} has uncommitted work; commit it as the release content commit (AGENTS.release.md §6.3), then gather.`
+      : `${current || "HEAD"} has uncommitted changes; deliver them first, then gather.`, {
+      paths: dirty.slice(0, 50), next: { action: "run", command: onTarget ? "content commit per AGENTS.release.md §6.3, then integrate gather plan" : "deliver plan, deliver apply, then integrate gather plan" },
+    });
+  }
+  const unknown = [...include, ...exclude].filter(name => !pending.branches.some(item => item.name === name));
+  if (unknown.length) return stop("BRANCH_NOT_PENDING", `Not an unmerged work branch: ${unknown.join(", ")}.`, { pending: pending.branches.map(gatherSummary) });
+  const skip = new Set(exclude);
+  const candidates = pending.branches.filter(item => !skip.has(item.name));
+  const mergeable = candidates.filter(item => item.conflict !== true);
+  const blocked = candidates.filter(item => item.conflict === true);
+  const ready = mergeable.filter(item => item.status === "ready");
+  const undecided = mergeable.filter(item => item.status !== "ready");
+  const warnings = [...pending.warnings, ...blocked.map(item => warning("GATHER_CONFLICT", item.name, `integrate plan --intent update-branch --branch ${item.name}, resolve ${item.conflictPaths.slice(0, 3).join(", ")}, deliver, then gather again`))];
+  if (!include.length && !mode && undecided.length) {
+    return {
+      ok: true, target: integration, counts: pending.counts, ready: ready.map(gatherSummary), undecided: undecided.map(gatherSummary), blocked: blocked.map(gatherSummary), warnings, planHash: null, next: { action: "ask" },
+      card: {
+        kind: "integration", topic: "git/release-gather", risk: "R2", confidence: "high",
+        question: `มี ${undecided.length} branch ที่ยังไม่พร้อมรวมอัตโนมัติ จะรวมเข้า ${integration} ใน release นี้ไหม`,
+        impact: `branch ที่รวมจะไปกับ release นี้; ที่พร้อมแล้ว ${ready.length} branch รวมให้อยู่แล้ว`,
+        checked: [...undecided, ...blocked].slice(0, 5).map(item => `${item.name}: ${item.reasons.join(", ")}`),
+        options: [
+          { id: "1", label: `รวมเฉพาะที่พร้อม (${ready.length})`, effect: "integrate gather plan --mode ready", value: "ready" },
+          { id: "2", label: `รวมทั้งหมดที่ไม่ชน (${mergeable.length})`, effect: "integrate gather plan --mode all", value: "all" },
+          { id: "3", label: "ไม่รวม branch ใดเลย", effect: `release เฉพาะงานที่อยู่ใน ${integration} แล้ว`, value: "none" },
+        ],
+        recommended: "1", recommendedReason: "รวมเฉพาะงานที่ส่งผ่าน deliver และ test ผ่าน", blocking: true, default: null, recordAs: "none", paths: [], expiresHours: 24,
+      },
+    };
+  }
+  const named = new Set(include);
+  const selected = include.length ? mergeable.filter(item => named.has(item.name)) : mode === "none" ? [] : mode === "all" ? mergeable : ready;
+  const merges = selected.map(item => ({ name: item.name, ref: item.ref, sha: item.sha }));
+  const planHash = planHashOf({ integration, baseSha: pending.baseSha, current, merges: merges.map(item => [item.name, item.sha]) });
+  return {
+    ok: true, target: integration, base: pending.base, baseSha: pending.baseSha, current, counts: pending.counts,
+    selected: selected.map(gatherSummary), skipped: pending.branches.filter(item => !selected.includes(item)).map(gatherSummary),
+    merges, warnings, card: null, planHash,
+    next: selected.length ? { action: "run", command: `integrate gather apply --plan-hash ${planHash}${mode ? ` --mode ${mode}` : ""}` } : { action: "report", command: `nothing to gather into ${integration}; continue the release` },
+  };
+}
+
+// Merge commits are built with merge-tree/commit-tree like the local-merge
+// integration, so gathering never switches branches in the worktree. Local
+// develop moves by update-ref, or by --ff-only when it is checked out here.
+export async function applyGather(options) {
+  const run = options.run || defaultRun;
+  const { root } = options;
+  const plan = await planGather({ ...options, run, fetch: false });
+  if (!plan.ok) return plan;
+  if (plan.card) return { ...plan, ok: false, code: "CARD_PENDING", message: "Answer the card first." };
+  if (plan.planHash !== options.planHash) return stop("PLAN_STALE", "Branches changed since the plan; run integrate gather plan again.", { next: { action: "run", command: "integrate gather plan" } });
+  if (!plan.merges.length) return { ok: true, target: plan.target, merged: [], head: plan.baseSha, pushed: false, skipped: plan.skipped, warnings: plan.warnings, next: plan.next };
+  const here = plan.current === plan.target;
+  const elsewhere = !here && out(git(run, root, ["worktree", "list", "--porcelain"])).split(/\r?\n/).includes(`branch refs/heads/${plan.target}`);
+  if (elsewhere) return stop("TARGET_CHECKED_OUT", `${plan.target} is checked out in another worktree; gather there or free it first.`);
+  const signing = out(git(run, root, ["config", "--get", "commit.gpgsign"])) === "true" ? ["-S"] : [];
+  const merged = [];
+  let tip = plan.baseSha;
+  for (const item of plan.merges) {
+    const tree = git(run, root, ["merge-tree", "--write-tree", "--no-messages", tip, item.sha]);
+    if (!tree.ok) {
+      if (tree.status !== 1) return stop("GIT_MERGE_TREE_UNSUPPORTED", "integrate gather needs git 2.38+ (merge-tree --write-tree).", { stderr: trimStderr(tree.stderr) });
+      const conflicts = lines(git(run, root, ["merge-tree", "--write-tree", "--name-only", "--no-messages", tip, item.sha]).stdout).slice(1);
+      return stop("MERGE_CONFLICT", `${item.name} conflicts with the branches gathered before it; nothing was changed.`, {
+        merged: [], conflicts, next: { action: "ask" },
+        card: {
+          kind: "integration", topic: "git/release-gather-conflict", risk: "R2", confidence: "high",
+          question: `${item.name} ชนกับงานที่รวมก่อนหน้า ${conflicts.length} ไฟล์`,
+          impact: `ยังไม่ได้แตะ ${plan.target}`,
+          checked: conflicts.slice(0, 5),
+          options: [
+            { id: "1", label: "ข้าม branch นี้แล้ว release ต่อ", effect: `integrate gather plan --exclude ${item.name}`, value: "exclude" },
+            { id: "2", label: "หยุด release แก้ conflict ก่อน", effect: `integrate plan --intent update-branch --branch ${item.name}`, value: "resolve" },
+          ],
+          recommended: "1", recommendedReason: "งานอื่นไปต่อได้ branch นี้ตามไปรอบหน้าหลังแก้ conflict", blocking: true, default: null, recordAs: "none", paths: conflicts, expiresHours: 24,
+        },
+      });
+    }
+    const label = item.ref.startsWith("origin/") ? `remote-tracking branch '${item.ref}'` : `branch '${item.ref}'`;
+    const created = git(run, root, ["commit-tree", ...signing, tree.stdout.split(/\r?\n/)[0].trim(), "-p", tip, "-p", item.sha, "-m", `Merge ${label} into ${plan.target}`]);
+    if (!created.ok) return stop("MERGE_COMMIT_FAILED", "git commit-tree failed; nothing was changed.", { stderr: trimStderr(created.stderr) });
+    tip = created.stdout.trim();
+    merged.push({ name: item.name, sha: item.sha, mergeSha: tip });
+  }
+  const localSha = refExists(run, root, `refs/heads/${plan.target}`) ? out(git(run, root, ["rev-parse", plan.target])) : "0".repeat(40);
+  const moved = here ? git(run, root, ["merge", "--ff-only", tip]) : git(run, root, ["update-ref", `refs/heads/${plan.target}`, tip, localSha]);
+  if (!moved.ok) return stop("GATHER_FAILED", `Could not move ${plan.target} to the gathered merges; nothing was changed.`, { stderr: trimStderr(moved.stderr) });
+  return {
+    ok: true, target: plan.target, merged, head: tip, pushed: false, skipped: plan.skipped, warnings: plan.warnings,
+    next: { action: "run-verification", command: `verify ${plan.target}, then continue the release; D pushes ${plan.target} once` },
   };
 }

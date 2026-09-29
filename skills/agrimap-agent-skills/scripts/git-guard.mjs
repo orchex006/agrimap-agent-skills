@@ -1,13 +1,16 @@
 #!/usr/bin/env node
-// Pre-tool guard for git commands the agent types itself (ACG C8 §11.2).
+// Pre-tool guard for git commands the agent types itself (ACG C8 §11.2; G7 team
+// commit style since 4.9.6).
 // Package scripts call git through execFileSync and are never seen here.
 // Fail-open: any parse error or exception allows the command and writes one
 // stderr line. governance.guards:false makes the hook a no-op.
 import { execFileSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseCliArgs } from "./cli-args.mjs";
+import { checkCommitHeader } from "./git-flow.mjs";
 import { DEFAULT_PROTECTED, isProtected, loadPolicy } from "./workflow-policy.mjs";
 import { safeSession } from "./session-state.mjs";
 
@@ -80,11 +83,43 @@ export function gitInvocation(segment) {
   return { sub: tokens[index], args: tokens.slice(index + 1), cwd: cwdIndex >= 0 ? globals[cwdIndex + 1] : null };
 }
 
+// Heredoc ($(cat <<'EOF' ... EOF)) and PowerShell here-string (@'...'@) bodies.
+function unwrapMessage(value) {
+  const text = String(value);
+  const heredoc = text.match(/^\$\(\s*cat\s+<<-?\s*(['"]?)([A-Za-z_]\w*)\1[ \t]*\r?\n([\s\S]*?)\r?\n[ \t]*\2[ \t]*(?:\r?\n)?\s*\)\s*$/);
+  if (heredoc) return heredoc[3];
+  const here = text.match(/^@\r?\n([\s\S]*?)\r?\n@$/);
+  return here ? here[1] : text;
+}
+
+// Message of `git commit -m/--message/-F/--file`; null when unknown (editor, stdin, reuse).
+export function commitMessageOf(args, readMessageFile = null) {
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--") break;
+    let value;
+    let file = false;
+    if (arg === "-m" || arg === "--message") value = args[index + 1];
+    else if (arg.startsWith("--message=")) value = arg.slice("--message=".length);
+    else if (arg === "-F" || arg === "--file") { value = args[index + 1]; file = true; }
+    else if (arg.startsWith("--file=")) { value = arg.slice("--file=".length); file = true; }
+    else if (/^-[A-Za-z]+$/.test(arg) && /[mF]$/.test(arg)) { value = args[index + 1]; file = arg.endsWith("F"); }
+    else if (/^-m./.test(arg)) value = arg.slice(2);
+    else continue;
+    if (value === undefined) return null;
+    if (!file) return unwrapMessage(value);
+    if (value === "-" || !readMessageFile) return null;
+    try { return readMessageFile(value); } catch { return null; }
+  }
+  return null;
+}
+
 const shortFlags = (args, letter) => args.some(arg => /^-[A-Za-z]+$/.test(arg) && arg.includes(letter));
 const stripRef = value => String(value || "").replace(/^\+/, "").replace(/^refs\/heads\//, "");
 const isTag = value => /^refs\/tags\//.test(value) || /^v?\d+\.\d+(?:\.\d+)?/.test(value);
 
-// Pure rule evaluation. context: { protectedList, currentBranch, release }.
+// Pure rule evaluation. context: { protectedList, currentBranch, release,
+// commitConvention ("agrimap"|"conventional"|null), readMessageFile }.
 export function evaluate(invocation, context) {
   const { sub, args } = invocation;
   const policy = { branching: { protected: context.protectedList || DEFAULT_PROTECTED } };
@@ -130,6 +165,15 @@ export function evaluate(invocation, context) {
   }
   if (sub === "tag" && (args.includes("--delete") || shortFlags(args, "d"))) return { decision: DENY, rule: "G5", reason: "deleting a tag" };
   if (sub === "stash" && !["list", "show"].includes(args[0])) return { decision: ASK, rule: "G6", reason: "stash hides the requester's work" };
+  if (sub === "commit" && context.commitConvention) {
+    const message = commitMessageOf(args, context.readMessageFile ? file => context.readMessageFile(file, invocation.cwd) : null);
+    const header = message === null ? "" : message.split(/\r?\n/).map(line => line.trim()).find(Boolean) || "";
+    // Unresolved shell expansion or an unknown message fails open.
+    if (!header || header.includes("$")) return null;
+    const check = checkCommitHeader(header, context.commitConvention);
+    if (check.ok) return null;
+    return { decision: DENY, rule: "G7", reason: `commit header "${header.slice(0, 80)}" is not the team style "<feature|fix|comment|bump|audit|ci>: <plain description>" of AGENTS.md §10.6${check.suggestion ? `; use "${check.suggestion}"` : ""}` };
+  }
   return null;
 }
 
@@ -139,6 +183,14 @@ function git(cwd, args) {
 
 async function readJson(file) {
   try { return JSON.parse(await readFile(file, "utf8")); } catch { return null; }
+}
+
+// G7 applies in AgriMap repositories: a workflow policy, .agrimap-agent state or the bootstrap marker.
+async function commitConventionFor(root, loaded) {
+  if (!root) return null;
+  if (loaded?.validation?.ok) return loaded.policy.delivery?.commitConvention || "agrimap";
+  if (await stat(path.join(root, ".agrimap-agent")).then(() => true, () => false)) return "agrimap";
+  return /AGRIMAP BOOTSTRAP VERSION/.test(await readFile(path.join(root, "AGENTS.md"), "utf8").catch(() => "")) ? "agrimap" : null;
 }
 
 export async function guardCommand(command, { cwd, session = null } = {}) {
@@ -153,6 +205,8 @@ export async function guardCommand(command, { cwd, session = null } = {}) {
     protectedList: loaded?.validation?.ok ? loaded.policy.branching?.protected || DEFAULT_PROTECTED : DEFAULT_PROTECTED,
     currentBranch: root ? git(root, ["branch", "--show-current"]) : null,
     release: active?.operation === "release",
+    commitConvention: await commitConventionFor(root, loaded),
+    readMessageFile: (file, gitCwd) => readFileSync(path.resolve(cwd, gitCwd || ".", file), "utf8"),
   };
   let result = null;
   for (const segment of splitCommands(command)) {

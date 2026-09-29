@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Claude Stop hook (ACG C8 §11.3): blocks the end of a turn once per execution
-// when verified work is not delivered although the confirmed workflow policy
-// commits on completion. stop_hook_active or a written marker never block
+// when verified work (passed or failed: failed tests still deliver with
+// AGM-Verification, AGENTS.md §10.3) is not delivered although the confirmed
+// workflow policy commits on completion. stop_hook_active or a written marker never block
 // again, so it cannot loop. Fail-open; governance.guards:false is a no-op.
 import { execFileSync } from "node:child_process";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
@@ -10,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { loadPolicy } from "./workflow-policy.mjs";
 import { safeSession } from "./session-state.mjs";
 
-export const REMINDER_REASON = "AGM: work is verified but not delivered. Run deliver plan/apply per workflow policy, or tell the user why delivery is skipped.";
+export const REMINDER_REASON = "AGM: work is verified but not delivered. Run deliver plan/apply per workflow policy (failed tests still deliver with AGM-Verification), or tell the user why delivery is skipped.";
 
 async function readJson(file) {
   try { return JSON.parse(await readFile(file, "utf8")); } catch { return null; }
@@ -58,7 +59,7 @@ export async function reminderFor(input) {
   const loaded = await loadPolicy(root);
   if (loaded.policy?.status !== "confirmed" || loaded.policy?.delivery?.commitOnComplete !== true) return null;
   const events = await executionEvents(state, active.executionId);
-  const verified = events.some(event => event.event === "verified" && (event.verification_status || event.verificationStatus || "passed") === "passed");
+  const verified = events.some(event => event.event === "verified");
   if (!verified || events.some(event => event.event === "delivered")) return null;
   if (!ownDirty(root, active.preexistingDirty).length) return null;
   await mkdir(path.dirname(marker), { recursive: true });
