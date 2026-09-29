@@ -2,6 +2,18 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.9.6 — 2026-09-29
+
+Team commit style is enforced, and releases gather finished work branches into develop.
+
+- Commit style: `deliver` normalizes Conventional types in explicit input or in the subject (`feat(x):` → `feature:`, `docs:`/`refactor:`/`test:` → `comment:`, `chore:`/`build:` → `ci:`) and drops the scope; English Conventional headers pass only with policy `delivery.commitConvention: "conventional"`. `checkCommitHeader`/`teamHeader` in `git-flow.mjs` are the single check.
+- Claude guard G7 (`git-guard.mjs`): in an AgriMap repository (workflow policy, `.agrimap-agent/` or the bootstrap marker) a `git commit -m/--message/-F` whose header is not `feature|fix|comment|bump|audit|ci: …` is denied with the header to use. Heredoc (`$(cat <<'EOF' …)`) and PowerShell here-string messages are read; Git-written merge/revert headers, editor, stdin and unresolved `$VAR` messages fail open.
+- Bootstrap `AGENTS.md` §10.6 says the style is mandatory for every Agent commit (deliver, release, direct commit), bans `feat(x):`/`docs:`/`chore:`, and splits work of different types into separate commits. The core file stays within the 24,000-character diet.
+- Release gather (M): `integrate pending` lists work branches not yet in develop as ready (delivered with AGM-Execution, tests passed), unverified, manual (no delivery trailer or product commits after it) or conflicting (`merge-tree` preview). `integrate gather plan|apply` builds Git merge commits into local develop without switching the worktree or pushing; ready branches merge without a question, unverified/manual need one card, conflicting branches are reported with their fix and never merged. Audit-only commits after a delivery keep a branch ready.
+- `AGENTS.release.md` §6.4 and `release-steps.md`: prepare and release run M after the pending-work gate and before indexing/preparation; pipeline with a prepared candidate only checks pending work and asks once to re-prepare at the same version or leave new branches for the next release; promote gathers after T for the next round. The merges ship with the single D (or F) develop push. §6.3 names the content commit types and the `audit:` final commit. Post-delivery `.agrimap-agent` logs that block a switch to develop are committed on the work branch as `audit:`.
+- Stop reminder: failed verification also triggers the one-time delivery reminder, because failed work still delivers to the work branch with `AGM-Verification: failed` (AGENTS.md §10.3).
+- Package repository: `DEVELOPMENT.md` documents the same commit style, and package CI checks the non-merge commits of every PR (`tools/check-commit-style.mjs`, checkout with full history).
+
 ## 4.9.5 — 2026-09-28
 
 Skill routing: the Agent picks the right skill without being told, in every repository and at the multi-repository workspace root.
