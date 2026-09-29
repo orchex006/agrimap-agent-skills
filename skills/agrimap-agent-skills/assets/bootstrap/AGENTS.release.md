@@ -1,6 +1,6 @@
 # กติกา Release, Version, Changelog และ Deployment
 
-<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.9 -->
+<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.10 -->
 
 ไฟล์นี้ใช้ร่วมกับ `AGENTS.md` (core) ของ repository เดียวกัน: เก็บ §2 Intent routing ฉบับเต็มและ §4–§8 โดยคงเลข § เดิม เพื่อให้การอ้างอิงข้ามไฟล์ไม่เปลี่ยน §1, §3, §9 และ §10 อยู่ใน `AGENTS.md` และยังบังคับใช้กับงาน release ทุกงาน
 
@@ -378,15 +378,16 @@ Owner decision 2026-09-29 (4.9.8): release ต้องจบในการส�
 
   ```markdown
   # <ชื่อ project> / <Production version>
-
   - เพิ่ม...
   - แก้...
   - ปรับขั้นตอนเข้าสู่ระบบ... (เกี่ยวข้อง: agmws-identity-netcore)
   ```
 
+- รูปแบบตายตัว: บรรทัดแรก `# <project> / <version>` แล้วตามด้วย `- ` bullet ทันที ไม่มีบรรทัดว่าง หัวข้อย่อย ตาราง ตัวหนา หรือข้อความนำ/ปิดท้าย
+
 - ครอบคลุมทุกจุดที่เปลี่ยนใน version นั้นจาก release notes/diff ที่ตรวจแล้ว หนึ่งข้อต่อหนึ่งเรื่องที่ผู้ใช้สังเกตได้ รวมเรื่องเล็กที่เกี่ยวกันเป็นข้อเดียว ไม่ใส่ bump/audit/ci
 - ข้อที่ต้องแก้หรือกระทบ project อื่น (generated API client `agmws-*`, package `@agrimap/*`, NuGet `AgriMap.*`, endpoint ของ service อื่น หรือ project ที่ต้องตามไปแก้/deploy คู่กัน) ปิดท้ายข้อด้วย `(เกี่ยวข้อง: <project>, <project>)` ใช้ชื่อ repo จริง โดยอธิบายผลที่ผู้ใช้เห็น ไม่อธิบายเทคนิค
-- บันทึกที่ `.agrimap-agent/reports/YYYY-MM/<RUN_ID>-release-description.md` (commit ไปกับ `audit:` commit) และแสดงข้อความเต็มในคำตอบสุดท้ายเสมอ รวมกรณี `--silent`
+- บันทึกที่ `.agrimap-agent/reports/YYYY-MM/<RUN_ID>-release-description.md` (commit ไปกับ `audit:` commit) และคำตอบสุดท้ายต้องมีหัวข้อ `description-released` ตามด้วยข้อความเต็มใน code block `markdown` ตามรูปแบบข้างต้นเสมอ ไม่ว่า notify จะ `sent`, `pending` หรือ `skipped (--silent)`; ขาดหัวข้อนี้ถือว่ายังไม่ `completed`
 - ส่งด้วย `node tools/agrimap/release-notify.mjs send --description <file> --environment Production` ซึ่งตรวจ `…/healthz` ก่อน POST ทุกครั้ง URL มาจาก env `NOTIFY_WEBHOOK_URL` (เช่น `https://appserv2.cdg.co.th/agrimap-notify/release-description`)
   - exit 2 (ไม่มี env): ถามครั้งเดียวด้วยเครื่องมือถามคำถามของ host (ไม่ถามเป็นข้อความธรรมดา) ตาม `question` ที่ script ส่งมา ตัวเลือกแรกคือ URL มาตรฐาน แล้วรัน `set-url` บันทึก env ถาวรบนเครื่อง จากนั้นส่งต่อใน invocation เดิม
   - exit 3/4 (health หรือ POST ล้มเหลว): release ยังถือว่าสำเร็จ รายงาน notify เป็น `pending` พร้อม HTTP status และคำสั่งส่งซ้ำ ห้าม retry วนหรือส่งซ้ำเมื่อ `sent: true` แล้ว

@@ -2,7 +2,13 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
-## 4.9.9 — 2026-09-29
+## 4.9.10 — 2026-09-29
+
+The Release Description always appears in the final answer in one fixed shape. 4.9.9 was never published; 4.9.10 carries it.
+
+- Release Description output: the final answer of `release production|full` and `promote` always has a `description-released` block in the fixed shape `# <project> / <version>` followed directly by `- ` bullets (no blank line or extra text), whatever the notify outcome (AGENTS.release.md §8.2, release-notify.md, release-steps.md).
+
+## 4.9.9 — 2026-09-29 (not published)
 
 A release only cares about `develop`, `jenkins`, `jenkins-release` and its own work branch; a version mismatch never stops work. 4.9.8 was never published; 4.9.9 carries it.
 
