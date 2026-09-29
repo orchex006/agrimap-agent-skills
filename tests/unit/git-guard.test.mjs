@@ -72,16 +72,18 @@ test('hook: deny output for Claude, empty output on allow, fail-open on parse er
 test('G7 denies commit headers outside the team style in AgriMap repositories (4.9.6)',async t=>{
   const g7={...ctx,commitConvention:'agrimap'};
   for(const command of ['git commit -m "feat(x): add y"','git commit -am "docs: z"',"git commit -m \"$(cat <<'EOF'\nchore: bump\n\nbody\nEOF\n)\"","git commit -m @'\nrefactor: tidy\n'@",'git commit -m "wip"']) assert.deepEqual([rule(command,g7),verdict(command,g7).decision],['G7','deny'],command);
-  assert.match(verdict('git commit -m "feat(x): add y"',g7).reason,/use "feature: add y"/);
-  for(const command of ['git commit -m "feature: เพิ่มรับ User หลายช่องทาง"','git commit -m "bump: Production 1.4.2" -m "body"',"git commit -m \"$(cat <<'EOF'\nfix: แก้\nEOF\n)\"",'git commit --amend --no-edit','git commit','git commit -m "$MSG"','git commit -F -',"git commit -m \"Merge branch 'feature/x' into develop\""]) assert.equal(verdict(command,g7),null,command);
+  assert.match(verdict('git commit -m "feat(x): เพิ่มปุ่มส่งออก"',g7).reason,/use "feature: เพิ่มปุ่มส่งออก"/);
+  for(const command of ['git commit -m "feature: เพิ่มรับ User หลายช่องทาง"','git commit -m "bump: ขึ้นเวอร์ชัน Production 1.4.2" -m "body"',"git commit -m \"$(cat <<'EOF'\nfix: แก้\nEOF\n)\"",'git commit --amend --no-edit','git commit','git commit -m "$MSG"','git commit -F -',"git commit -m \"Merge branch 'feature/x' into develop\""]) assert.equal(verdict(command,g7),null,command);
   assert.equal(verdict('git commit -m "feat(x): y"',{...g7,commitConvention:'conventional'}),null,'policy opt-out');
   assert.equal(verdict('git commit -m "wip"'),null,'not an AgriMap repository');
+  for(const command of ['git commit -m "fix: resolve Windows short paths"','git commit -m "bump: 4.9.8"'])assert.match(verdict(command,g7).reason,/Thai description/,command);
+  assert.equal(verdict('git commit -m "fix: resolve paths"',{...g7,commitLanguage:'en'}),null,'policy commitLanguage en');
   const h=await createHarness('agm-guard7-');t.after(()=>h.cleanup());
   const {repo}=await createGitFixture(h,{name:'svc'});
   assert.equal(await guardCommand('git commit -m "wip"',{cwd:repo}),null,'plain repository');
   await mkdir(path.join(repo,'.agrimap-agent'),{recursive:true});
   await writeFile(path.join(repo,'msg.txt'),'docs: x\n\nbody\n');
   assert.equal((await guardCommand('git commit -F msg.txt',{cwd:repo}))?.rule,'G7');
-  await writeFile(path.join(repo,'msg.txt'),'comment: x\n');
+  await writeFile(path.join(repo,'msg.txt'),'comment: ปรับข้อความ\n');
   assert.equal(await guardCommand('git commit -F msg.txt',{cwd:repo}),null);
 });

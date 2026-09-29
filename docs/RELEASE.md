@@ -17,7 +17,7 @@
 | `prepare production` | เตรียมและ verify candidate Production, release.md และ versioned notes | เลขที่ระบุ หรือ PATCH+1; ยังไม่ push/tag |
 | `pipeline inhouse` | ตรวจ candidate ที่เตรียมแล้ว → commit paths ที่ตรวจ → push/verify develop และ jenkins | ไม่ bump ซ้ำ; ไม่มี Production/tag |
 | `pipeline production` | ตรวจ Production candidate → commit → push/verify develop และ jenkins → เตรียมแผน Production | หยุดก่อน jenkins-release และ tag |
-| `promote` | ตรวจ candidate → แสดง SHA/version/branch/tag → ขอยืนยัน → publish/verify Production และ annotated tag | ต้องมี candidate ที่เตรียมแล้วและการยืนยัน concrete plan |
+| `promote` | ตรวจ candidate → แสดง SHA/version/branch/tag → ขอยืนยัน → publish/verify Production และ annotated tag → Release Description/แจ้งเตือน | ต้องมี candidate ที่เตรียมแล้วและการยืนยัน concrete plan |
 | `release full` | indexing → prepare owners แยกกัน → pipeline inhouse/production → ยืนยัน → promote → Release Description/แจ้งเตือน | เลขตามคำขอ หรือ PATCH+1 แยก owner; notes/tag เฉพาะ Production |
 | `release production` | indexing → prepare production → pipeline production → ยืนยัน → promote → Release Description/แจ้งเตือน | Inhouse version คงเดิม แม้ผ่าน branch jenkins |
 | `release inhouse` | indexing → prepare inhouse → pipeline inhouse | เฉพาะ develop/jenkins; ไม่แก้ Production notes/tag |
@@ -36,7 +36,7 @@ Agent ใช้ตัวจับเวลาใน bundle เก็บสถา
 
 **งานค้าง:** `release` และ `pipeline` รวมไฟล์ที่ยังไม่ commit และ commit บน develop ที่ยังไม่ขึ้น remote เข้า release ให้อัตโนมัติ (ตรวจข้อมูลลับก่อนเสมอ) เก็บไว้ local เฉพาะเมื่อสั่งยกเว้น หลัง release Agent commit `audit:` แล้ว push develop หนึ่งครั้งให้ clean โดยไม่ promote ไป jenkins/jenkins-release และไม่แตะ tag
 
-**Release Description:** หลัง `release production` และ `release full` (รวม `--flash`) Agent เขียนสรุปภาษาคนที่ BA copy ส่งลูกค้าได้ทันที และแสดงในคำตอบสุดท้ายทุกครั้ง:
+**Release Description และ tag:** `release production`, `release full` (รวม `--flash`) และ `promote` สร้างและ push annotated tag ทุกครั้ง และส่ง Release Description ทุกครั้งที่ tag ผ่าน รวมกรณีที่หยุดรอยืนยันแล้วจบด้วย `promote` (ตั้งแต่ 4.9.8; bootstrap ที่ใหม่กว่าไม่ขวางขั้นนี้) Agent เขียนสรุปภาษาคนที่ BA copy ส่งลูกค้าได้ทันที และแสดงในคำตอบสุดท้ายทุกครั้ง:
 
 ```markdown
 # AgriMap Platform / 1.4.2
@@ -74,6 +74,8 @@ $agm-release production --flash
 ```
 
 ชื่อย่อ `full --flash`, `inhouse --flash`, `production --flash` เท่ากับ `release full|inhouse|production --flash` ตามลำดับ ใช้กับ `prepare inhouse|production` และ `pipeline inhouse|production` ได้ด้วย (pipeline ไม่สร้าง candidate ที่ยังไม่ได้เตรียม) โหมดไม่มี flag ยังทำงานเหมือนเดิม ไม่รองรับ flag นี้กับ promote/indexing/bootstrap
+
+ตั้งแต่ 4.9.8 `--flash` ใช้ `release preflight` ตรวจทุกอย่างครั้งเดียว ถามรอบเดียว sync branch ที่ไม่ชนเอง และไม่อ่านเอกสาร release ส่วนที่ไม่เกี่ยว เป้าหมายราว 5 นาทีเมื่อไม่มีคำถาม ดู [Usage](USAGE.md#release-preflight)
 
 | ส่วนงาน | --flash |
 | --- | --- |

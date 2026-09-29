@@ -7,7 +7,7 @@ import { defaultRun } from "./run-command.mjs";
 import { acknowledge, instructionChain, readRequired, resolveTargetRoots, scanBelow, worktreeFacts } from "./instruction-chain.mjs";
 import { inferPolicy, initPolicy, loadPolicy, setPolicyValue } from "./workflow-policy.mjs";
 import { recordChoice, renderCard, normalizeOptions, storeCard, validateCard } from "./decision-card.mjs";
-import { applyBranch, applyDelivery, applyGather, applyIntegration, dirtyInventory, integrationOptions, pendingWork, planBranch, planDelivery, planGather, planIntegration, snapshotDirty } from "./git-flow.mjs";
+import { applyBranch, applyDelivery, applyGather, applyIntegration, applyReleaseSync, dirtyInventory, integrationOptions, pendingWork, planBranch, planDelivery, planGather, planIntegration, planReleaseSync, releasePreflight, snapshotDirty } from "./git-flow.mjs";
 import { applyProjectPatch, inferProject, initProject, loadProject, resolveSpecSources, setProjectValue, specStandingCard, verifySpecPath } from "./project-profile.mjs";
 import { applySpecSync, coveredBy, planSpecSync, specCheck, specContext, specSemanticCard } from "./spec-sync.mjs";
 import { addWorkingNote, loadLocalMemory, localPathsForLeakCheck, setLocalPath } from "./local-memory.mjs";
@@ -448,6 +448,41 @@ async function integrateCommand(ctx, sub, args, root) {
   return result;
 }
 
+// ------------------------------------------------------------------ release
+
+// 4.9.8: R preflight (read-only, one question round) and the history-preserving
+// develop sync used at R and again right before the D push (AGENTS.release.md §6.5).
+async function releaseCommand(ctx, sub, args, root) {
+  const gitError = requireGit(ctx, root);
+  if (gitError) return gitError;
+  const state = path.join(root, ".agrimap-agent");
+  const session = safeSession(args.session);
+  const { active } = await activeFor(ctx, state, session);
+  const loaded = await loadPolicy(root);
+  const policy = loaded.validation?.ok ? loaded.policy : null;
+  if (sub === "preflight") {
+    const result = await releasePreflight({ root, policy });
+    const cards = [];
+    for (const card of result.questions || []) cards.push(await storeAndRender(state, session, card, active?.executionId));
+    return cards.length ? { ...result, cards } : result;
+  }
+  if (sub !== "sync") return { ok: false, message: "Use release preflight|sync plan|sync apply." };
+  const options = { root, allow: list(args.allow) };
+  if (args._action === "plan") {
+    const plan = await planReleaseSync(options);
+    return plan.card ? { ...plan, ...(await storeAndRender(state, session, plan.card, active?.executionId)) } : plan;
+  }
+  if (args._action !== "apply") return { ok: false, message: "Use release sync plan|apply." };
+  const result = await applyReleaseSync({ ...options, planHash: text(args["plan-hash"]) });
+  if (result.ok && active && result.merged.length) {
+    await logForActive(ctx, state, active, {
+      event: "integrated", summary: `Synced local develop with ${result.merged.map(item => item.ref).join(", ")}`.slice(0, 240),
+      reason: result.merged.map(item => `${item.ref}@${item.sha.slice(0, 7)} -> ${item.mergeSha.slice(0, 7)} (${item.changed} files)`).join("; ").slice(0, 400),
+    });
+  }
+  return result;
+}
+
 // ------------------------------------------------------------------ project
 
 async function projectCommand(ctx, sub, args, root) {
@@ -610,12 +645,12 @@ async function recallCommand(ctx, sub, args, root) {
   return recall({ root, topic: text(args.topic), paths: list(args.paths), kind: text(args.kind), limit: Number(args.limit) || 5, learning: config?.learning || {} });
 }
 
-export const GOVERNANCE_COMMANDS = Object.freeze(["context", "policy", "decide", "branch", "deliver", "integrate", "project", "local", "spec", "recall"]);
+export const GOVERNANCE_COMMANDS = Object.freeze(["context", "policy", "decide", "branch", "deliver", "integrate", "release", "project", "local", "spec", "recall"]);
 
 export async function runGovernanceCommand(command, sub, args, root, ctx) {
   try {
     if (command === "context") return await contextCommand(ctx, args);
-    const handlers = { policy: policyCommand, decide: decideCommand, branch: branchCommand, deliver: deliverCommand, integrate: integrateCommand, project: projectCommand, local: localCommand, spec: specCommand, recall: recallCommand };
+    const handlers = { policy: policyCommand, decide: decideCommand, branch: branchCommand, deliver: deliverCommand, integrate: integrateCommand, release: releaseCommand, project: projectCommand, local: localCommand, spec: specCommand, recall: recallCommand };
     return await handlers[command](ctx, sub, args, root);
   } catch (error) {
     return { ok: false, code: error.code || "COMMAND_FAILED", message: String(error.message || error) };

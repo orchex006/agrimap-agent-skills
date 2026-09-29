@@ -24,7 +24,7 @@ function bind(h,repo,remote){
   const ack=session=>{const c=cli(['context','--session',session]);return cli(['context','--session',session,'--ack',c.chain.filter(e=>c.readRequired.includes(e.relative)).map(e=>e.sha12).join(',')]);};
   return {repo,remote,git:args=>gitIn(repo,args),cli,ack};
 }
-async function startWork(p,{session='s1',slug='order-export',title='Add order export',type='feature'}={}){
+async function startWork(p,{session='s1',slug='order-export',title='เพิ่มการส่งออกคำสั่งซื้อ',type='feature'}={}){
   p.ack(session);
   const started=p.cli(['start','--operation','execute','--session',session,'--requested-by','Tester','--title',title]);
   assert.equal(started.ok,true,JSON.stringify(started));
@@ -69,7 +69,7 @@ test('dirty base carries files, pre-existing dirt is never delivered, mixed asks
   await writeFile(path.join(p.repo,'notes.md'),'local edit\n');
   await writeFile(path.join(p.repo,'shared.md'),'before start\n');
   p.ack('s1');
-  const started=p.cli(['start','--operation','execute','--session','s1','--requested-by','Tester','--title','Add export']);
+  const started=p.cli(['start','--operation','execute','--session','s1','--requested-by','Tester','--title','เพิ่มการส่งออก']);
   assert.deepEqual(started.activeTask.preexistingDirty.map(e=>e.path).sort(),['notes.md','shared.md']);
   const plan=p.cli(['branch','plan','--session','s1','--type','feature','--slug','export']);
   assert.equal(plan.action,'create-carry');assert.ok(plan.warnings.some(w=>w.code==='BASE_NOT_REFRESHED_DIRTY'));
@@ -110,7 +110,7 @@ test('host branches push under the team name or rename; collisions get a suffix;
 test('delivery gates: protected branch, missing ack, secrets without values, changelog, local path leak (git-flow 7/8/9)',async t=>{
   const h=await fixture(t);const p=await project(h,{changelog:true});
   p.ack('s1');
-  const started=p.cli(['start','--operation','execute','--session','s1','--requested-by','Tester','--title','Fix it']);
+  const started=p.cli(['start','--operation','execute','--session','s1','--requested-by','Tester','--title','แก้ปัญหาการบันทึก']);
   await writeFile(path.join(p.repo,'a.js'),'x\n');
   assert.equal(p.cli(['deliver','plan','--session','s1']).code,'PROTECTED_BRANCH');
   assert.equal(p.cli(['deliver','plan','--session','other']).code,'NO_ACTIVE_EXECUTION');
@@ -170,10 +170,10 @@ test('remote work branch ahead is REMOTE_AHEAD (git-flow 11)',async t=>{
   const again=deliver(p,'s1',['--input',await messageFile(h)]).applied;
   assert.equal(again.code,'REMOTE_AHEAD');
 });
-async function messageFile(h){const f=path.join(h.temp,'message.json');await writeFile(f,JSON.stringify({type:'feat',scope:'orders',subject:'follow-up change'}));return f;}
+async function messageFile(h){const f=path.join(h.temp,'message.json');await writeFile(f,JSON.stringify({type:'feat',scope:'orders',subject:'งานต่อเนื่อง'}));return f;}
 
 async function deliveredBranch(p,{session,slug,file,content='x\n'}){
-  const {executionId}=await startWork(p,{session,slug,title:`Work ${slug}`});
+  const {executionId}=await startWork(p,{session,slug,title:`ส่งงานส่วน ${slug}`});
   await writeFile(path.join(p.repo,file),content);verify(p,session,executionId);
   const {applied}=deliver(p,session);assert.equal(applied.ok,true,JSON.stringify(applied));
   p.cli(['complete','--session',session,'--execution',executionId]);
@@ -208,7 +208,7 @@ test('audit written after delivery rides with the next delivery instead of becom
   const residue=p.git(['status','--porcelain','--untracked-files=all']).match(/\.agrimap-agent\/logs\/\S+/g)||[];
   assert.ok(residue.length,'integrate/complete leave audit dirty');
   p.ack('s2');
-  const started=p.cli(['start','--operation','execute','--session','s2','--requested-by','Tester','--title','Second change']);
+  const started=p.cli(['start','--operation','execute','--session','s2','--requested-by','Tester','--title','งานรอบที่สอง']);
   assert.equal(started.ok,true,JSON.stringify(started));
   assert.ok(!started.activeTask.preexistingDirty.some(e=>e.path.startsWith('.agrimap-agent/logs/')));
   const bplan=p.cli(['branch','plan','--session','s2','--type','feature','--slug','residue','--mode','current']);
@@ -541,23 +541,23 @@ test('a generated execution ID that collides within the same second moves to the
   const taken=[];
   for(let i=0;i<3;i++){const v=parts(new Date(Date.now()+i*1000));const id=v.day+v.hour+v.minute+v.second;taken.push(id);await mkdir(path.join(p.repo,'.agrimap-agent/runtime/reservations',v.year+'-'+v.month,id),{recursive:true});}
   p.ack('s9');
-  const started=p.cli(['start','--operation','execute','--session','s9','--requested-by','Tester','--title','Same second start']);
+  const started=p.cli(['start','--operation','execute','--session','s9','--requested-by','Tester','--title','เริ่มงานวินาทีเดียวกัน']);
   assert.equal(started.ok,true,JSON.stringify(started));
   assert.ok(!taken.includes(started.activeTask.executionId),started.activeTask.executionId);
 });
 
 test('team commit style is enforced: Conventional types map to feature|fix|comment|ci and lose their scope (4.9.6)',async t=>{
   const {checkCommitHeader,teamHeader}=await import('../../skills/agrimap-agent-skills/scripts/git-flow.mjs');
-  assert.deepEqual(checkCommitHeader('feat(orders): add export'),{ok:false,suggestion:'feature: add export'});
+  assert.deepEqual(checkCommitHeader('feat(orders): เพิ่มการส่งออก'),{ok:false,reason:'type',suggestion:'feature: เพิ่มการส่งออก'});
   assert.equal(checkCommitHeader('feat(orders): add export','conventional').ok,true,'opt-out policy');
   for(const [from,to] of [['docs: x','comment: x'],['refactor(api): x','comment: x'],['chore: x','ci: x'],['fix(ui)!: x','fix: x']])assert.equal(teamHeader(from),to,from);
   for(const header of ["Merge branch 'feature/x' into develop",'Revert "feature: x"','fixup! feature: x'])assert.equal(checkCommitHeader(header).ok,true,header);
-  assert.deepEqual(checkCommitHeader('wip'),{ok:false,suggestion:null});
+  assert.deepEqual(checkCommitHeader('wip'),{ok:false,reason:'type',suggestion:null});
   const h=await fixture(t);const p=await project(h,{method:'local-merge'});
   const {executionId}=await startWork(p,{slug:'legacy-input'});
   await writeFile(path.join(p.repo,'e.js'),'x\n');verify(p,'s1',executionId);
   const plan=p.cli(['deliver','plan','--session','s1','--input',await messageFile(h)]);
-  assert.equal(plan.message.header,'feature: follow-up change');
+  assert.equal(plan.message.header,'feature: งานต่อเนื่อง');
   await writeFile(path.join(h.temp,'embedded.json'),JSON.stringify({subject:'docs(readme): อธิบายการติดตั้ง'}));
   assert.equal(p.cli(['deliver','plan','--session','s1','--input',path.join(h.temp,'embedded.json')]).message.header,'comment: อธิบายการติดตั้ง');
 });
@@ -607,4 +607,65 @@ test('release gather reports a branch that conflicts with develop and never merg
   assert.equal(plan.card,null);assert.deepEqual(plan.selected,[]);
   assert.equal(plan.skipped[0].conflict,true);
   assert.ok(plan.warnings.some(w=>w.code==='GATHER_CONFLICT'&&w.subject==='feature/clash'));
+});
+
+test('commit descriptions are Thai by default; English stays for technical names (4.9.8)',async t=>{
+  const {checkCommitHeader}=await import('../../skills/agrimap-agent-skills/scripts/git-flow.mjs');
+  for(const header of ['feature: เพิ่มรับ User หลายช่องทาง','fix: แก้ dynamic form เพิ่มวันที่','comment: อัปเดต README','bump: ขึ้นเวอร์ชัน Production 1.4.2','feature: เพิ่ม API สร้าง order และ SP ORDER_H_I'])assert.equal(checkCommitHeader(header).ok,true,header);
+  for(const header of ['fix: resolve Windows short paths','bump: 4.9.8','feature: add export button'])assert.deepEqual(checkCommitHeader(header),{ok:false,reason:'thai',suggestion:null},header);
+  assert.equal(checkCommitHeader('fix: resolve paths','agrimap','en').ok,true,'policy commitLanguage en');
+  assert.deepEqual(checkCommitHeader('feat(x): add y'),{ok:false,reason:'type+thai',suggestion:null});
+  const h=await fixture(t);const p=await project(h,{method:'local-merge'});
+  const {executionId}=await startWork(p,{slug:'english',title:'Add export button'});
+  await writeFile(path.join(p.repo,'f.js'),'x\n');verify(p,'s1',executionId);
+  const plan=p.cli(['deliver','plan','--session','s1']);
+  assert.equal(plan.code,'MESSAGE_INVALID');assert.match(plan.message,/Thai description/);assert.match(plan.next.command,/subject/);
+});
+
+// A product repository with the three release branches, as agm-release sees it.
+async function releaseRepo(h){
+  const f=await createGitFixture(h,{name:'rel',jenkins:true,branches:['develop','jenkins','jenkins-release'],files:{'AGENTS.md':'# Rules\n'}});
+  const p=bind(h,f.repo,f.remote);
+  const push=(dir,ref)=>gitIn(dir,['push','-q','origin',ref]);
+  p.git(['switch','-q','develop']);await writeFile(path.join(p.repo,'app.js'),'v1\n');
+  p.git(['add','--','app.js']);p.git(['commit','-q','-m','feature: เพิ่มหน้าแรก']);push(p.repo,'develop');
+  p.git(['switch','-q','jenkins']);p.git(['merge','-q','--ff-only','develop']);push(p.repo,'jenkins');
+  // Someone promoted with a merge commit: jenkins-release holds history develop lacks, but no new file.
+  p.git(['switch','-q','jenkins-release']);p.git(['merge','-q','--no-ff','jenkins','-m',"Merge branch 'jenkins' into jenkins-release"]);push(p.repo,'jenkins-release');
+  p.git(['switch','-q','develop']);p.git(['fetch','-q','origin']);
+  return {p,push};
+}
+
+test('release preflight syncs a clean origin/develop and merge-only jenkins-release history without a question (4.9.8)',async t=>{
+  const h=await fixture(t);const {p}=await releaseRepo(h);
+  await writeFile(path.join(p.repo,'Jenkinsfile_Production'),"IMAGE_TAG = 'v1.0.1'\nPROJECT_VERSION = '1.0.1'\n");
+  p.git(['add','--','Jenkinsfile_Production']);p.git(['commit','-q','-m','bump: ขึ้นเวอร์ชัน Production 1.0.1']);
+  const other=await cloneRemote(h,p.remote,'other');
+  gitIn(other,['switch','-q','develop']);await writeFile(path.join(other,'other.js'),'x\n');
+  gitIn(other,['add','--','other.js']);gitIn(other,['commit','-q','-m','fix: แก้งานของอีกคน']);gitIn(other,['push','-q','origin','develop']);
+  const pre=p.cli(['release','preflight']);
+  assert.equal(pre.ok,true,JSON.stringify(pre.blockers));assert.equal(pre.branches.develop.state,'diverged');
+  assert.deepEqual(pre.questions,[]);assert.deepEqual(pre.owners.production,{imageTag:'v1.0.1',projectVersion:'1.0.1'});
+  assert.deepEqual(pre.autoActions.map(item=>item.action),['merge origin/develop into develop','merge origin/jenkins-release into develop']);
+  const originDevelop=p.git(['rev-parse','origin/develop']);
+  const plan=p.cli(['release','sync','plan']);assert.equal(plan.card,null);
+  const applied=p.cli(['release','sync','apply','--plan-hash',plan.planHash]);
+  assert.equal(applied.ok,true,JSON.stringify(applied));assert.equal(applied.pushed,false);
+  for(const ref of ['origin/develop','origin/jenkins','origin/jenkins-release'])p.git(['merge-base','--is-ancestor',ref,'develop']);
+  assert.equal(p.git(['rev-parse','origin/develop']),originDevelop,'sync never pushes');
+  assert.equal(await readFile(path.join(p.repo,'other.js'),'utf8'),'x\n','checked-out develop moved forward');
+  assert.deepEqual(p.cli(['release','sync','plan']).merges,[],'second sync has nothing left');
+});
+
+test('a jenkins-release hotfix that develop lacks becomes one preflight question; --allow merges it (4.9.8)',async t=>{
+  const h=await fixture(t);const {p,push}=await releaseRepo(h);
+  p.git(['switch','-q','jenkins-release']);await writeFile(path.join(p.repo,'hotfix.js'),'prod\n');
+  p.git(['add','--','hotfix.js']);p.git(['commit','-q','-m','fix: แก้ด่วนบน production']);push(p.repo,'jenkins-release');p.git(['switch','-q','develop']);
+  const pre=p.cli(['release','preflight']);
+  assert.equal(pre.questions.length,1);assert.equal(pre.questions[0].topic,'git/release-backmerge-jenkins-release');
+  assert.match(pre.questions[0].question,/1 ไฟล์/);
+  assert.equal(p.cli(['release','sync','plan']).card.topic,'git/release-backmerge-jenkins-release');
+  const plan=p.cli(['release','sync','plan','--allow','jenkins-release']);
+  const applied=p.cli(['release','sync','apply','--allow','jenkins-release','--plan-hash',plan.planHash]);
+  assert.equal(applied.ok,true,JSON.stringify(applied));assert.equal(await readFile(path.join(p.repo,'hotfix.js'),'utf8'),'prod\n');
 });

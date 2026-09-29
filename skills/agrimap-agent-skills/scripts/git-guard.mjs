@@ -119,7 +119,7 @@ const stripRef = value => String(value || "").replace(/^\+/, "").replace(/^refs\
 const isTag = value => /^refs\/tags\//.test(value) || /^v?\d+\.\d+(?:\.\d+)?/.test(value);
 
 // Pure rule evaluation. context: { protectedList, currentBranch, release,
-// commitConvention ("agrimap"|"conventional"|null), readMessageFile }.
+// commitConvention ("agrimap"|"conventional"|null), commitLanguage ("th" default), readMessageFile }.
 export function evaluate(invocation, context) {
   const { sub, args } = invocation;
   const policy = { branching: { protected: context.protectedList || DEFAULT_PROTECTED } };
@@ -170,9 +170,10 @@ export function evaluate(invocation, context) {
     const header = message === null ? "" : message.split(/\r?\n/).map(line => line.trim()).find(Boolean) || "";
     // Unresolved shell expansion or an unknown message fails open.
     if (!header || header.includes("$")) return null;
-    const check = checkCommitHeader(header, context.commitConvention);
+    const check = checkCommitHeader(header, context.commitConvention, context.commitLanguage || "th");
     if (check.ok) return null;
-    return { decision: DENY, rule: "G7", reason: `commit header "${header.slice(0, 80)}" is not the team style "<feature|fix|comment|bump|audit|ci>: <plain description>" of AGENTS.md §10.6${check.suggestion ? `; use "${check.suggestion}"` : ""}` };
+    const thai = check.reason === "type" ? "" : " with a Thai description (English only for technical names)";
+    return { decision: DENY, rule: "G7", reason: `commit header "${header.slice(0, 80)}" is not the team style "<feature|fix|comment|bump|audit|ci>: <plain description>"${thai} of AGENTS.md §10.6${check.suggestion ? `; use "${check.suggestion}"` : ""}` };
   }
   return null;
 }
@@ -206,6 +207,7 @@ export async function guardCommand(command, { cwd, session = null } = {}) {
     currentBranch: root ? git(root, ["branch", "--show-current"]) : null,
     release: active?.operation === "release",
     commitConvention: await commitConventionFor(root, loaded),
+    commitLanguage: loaded?.validation?.ok ? loaded.policy.delivery?.commitLanguage || "th" : "th",
     readMessageFile: (file, gitCwd) => readFileSync(path.resolve(cwd, gitCwd || ".", file), "utf8"),
   };
   let result = null;

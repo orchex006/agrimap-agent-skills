@@ -2,6 +2,18 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.9.8 — 2026-09-29
+
+A release finishes in one invocation when nothing needs a decision, `--flash` is lean again, and commit descriptions are Thai.
+
+- `release preflight` (agm-workspace) fetches once and reports the three branch pairs, both owner pairs, the latest tag, dirty paths and finished work branches (M), with `autoActions`, at most three `questions` for one round, and `blockers`. It replaces a series of separate checks at R.
+- `release sync plan|apply` builds history-preserving merge commits into local develop without pushing: a clean `origin/develop`, and `origin/jenkins`/`origin/jenkins-release` history that changes no file, so the `--ff-only` promotion works (owner decision 2026-09-29). Content-bearing back-merges become one preflight question (`--allow <branch>`); real conflicts stop only that step. It runs at R and again before the D push; a push rejected by a concurrent push is synced and retried at most twice without asking.
+- M never stops a release: work branches that conflict with develop are reported under `⚠️ ต้องตามต่อ` without a question; after a candidate exists M only reports. This fixes the 4.9.6 wording that made an agent wait on three conflicting manual branches.
+- `AGENTS.release.md` §6.5: one question round at R, automatic sync, no bootstrap upgrade in the middle of a release (a resumed release keeps its rules), records written with file tools, no intermediate audit commits. §6.2 names the two approved non-fast-forward exceptions.
+- `--flash`: `release-flash.md` is a self-contained fast path built on preflight/sync; it reads only §2.3, §5.2, §6, §7 and §8.2 of the target `AGENTS.release.md`, loads `release-steps.md`/`release-tools.md` only for recovery, reuses .NET tool evidence up to 7 days, and targets about five active minutes. Its token scenario loads about 25% less than a full release.
+- Production tag and notify: `release production`, `release full` and `promote` always create and push the annotated Production tag and send the Release Description (`AGENTS.release.md` §2.2, §7, §8.1, §8.2; `promote` now ends with N). Before, the target contract said only `Version + Tags` creates a tag and that `promote` never notifies, so a release that paused for Production confirmation and finished through `promote` skipped both (seen in `agmwa-platform-ng` 1.0.42). A newer bootstrap no longer blocks promote/tag/notify of a frozen candidate.
+- Commit descriptions are Thai by default (policy `delivery.commitLanguage: "th"`): at least 30% of the description's letters are Thai, English stays for technical names. `deliver` refuses an English objective with a hint to pass a Thai `subject`; guard G7 and package CI apply the same rule. Bootstrap `AGENTS.md` §10.6 says `<คำอธิบายภาษาไทย>`.
+
 ## 4.9.7 — 2026-09-29
 
 The skills know the AgriMap service matrix without being told.

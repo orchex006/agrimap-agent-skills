@@ -45,9 +45,9 @@ For `agm-release bootstrap upgrade` (preserve custom rules) or legacy `agm-relea
 | prepare production | Prepare and verify the requested Production version, default PATCH+1 | Local candidate only; no push/tag |
 | pipeline inhouse | Verify existing candidate; commit reviewed candidate, push/verify develop, fast-forward push/verify jenkins | Inhouse branch checkpoint; no version bump or Production/tag |
 | pipeline production | Verify existing Production candidate; commit reviewed candidate, push/verify develop and jenkins; prepare Production fast-forward plan | Production-ready candidate; do not push jenkins-release or create/push tag |
-| promote | Verify existing Production-ready candidate; present exact publication plan; request confirmation; publish/verify jenkins-release then annotated Production tag | Confirmed Production and remote tag checkpoints |
-| release full | indexing → prepare both owners independently → pipeline inhouse → pipeline production → confirm → promote | develop + Inhouse + Production + Production tag |
-| release production | indexing → prepare production → pipeline production → confirm → promote | Production + Production tag; Inhouse branch transit, Inhouse version unchanged |
+| promote | Verify existing Production-ready candidate; present exact publication plan; request confirmation; publish/verify jenkins-release then annotated Production tag | Confirmed Production, tag and notify checkpoints |
+| release full | indexing → prepare both owners independently → pipeline inhouse → pipeline production → confirm → promote | develop + Inhouse + Production + Production tag + notify |
+| release production | indexing → prepare production → pipeline production → confirm → promote | Production + Production tag + notify; Inhouse branch transit, Inhouse version unchanged |
 | release inhouse | indexing → prepare inhouse → pipeline inhouse | develop + Inhouse only; no Production/tag |
 
 Preparing both owners is internal to release full; it is not permission to blindly call CLI prepare both. First prove the CLI respects Production-only notes as described in release-tools.md. Full flow reuses one frozen candidate through both pipeline steps; do not recommit, bump or push the same checkpoint twice. No arguments, unknown arguments or an unspecified environment require clarification before mutation. Help/explanations are artifactless.
@@ -77,9 +77,13 @@ Do not carry unrelated dirty changes across branch switches. Classify their actu
 
 Pulling origin/jenkins-release into local jenkins-release only synchronizes the same branch; it is not promotion from jenkins. Preflight never merges develop into jenkins or jenkins into jenkins-release, pushes a branch/tag, or grants Production confirmation. Re-fetch before each publication stage to detect races; same-directory pull checks reduce stale-state failures but cannot guarantee conflict-free future merges. On resume preserve the exact prepared candidate and re-evaluate remote movement before any pull over candidate changes; do not prepare a replacement or bump again.
 
+### Preflight and automatic sync
+
+Follow AGENTS.release.md §6.5: `release preflight` and `release sync` ([git-workflow.md](git-workflow.md)) give one question round at R and automatic clean syncs; a resumed release keeps its rules.
+
 ### Finished work branches (M)
 
-Delivered work ships without a merge request per branch (AGENTS.release.md §6.4). prepare, pipeline and release gather finished work into local develop before preparing; promote gathers after T. First deliver leftovers on the current work branch; commit post-delivery `.agrimap-agent` logs there as `audit: บันทึกประวัติงาน` when they block a switch. Then run `integrate pending` and `integrate gather plan`/`apply` ([git-workflow.md](git-workflow.md)): ready branches merge without a question, unverified/manual ones need one card, conflicting ones are reported, never merged. Merges are local Git merge commits without a worktree switch; verify develop, and they ship with the single D push (promote: F). A pipeline with a prepared candidate only checks pending work and asks once: re-prepare with `release <env>` at the same version, or leave it for the next release. Never rebase, squash, force, stash or delete branches.
+Delivered work ships without a merge request per branch (AGENTS.release.md §6.4). prepare, pipeline and release gather finished work into local develop before preparing; promote gathers after T. First deliver leftovers on the current work branch; commit post-delivery `.agrimap-agent` logs there as `audit: บันทึกประวัติงาน` when they block a switch. Then run `integrate pending` and `integrate gather plan`/`apply` ([git-workflow.md](git-workflow.md)): ready branches merge without a question, unverified/manual ones need one card, conflicting ones are reported, never merged. Conflicting branches never stop the release and need no question. Merges are local Git merge commits without a worktree switch; verify develop, and they ship with the single D push (promote: F). A pipeline with a prepared candidate only checks pending work and asks once: re-prepare with `release <env>` at the same version, or leave it for the next release. Never rebase, squash, force, stash or delete branches.
 
 ## Indexing includes Project Backfill
 
