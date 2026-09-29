@@ -7,7 +7,7 @@ import { defaultRun } from "./run-command.mjs";
 import { acknowledge, instructionChain, readRequired, resolveTargetRoots, scanBelow, worktreeFacts } from "./instruction-chain.mjs";
 import { inferPolicy, initPolicy, loadPolicy, setPolicyValue } from "./workflow-policy.mjs";
 import { recordChoice, renderCard, normalizeOptions, storeCard, validateCard } from "./decision-card.mjs";
-import { applyBranch, applyDelivery, applyIntegration, dirtyInventory, integrationOptions, planBranch, planDelivery, planIntegration, snapshotDirty } from "./git-flow.mjs";
+import { applyBranch, applyDelivery, applyGather, applyIntegration, dirtyInventory, integrationOptions, pendingWork, planBranch, planDelivery, planGather, planIntegration, snapshotDirty } from "./git-flow.mjs";
 import { applyProjectPatch, inferProject, initProject, loadProject, resolveSpecSources, setProjectValue, specStandingCard, verifySpecPath } from "./project-profile.mjs";
 import { applySpecSync, coveredBy, planSpecSync, specCheck, specContext, specSemanticCard } from "./spec-sync.mjs";
 import { addWorkingNote, loadLocalMemory, localPathsForLeakCheck, setLocalPath } from "./local-memory.mjs";
@@ -382,6 +382,25 @@ async function integrateCommand(ctx, sub, args, root) {
     if (!result.ok) return result;
     return { ...result, ...(await storeAndRender(state, session, result.card, delivery?.executionId)) };
   }
+  // Release M (4.9.6): finished work branches into the local integration branch.
+  if (sub === "pending") return pendingWork({ root, policy, target: text(args.target) });
+  if (sub === "gather") {
+    const gather = { root, policy, target: text(args.target), mode: text(args.mode), include: list(args.branches), exclude: list(args.exclude) };
+    if (args._action === "plan") {
+      const plan = await planGather(gather);
+      return plan.card ? { ...plan, ...(await storeAndRender(state, session, plan.card, active?.executionId)) } : plan;
+    }
+    if (args._action !== "apply") return { ok: false, message: "Use integrate gather plan|apply." };
+    const result = await applyGather({ ...gather, planHash: text(args["plan-hash"]) });
+    if (!result.ok) return result.card ? { ...result, ...(await storeAndRender(state, session, result.card, active?.executionId)) } : result;
+    if (active && result.merged.length) {
+      await logForActive(ctx, state, active, {
+        event: "integrated", summary: `Gathered ${result.merged.length} work branches into local ${result.target}`,
+        reason: result.merged.map(item => `${item.name}@${item.sha.slice(0, 7)}`).join("; ").slice(0, 400), warnings: result.warnings,
+      });
+    }
+    return result;
+  }
   const options = {
     root, state, policy, active, delivery, intent: String(args.intent || "integrate"), branch: args.branch && args.branch !== true ? String(args.branch) : null,
     target: args.target && args.target !== true ? String(args.target) : null, whenGreen: Boolean(args["when-green"]), confirmUnverified: Boolean(args["confirm-unverified"]),
@@ -391,7 +410,7 @@ async function integrateCommand(ctx, sub, args, root) {
     const plan = await planIntegration(options);
     return plan.card ? { ...plan, ...(await storeAndRender(state, session, plan.card, delivery?.executionId)) } : plan;
   }
-  if (sub !== "apply") return { ok: false, message: "Use integrate options|plan|apply." };
+  if (sub !== "apply") return { ok: false, message: "Use integrate options|plan|apply|pending|gather." };
   const result = await applyIntegration({ ...options, planHash: args["plan-hash"], stage: args.stage && args.stage !== true ? String(args.stage) : null });
   if (!result.ok) return result.card ? { ...result, ...(await storeAndRender(state, session, result.card, delivery?.executionId)) } : result;
   if (options.intent === "park" && active) await ctx.appendRecent(state, active, "parked", "Work branch parked; resume with the same session.");

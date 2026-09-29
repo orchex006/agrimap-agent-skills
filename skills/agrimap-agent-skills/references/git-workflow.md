@@ -15,6 +15,10 @@ After `start`, run `branch plan --type feature|fix|hotfix|refactor|docs|chore --
 
 After verification, add the changelog entry required by the project AGENTS, then `deliver plan [--input message.json]` and `deliver apply`. Failed or missing verification still delivers the work branch with `AGM-Verification` and the `DELIVERED_UNVERIFIED` warning; merge is not offered until it passes. Messages follow the team style (bootstrap AGENTS.md §10.6): `feature|fix|comment: <plain description>` of at most 100 characters that an App Leader, BA or customer understands; agm-release commits use `bump|audit|ci`. Conventional types in explicit input are normalized (feat→feature, docs/refactor→comment, chore/build→ci) without scope; guard G7 denies any other header typed with `git commit` unless the policy sets `delivery.commitConvention: conventional`. Separate work of different types into separate commits. The script stages exact own paths and verifies the remote SHA; it refuses protected branches, suspected secrets, missing acknowledgement or changelog. If the policy disables delivery, report exact paths and commit only when asked (`--explicit commit|push`). Then run `integrate options` and end with the delivery summary (at most 12 lines, warnings under `⚠️ ต้องตามต่อ` with code, impact and fix) and its next-step card.
 
+## Release gather
+
+agm-release only (AGENTS.release.md §6.4): `integrate pending` lists work branches not in develop with status ready|unverified|manual and conflicts. `integrate gather plan [--mode ready|all|none] [--branches a,b] [--exclude a]` then `integrate gather apply --plan-hash <hash>` builds Git merge commits into local develop without switching or pushing; the release D stage pushes develop once. A card appears only for unverified/manual branches; conflicts are reported, never merged.
+
 ## Short replies
 
 | Reply | Intent |

@@ -561,3 +561,50 @@ test('team commit style is enforced: Conventional types map to feature|fix|comme
   await writeFile(path.join(h.temp,'embedded.json'),JSON.stringify({subject:'docs(readme): อธิบายการติดตั้ง'}));
   assert.equal(p.cli(['deliver','plan','--session','s1','--input',path.join(h.temp,'embedded.json')]).message.header,'comment: อธิบายการติดตั้ง');
 });
+
+// Post-delivery logs/recent memory stay modified on the work branch; release commits them as audit (AGENTS.release.md §6.4).
+function commitCarriedAudit(p){
+  const paths=[...p.git(['diff','--name-only']).split('\n'),...p.git(['ls-files','--others','--exclude-standard']).split('\n')].filter(file=>file.startsWith('.agrimap-agent/'));
+  if(paths.length){p.git(['add','--',...paths]);p.git(['commit','-q','-m','audit: บันทึกประวัติงาน']);}
+}
+
+test('release gather merges verified work branches into local develop without switching or pushing; others need a card (4.9.6)',async t=>{
+  const h=await fixture(t);const p=await project(h,{method:'local-merge'});
+  const a=await deliveredBranch(p,{session:'s1',slug:'ready-a',file:'a.js'});
+  commitCarriedAudit(p);p.git(['switch','-q','develop']);
+  const b=await deliveredBranch(p,{session:'s2',slug:'ready-b',file:'b.js'});
+  commitCarriedAudit(p);p.git(['switch','-q','develop']);
+  const {executionId}=await startWork(p,{session:'s3',slug:'failing'});
+  await writeFile(path.join(p.repo,'c.js'),'x\n');verify(p,'s3',executionId,'failed');
+  assert.equal(deliver(p,'s3').applied.ok,true);
+  commitCarriedAudit(p);p.git(['switch','-q','-c','fix/by-hand','develop']);await writeFile(path.join(p.repo,'d.js'),'x\n');
+  p.git(['add','--','d.js']);p.git(['commit','-q','-m','fix: แก้ด้วยมือ']);p.git(['push','-q','-u','origin','fix/by-hand']);
+  const originDevelop=p.git(['rev-parse','origin/develop']);
+  const pending=p.cli(['integrate','pending','--session','s1']);
+  assert.deepEqual(pending.counts,{ready:2,unverified:1,manual:1,conflict:0,merged:0});
+  const card=p.cli(['integrate','gather','plan','--session','s1']);
+  assert.equal(card.card.topic,'git/release-gather');assert.equal(card.planHash,null);
+  const plan=p.cli(['integrate','gather','plan','--session','s1','--mode','ready']);
+  assert.deepEqual(plan.selected.map(item=>item.name),['feature/ready-a','feature/ready-b']);
+  const applied=p.cli(['integrate','gather','apply','--session','s1','--mode','ready','--plan-hash',plan.planHash]);
+  assert.equal(applied.ok,true,JSON.stringify(applied));assert.equal(applied.pushed,false);
+  assert.equal(p.git(['branch','--show-current']),'fix/by-hand','gather never switches the worktree');
+  assert.equal(p.git(['rev-parse','origin/develop']),originDevelop,'the release D stage pushes develop, not gather');
+  for(const sha of [a.commit,b.commit])p.git(['merge-base','--is-ancestor',sha,'develop']);
+  assert.equal(p.git(['log','-1','--format=%s','develop']),"Merge branch 'feature/ready-b' into develop");
+  assert.equal(p.git(['rev-parse','develop^2']),p.git(['rev-parse','feature/ready-b']),'the carried audit commit rides along');
+  assert.deepEqual(p.cli(['integrate','pending','--session','s1']).counts,{ready:0,unverified:1,manual:1,conflict:0,merged:2});
+  await writeFile(path.join(p.repo,'d.js'),'dirty\n');
+  assert.equal(p.cli(['integrate','gather','plan','--session','s1','--mode','all']).code,'DELIVER_FIRST');
+});
+
+test('release gather reports a branch that conflicts with develop and never merges it (4.9.6)',async t=>{
+  const h=await fixture(t);const p=await project(h,{method:'local-merge'});
+  await deliveredBranch(p,{session:'s1',slug:'clash',file:'README.md',content:'# mine\n'});
+  commitCarriedAudit(p);p.git(['switch','-q','develop']);await writeFile(path.join(p.repo,'README.md'),'# theirs\n');
+  p.git(['add','--','README.md']);p.git(['commit','-q','-m','fix: ปรับ README']);p.git(['push','-q','origin','develop']);
+  const plan=p.cli(['integrate','gather','plan','--session','s1']);
+  assert.equal(plan.card,null);assert.deepEqual(plan.selected,[]);
+  assert.equal(plan.skipped[0].conflict,true);
+  assert.ok(plan.warnings.some(w=>w.code==='GATHER_CONFLICT'&&w.subject==='feature/clash'));
+});
