@@ -45,9 +45,9 @@ For `agm-release bootstrap upgrade` (preserve custom rules) or legacy `agm-relea
 | prepare production | Prepare and verify the requested Production version, default PATCH+1 | Local candidate only; no push/tag |
 | pipeline inhouse | Verify existing candidate; commit reviewed candidate, push/verify develop, fast-forward push/verify jenkins | Inhouse branch checkpoint; no version bump or Production/tag |
 | pipeline production | Verify existing Production candidate; commit reviewed candidate, push/verify develop and jenkins; prepare Production fast-forward plan | Production-ready candidate; do not push jenkins-release or create/push tag |
-| promote | Verify existing Production-ready candidate; present exact publication plan; request confirmation; publish/verify jenkins-release then annotated Production tag | Confirmed Production and remote tag checkpoints |
-| release full | indexing → prepare both owners independently → pipeline inhouse → pipeline production → confirm → promote | develop + Inhouse + Production + Production tag |
-| release production | indexing → prepare production → pipeline production → confirm → promote | Production + Production tag; Inhouse branch transit, Inhouse version unchanged |
+| promote | Verify existing Production-ready candidate; present exact publication plan; request confirmation; publish/verify jenkins-release then annotated Production tag | Confirmed Production, tag and notify checkpoints |
+| release full | indexing → prepare both owners independently → pipeline inhouse → pipeline production → confirm → promote | develop + Inhouse + Production + Production tag + notify |
+| release production | indexing → prepare production → pipeline production → confirm → promote | Production + Production tag + notify; Inhouse branch transit, Inhouse version unchanged |
 | release inhouse | indexing → prepare inhouse → pipeline inhouse | develop + Inhouse only; no Production/tag |
 
 Preparing both owners is internal to release full; it is not permission to blindly call CLI prepare both. First prove the CLI respects Production-only notes as described in release-tools.md. Full flow reuses one frozen candidate through both pipeline steps; do not recommit, bump or push the same checkpoint twice. No arguments, unknown arguments or an unspecified environment require clarification before mutation. Help/explanations are artifactless.
@@ -79,7 +79,7 @@ Pulling origin/jenkins-release into local jenkins-release only synchronizes the 
 
 ### Preflight and automatic sync
 
-Follow AGENTS.release.md §6.5 with `release preflight` and `release sync` from [git-workflow.md](git-workflow.md): one question round at R, automatic clean syncs at R and before the D push, and a resumed release keeps its starting rules.
+Follow AGENTS.release.md §6.5: `release preflight` and `release sync` ([git-workflow.md](git-workflow.md)) give one question round at R and automatic clean syncs; a resumed release keeps its rules.
 
 ### Finished work branches (M)
 

@@ -1,10 +1,10 @@
 # Release Description and team notification (N)
 
-Applies to `release production` and `release full`, with or without `--flash`, after the Production branch/tag checkpoint (T) is verified. Other actions never notify. The target's AGENTS.release.md §8.2 owns the wording rules; follow it when present. This is the AI summary card (`POST …/release-description`: project name, version, items with related projects); the Jenkins build card (`POST …/release`) is sent by each Jenkinsfile and is not the Agent's.
+Applies to `release production`, `release full` (with or without `--flash`) and `promote`, every time the Production tag checkpoint (T) is verified, including a release that paused for confirmation and finished through `promote` or a resume. Send once per version. `release inhouse`, `pipeline` and `prepare` never notify. The target's AGENTS.release.md §8.2 owns the wording rules; follow it when present. This is the AI summary card (`POST …/release-description`: project name, version, items with related projects); the Jenkins build card (`POST …/release`) is sent by each Jenkinsfile and is not the Agent's.
 
 ## Flags
 
-`--silent` (alias `--skip-noti`) is a bare modifier accepted only on `release production|full`; it may precede or follow the command words and combines with `--flash`. It skips sending only. Reject it on other actions, valued or duplicated, before writes.
+`--silent` (alias `--skip-noti`) is a bare modifier accepted only on `release production|full` and `promote`; it may precede or follow the command words and combines with `--flash`. It skips sending only. Reject it on other actions, valued or duplicated, before writes.
 
 ## Write the description
 

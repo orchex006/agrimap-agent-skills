@@ -105,7 +105,7 @@ test('instruction diet: core AGENTS.md at most 24,000 chars; core + release keep
   const entry=manifest.files.find(f=>f.source==='AGENTS.release.md');
   assert.equal(entry.target,'AGENTS.release.md');assert.equal(entry.sha256,createHash('sha256').update(release).digest('hex'));
   const frozen=release.replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/,'<!-- AGRIMAP BOOTSTRAP VERSION: 3.6.1 -->');
-  assert.equal(createHash('sha256').update(frozen).digest('hex'),'04d36960b8c150e255e93f425ca439031db69d4495b5063992c0b36c1c9d6ca2');
+  assert.equal(createHash('sha256').update(frozen).digest('hex'),'6767f90c3c669101d50d2d0d96eb6105979b757de49cb178bb0e5ef4f2296a29');
   const headings=['## 0.','## 1.','## 2.','### 2.1','### 2.2','### 2.3','## 3.','## 4.','## 5.','### 5.1','### 5.2','## 6.','### 6.1','### 6.2','### 6.3','## 7.','## 8.','### 8.1','## 9.','### 9.1','### 9.5','## 10.','### 10.5','## Bootstrap contract freshness'];
   const all=(core+'\n'+release).split('\n');
   for(const h of headings)assert.ok(all.some(line=>line.startsWith(h)),h);
@@ -180,4 +180,21 @@ test('release-notify: short Release Description payload with related projects; u
   const sent=await run(['send','--description','desc.md','--url',url]);
   assert.equal(sent.status,0,sent.stdout);assert.equal(JSON.parse(sent.stdout).sent,true);
   assert.equal(posts.length,1);assert.equal(posts[0].url,'/agrimap-notify/release-description');assert.equal(posts[0].body.items.length,3);
+});
+
+test('release production/full and promote always push the Production tag and send the Release Description (4.9.8)',async()=>{
+  const bundle=path.join(projectRoot,'skills/agrimap-agent-skills');
+  const release=await readFile(path.join(bundle,'assets/bootstrap/AGENTS.release.md'),'utf8');
+  const section=(from,to)=>release.slice(release.indexOf(from),release.indexOf(to,release.indexOf(from)));
+  assert.match(release,/`release production`, `release full` และ `promote` เทียบเท่า `Version \+ Tags` เสมอ/);
+  assert.match(section('## 7. Production annotated tag','## 8.'),/คำสั่ง agm-release `release production`, `release full`, `promote`/);
+  const notify=section('### 8.2','- **Release Description**');
+  assert.match(notify,/`promote` ทุกครั้งที่ Production tag checkpoint ผ่าน/);
+  assert.doesNotMatch(notify,/`promote` และกลุ่ม A\/B ไม่ส่ง/);
+  assert.match(release,/bootstrap ที่ใหม่กว่า\*\*ไม่ขวาง\*\* promote\/tag\/notify/);
+  const steps=await readFile(path.join(bundle,'references/release-steps.md'),'utf8');
+  assert.match(steps,/\| promote \| R → V → check recorded D\/J → Q → C → T → M → F → N \|/);
+  assert.match(await readFile(path.join(bundle,'references/release-notify.md'),'utf8'),/and `promote`, every time the Production tag checkpoint/);
+  const operations=JSON.parse(await readFile(path.join(projectRoot,'config/operations.json'),'utf8')).operations;
+  assert.equal(operations.find(item=>item.name==='agm-release').conditionalReferences.find(item=>item.path==='release-notify.md').when,'release production|full or promote');
 });

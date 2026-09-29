@@ -1451,7 +1451,7 @@
         {
           "path": "release-notify.md",
           "why": "Release Description and notify",
-          "when": "release production|full"
+          "when": "release production|full or promote"
         },
         {
           "path": "release-bootstrap-upgrade.md",
