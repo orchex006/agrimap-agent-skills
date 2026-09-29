@@ -75,7 +75,9 @@ $agm-release production --flash
 
 ชื่อย่อ `full --flash`, `inhouse --flash`, `production --flash` เท่ากับ `release full|inhouse|production --flash` ตามลำดับ ใช้กับ `prepare inhouse|production` และ `pipeline inhouse|production` ได้ด้วย (pipeline ไม่สร้าง candidate ที่ยังไม่ได้เตรียม) โหมดไม่มี flag ยังทำงานเหมือนเดิม ไม่รองรับ flag นี้กับ promote/indexing/bootstrap
 
-ตั้งแต่ 4.9.8 `--flash` ใช้ `release preflight` ตรวจทุกอย่างครั้งเดียว ถามรอบเดียว sync branch ที่ไม่ชนเอง และไม่อ่านเอกสาร release ส่วนที่ไม่เกี่ยว เป้าหมายราว 5 นาทีเมื่อไม่มีคำถาม ดู [Usage](USAGE.md#release-preflight)
+ตั้งแต่ 4.9.9 release (รวม `--flash`) รวมแค่ branch ของงานนี้ แก้ conflict เอง sync `jenkins`/`jenkins-release` เอง และไม่ดู branch อื่น คำถามเหลือแค่ยืนยัน Production ดู [Usage](USAGE.md#release-preflight)
+
+**URL แจ้งเตือน:** เครื่องที่ยังไม่เคยตั้ง Agent ถามผ่านกล่องคำถาม ตัวเลือกแรกคือ URL มาตรฐาน `https://appserv2.cdg.co.th/agrimap-notify/release-description` เลือกแล้วตั้งค่าและส่งต่อทันที
 
 | ส่วนงาน | --flash |
 | --- | --- |

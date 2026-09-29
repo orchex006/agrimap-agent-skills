@@ -8,7 +8,7 @@ Before the first repository write run `agm-workspace.mjs context`: read/ack its 
 
 Reuse a conversation/host-confirmed requester via `--requested-by`; missing runtime state does not invalidate confirmation. Otherwise inspect `agm-workspace.mjs requester --cwd <project> --session <id>` read-only. Never infer identity from Git/OS authorship or copied audit history. Reject expired/revoked/foreign/ambiguous records; otherwise ask once. Identity grants no publication authority.
 
-For adopted product repositories before durable work, compare the installed AGENTS.md bootstrap version marker/receipt to the active skill manifest. Missing or different versions require reconciliation within this invocation using release-and-bootstrap.md and project-bootstrap.mjs; update unmodified templates with backups, preserve custom rules through a scoped merge, then verify freshness. For release, check branch freshness before bootstrap writes. No product bootstrap in the skill-package root or for ordinary questions.
+For adopted product repositories before durable work, compare the installed AGENTS.md bootstrap version marker/receipt to the active skill manifest. A missing or different version only warns: run project-bootstrap apply now (auto-merge keeps project lines, with backups) and continue; report a pending file. For release, check branch freshness before bootstrap writes. No product bootstrap in the skill-package root or for ordinary questions.
 Follow explicit project recording requirements (bootstrap AGENTS §9) without duplicate lifecycles.
 Follow recommendations.md in every operation: proactively give supported advice with gaps, assumptions and confidence. Advice grants no write authority.
 

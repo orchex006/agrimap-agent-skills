@@ -1,6 +1,6 @@
 # กติกา Release, Version, Changelog และ Deployment
 
-<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.8 -->
+<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.9 -->
 
 ไฟล์นี้ใช้ร่วมกับ `AGENTS.md` (core) ของ repository เดียวกัน: เก็บ §2 Intent routing ฉบับเต็มและ §4–§8 โดยคงเลข § เดิม เพื่อให้การอ้างอิงข้ามไฟล์ไม่เปลี่ยน §1, §3, §9 และ §10 อยู่ใน `AGENTS.md` และยังบังคับใช้กับงาน release ทุกงาน
 
@@ -77,7 +77,7 @@ Normalize ได้เฉพาะ case/whitespace และ semantic phrase bou
 - Exact intent กลุ่ม B ที่ owner สั่งเองเป็นการยืนยัน branch push ตลอด flow รวม final audit commit; tag push อนุญาตเฉพาะ `Version + Tags` ไม่ถามย้ำในแต่ละ checkpoint
 - การอ้าง keyword ในคำขอแก้เอกสารไม่ใช่คำสั่ง release; กลุ่ม A และ deploy aliases อื่นคงขอบเขตเดิม
 - คำสั่ง publish อื่นที่ไม่ใช่กลุ่ม B (เช่น `release inhouse|production|full`, `pipeline inhouse|production`) รวมงานค้างทั้งหมดโดยอัตโนมัติเหมือนกลุ่ม B: dirty path และ local `develop` commit ที่ยังไม่ขึ้น remote นอก candidate ถูกรวมเป็น content commit ตาม §6.3 ก่อน version commit โดยไม่ถาม เก็บไว้ local เฉพาะเมื่อ owner สั่งยกเว้นชัดเจน ข้อมูลลับ ignored/runtime state และ nested repository ถูกตัดออกอัตโนมัติพร้อมรายงาน
-- ทุกคำสั่ง prepare/pipeline/release เริ่มด้วย `release preflight` และถามทุกเรื่องที่ต้องตัดสินในรอบเดียวตาม §6.5; sync `origin/develop` และ back-merge ที่ไม่เปลี่ยนไฟล์ทำเองโดยไม่ถาม
+- ทุกคำสั่ง prepare/pipeline/release เริ่มด้วย `release preflight` ตาม §6.5; sync `origin/develop`, back-merge `jenkins`/`jenkins-release` และแก้ conflict ทำเองโดยไม่ถาม branch ของคนอื่นไม่เกี่ยว
 - ทุกคำสั่ง prepare/pipeline/release และกลุ่ม B รวม work branch ที่ทำเสร็จแต่ยังไม่อยู่ใน `develop` เข้า local `develop` ก่อนเตรียม version ตาม §6.4 (M) ส่วน promote รวมเข้า `develop` ตอนจบโดยไม่แตะ candidate Production ที่ freeze แล้ว
 - เมื่อจบ release ให้ commit audit ที่เหลือและ push `develop` หนึ่งครั้ง แล้วตรวจ remote SHA ให้ `develop` สะอาดและเท่ากับ origin (ไม่ promote audit commit ไป `jenkins`/`jenkins-release` และไม่ย้าย tag)
 
@@ -181,7 +181,7 @@ agm-release -- notes --mode production
 - English ใช้ได้ตามปกติโดยไม่ต้องแปลและไม่ต้องใส่วงเล็บอธิบาย สำหรับ:
   - identifier ทุกชนิด เช่น function, method, variable, class, property, file path, route, branch, tag, version, environment name ตัวอย่าง `OAuthUseCase`, `GET /api/oauth/authorize`, `Jenkinsfile_Production`, `v1.0.16`
   - code block, shell command, config key, SQL object, package name, error code และ HTTP status ตัวอย่าง `401`, `invalid_grant`, `AgriMap.Platform 0.0.208`
-  - คำทับศัพท์ทางเทคนิคที่ทีมใช้จริง เช่น deploy, pipeline, commit, merge, promote, tag, release, endpoint, token, session, cache, rollback
+  - คำทับศัพท์ทางเทคนิคที่ทีมใช้จริง เช่น deploy, pipeline, commit, merge, promote, tag, release, endpoint, token, session, cache, rollback, header และชื่อที่ทีมรู้จัก เช่น `x-correlation-id` ให้เขียนตรงตัว ไม่แปลเป็นคำไทยกว้าง ๆ เช่น "ปรับเพิ่มการส่งรหัส x-correlation-id ใน header เพื่อให้ทีมงานตรวจสอบและประสานงานแก้ปัญหาได้ตรงจุด" เข้าใจง่ายกว่า "เพิ่มรหัสติดตามคำขอที่ส่งผ่าน Gateway"
 - ห้ามแปล identifier เป็นไทย และห้ามบังคับสร้างคำไทยแทนคำทับศัพท์ที่ทีมใช้จนคุ้น เพราะจะ grep เทียบกับ code ไม่เจอและสื่อสารกันไม่ตรง
 - ประโยคต้องอ่านเป็นภาษาไทยที่มี term อังกฤษแทรกอยู่ ไม่ใช่ประโยคอังกฤษที่แทรกคำไทย ถ้าย่อหน้าไหนเป็นอังกฤษล้วนให้เขียนใหม่เป็นไทย
 - หัวข้อและ field ตาม schema ใน `release-notes/README.md` คงเป็นอังกฤษเสมอ ห้ามแปล ได้แก่ `## Deployment targets`, `## Added`, `## Changed`, `## Fixed`, `## Verification` และ field `Version`, `Date`, `Source baseline`, `Source candidate`, `Tag` เพราะเป็นโครงสร้างที่เครื่องมืออ่าน
@@ -272,7 +272,7 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 - ตรวจ ancestry ด้วย `git merge-base --is-ancestor`, commit differences ด้วย `git log --left-right` และ actual file diffs รวม local-only commits; จำนวน commits และ commit subjects เป็นเพียงเบาะแส ไม่พิสูจน์ code conflict หรือว่างานใดควรถูกทิ้ง คำสั่ง ancestry exit 1 หมายถึงไม่เป็น ancestor ส่วน exit อื่นที่เป็น error ต้องตรวจแยก
 - ถ้า remote target เป็น ancestor ของ verified source แต่ติดเฉพาะ local target ให้ตรวจ local-only commits และเสนอการรวมประวัติในโฟลเดอร์เดิมตาม scope ที่อนุญาต; ห้ามสร้าง clone/worktree, reset/delete local branch หรือรวม local-only commits ที่ยังไม่ได้ตรวจขอบเขตเพื่อข้ามปัญหา การเปลี่ยน checkout ต้องมีคำสั่งผู้ใช้ชัดเจน ห้ามถามยืนยัน push ซ้ำเมื่อ authorization เดิมครอบคลุม
 - ถ้า remote target กับ verified source diverged จริง ให้ตรวจ merge feasibility ด้วยเครื่องมือที่ไม่แก้ branch/worktree เช่น `git merge-tree` เมื่อรองรับ และรายงาน conflict paths หรือผลตรวจที่พิสูจน์ได้; ถ้าเครื่องมือไม่รองรับให้ระบุข้อจำกัด ห้ามอ้างว่า merge ผ่านโดยยังไม่ได้ตรวจ
-- เสนอทางเลือกที่รักษาประวัติ พร้อมวิธีแนะนำและผลกระทบ การใช้ non-fast-forward merge เป็นข้อยกเว้นต่อกติกาปัจจุบัน ต้องมี owner decision ที่ครอบคลุมวิธีรวมประวัติและการตรวจผลก่อนลงมือ; การไม่พบ conflict ไม่ใช่สิทธิ์สร้าง merge commit อัตโนมัติ ยกเว้นสองกรณีที่ owner อนุมัติถาวรใน §6.5 (merge `origin/develop` ที่ไม่ชน และ back-merge `jenkins`/`jenkins-release` ที่ไม่เปลี่ยนไฟล์)
+- เสนอทางเลือกที่รักษาประวัติ พร้อมวิธีแนะนำและผลกระทบ การใช้ non-fast-forward merge เป็นข้อยกเว้นต่อกติกาปัจจุบัน ต้องมี owner decision ที่ครอบคลุมวิธีรวมประวัติและการตรวจผลก่อนลงมือ; การไม่พบ conflict ไม่ใช่สิทธิ์สร้าง merge commit อัตโนมัติ ยกเว้นกรณีที่ owner อนุมัติถาวรใน §6.5 (merge `origin/develop` และ back-merge `jenkins`/`jenkins-release` เข้า develop)
 - หาก owner อนุมัติ merge commit ต้องตรวจ source ancestry และ merged content แทนสมมติฐานว่า source/target SHA เท่ากัน บันทึก target SHA ใหม่และ verify remote target ให้ตรง SHA ที่ push; Production ต้องรับ exact verified jenkins SHA และ tag ต้องชี้ exact verified Production SHA ตามเดิม
 - ก่อน push ตรวจ remote อีกครั้ง ถ้าเปลี่ยนจากฐานที่ตรวจไว้ให้ประเมินใหม่; ห้ามใช้ force เพื่อข้ามการเปลี่ยนแปลงของคนอื่น เมื่อแก้ blocker แล้วให้ resume checkpoint ที่ค้างโดยรักษา version และ authorization เดิม ไม่ bump/commit/promote ขั้นที่ผ่านแล้วซ้ำ
 
@@ -291,12 +291,14 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 
 ### 6.4 รวมงานที่ทำเสร็จเข้า develop ก่อน release (M)
 
+**ขอบเขต (4.9.9):** release สนใจแค่ `develop`/`jenkins`/`jenkins-release` และ work branch ของงานนี้เท่านั้น คือ branch ปัจจุบัน, branch ที่ส่งงานใน session นี้ หรือที่ผู้สั่งระบุ (`--branches`); branch อื่นที่ใครแตกไว้**ไม่ดู ไม่รายงาน ไม่ถาม** (`--scope all` เฉพาะเมื่อสั่งรวมทุก branch)
+
 งานที่ส่งเข้า work branch แล้วต้องไปกับ release โดยไม่ต้องสั่ง merge ทีละ branch ขั้นนี้ใช้กับ prepare, pipeline, release ทุกแบบและกลุ่ม B (หลัง pending-work gate ก่อน I/H/P) ส่วน promote ทำหลัง T เพื่อให้ `develop` ครบสำหรับรอบถัดไป
 
 1. ไฟล์ที่ยังไม่ commit บน work branch ปัจจุบันต้อง `deliver plan/apply` ก่อน (commit ตาม AGENTS.md §10.6 และ push work branch); ประวัติ `.agrimap-agent` ที่เขียนหลังส่งงาน (log/recent memory) ซึ่งขวางการ switch ให้ commit บน work branch นั้นเป็น `audit: บันทึกประวัติงาน`; ไฟล์ค้างบน `develop` เป็น content commit ตาม §6.3
 2. `integrate pending` แสดง work branch (prefix ตาม policy) ที่ยังไม่อยู่ใน `develop` พร้อมสถานะ: `ready` = ส่งผ่าน deliver และ test ผ่าน, `unverified`, `manual` (ไม่มี AGM-Execution หรือมี commit หลังส่งงาน) และ branch ที่ชนกับ `develop`
-3. `integrate gather plan` แล้ว `integrate gather apply --plan-hash <hash>`: รวมทุก branch `ready` ด้วย merge commit (ข้อความ Merge ของ Git) เข้า local `develop` โดยไม่ switch worktree และไม่ push; ถาม card เฉพาะเมื่อ script ส่ง card มา คือมี branch `unverified`/`manual` ที่**รวมได้โดยไม่ชน** (ค่าแนะนำคือรวมเฉพาะ `ready`) และถามรวมในรอบเดียวของ §6.5
-4. **M ไม่หยุด release เอง:** branch ที่ชนกับ `develop` ไม่ถูกรวมและไม่ต้องถาม ให้รายงานใน `⚠️ ต้องตามต่อ` พร้อมวิธีแก้แล้วทำต่อ; ไม่มี branch ให้รวมก็ทำต่อ; ห้ามถามว่าจะ release โดยไม่รวม branch ที่ชนหรือไม่
+3. `integrate gather plan` แล้ว `integrate gather apply --plan-hash <hash>`: รวม branch ของงานนี้ด้วย merge commit (ข้อความ Merge ของ Git) เข้า local `develop` โดยไม่ switch worktree และไม่ push ไม่มี card
+4. **Conflict ให้ Agent แก้เอง ไม่ถาม:** ถ้า branch ของงานนี้ชนกับ `develop` script คืน `resolve` พร้อมขั้นตอน ให้ merge `develop` เข้า branch นั้น แก้ conflict โดยรักษาเจตนาทั้งสองฝั่ง รัน test, commit (ข้อความ Merge ของ Git), push branch แล้ว gather ใหม่ ถามเฉพาะเมื่อสองฝั่งแก้ business logic เดียวกันขัดกันจนต้องให้คนเลือก
 5. ตรวจ build/test ของ `develop` หลังรวม แล้วจึง index/changelog/prepare; merge commit ไปกับการ push `develop` ครั้งเดียวของขั้น D (promote ไปกับ final audit push)
 6. หลังมี candidate แล้ว (pipeline หรือ resume) M รายงานอย่างเดียวและไม่รันซ้ำ: ใช้ `integrate pending` ตรวจ ถ้ามี branch `ready` ใหม่ให้ถามครั้งเดียวว่าจะเตรียมใหม่ด้วย `release <env>` version เดิม (รวมแล้ว reconcile changelog/notes) หรือปล่อยไปรอบหน้า ห้ามแทรกงานเข้า candidate ที่ตรวจแล้วเงียบ ๆ
 7. ห้าม rebase, squash, force, stash หรือลบ branch อัตโนมัติ; รายงานชื่อ branch และ SHA ที่รวม, ที่ข้ามพร้อมเหตุผล และ merge SHA ใน final report
@@ -306,8 +308,8 @@ develop -> jenkins -> jenkins-release   (checkout, merge --ff-only, push ที�
 Owner decision 2026-09-29 (4.9.8): release ต้องจบในการสั่งครั้งเดียวเมื่อไม่มีเรื่องที่ต้องตัดสินจริง
 
 1. **ตรวจครั้งเดียวก่อนเตรียม version (R):** รัน `release preflight` (script ของ skill) ซึ่ง fetch ครั้งเดียวแล้วรายงานสถานะ `develop`/`jenkins`/`jenkins-release`, เลข owner ทั้งสอง, tag ล่าสุด, ไฟล์ค้าง, M และ `autoActions`/`questions`/`blockers` ห้ามค้นทีละคำสั่งซ้ำเอง
-2. **ถามรอบเดียว:** รวมทุก `questions` (ไม่เกิน 3) เป็นข้อความเดียวพร้อมตัวเลือกและค่าแนะนำ แล้วทำต่อจนจบ ห้ามพบคำถามเรื่อง branch หลังสร้าง candidate แล้ว ยกเว้น remote เปลี่ยนจนชนจริงระหว่างทาง คำยืนยัน Production ตาม §7 ยังเป็นคำถามแยกหนึ่งครั้งตามเดิม
-3. **Sync อัตโนมัติ (ไม่ต้องถาม):** `release sync plan/apply` merge `origin/develop` ที่ไม่ชนเข้า local `develop` และ back-merge `origin/jenkins`/`origin/jenkins-release` ที่ไม่ใช่ ancestor เมื่อผล merge **ไม่เปลี่ยนไฟล์ใดเลย** (มีแต่ประวัติ merge) เพื่อให้ promote แบบ `--ff-only` ได้ ทั้งหมดเป็น merge commit ของ Git ใน local ไม่ push; ถ้า back-merge พาเนื้อหาใหม่มา script ส่ง card ใน preflight (แนะนำให้รวมแล้วไปต่อ) ถ้าชนจริงให้หยุดเฉพาะขั้นนั้นพร้อม path
+2. **ไม่ถามเรื่อง branch:** `resolve` จาก preflight คือสิ่งที่ Agent ทำเอง (merge, แก้ conflict, test, commit) แล้วทำต่อจนจบ คำถามที่เหลือมีแค่ยืนยัน Production ตาม §7 หนึ่งครั้ง และ `questions` ที่ script ส่งมา (ถ้ามี) ให้ถามรวมในรอบเดียวด้วยเครื่องมือถามคำถามของ host
+3. **Sync อัตโนมัติ (ไม่ต้องถาม):** `release sync plan/apply` merge `origin/develop` และ back-merge `origin/jenkins`/`origin/jenkins-release` ที่ไม่ใช่ ancestor เข้า local `develop` เสมอ รวมกรณีที่มีงาน (hotfix) ที่ develop ยังไม่มี เพื่อให้ promote แบบ `--ff-only` ได้ เป็น merge commit ของ Git ใน local ไม่ push และรายงานไฟล์ที่ได้มา (4.9.9); ถ้าชน script คืน `resolve` ให้ Agent `git merge <ref>` บน `develop` แก้ conflict รัน test แล้ว commit เองโดยไม่ถาม
 4. **ก่อน push develop (D):** หลัง commit candidate รัน `release sync plan/apply` อีกครั้งแล้ว push ทันที ถ้า push ถูกปฏิเสธเพราะมีคน push เข้ามา ให้ sync แล้ว push ใหม่เองได้สูงสุด 2 ครั้งโดยไม่ถาม ถ้า merge นำเนื้อหาใหม่เข้ามาให้เติม changelog/notes ของ delta นั้นและตรวจ owner pair ใหม่ ห้าม bump ซ้ำ
 5. **ไม่เปลี่ยนกติกากลางทาง:** ตรวจ bootstrap freshness ที่ R เท่านั้น release ที่ resume ใช้กติกาชุดเดิมจนจบ bootstrap ที่ใหม่กว่า**ไม่ขวาง** promote/tag/notify ของ candidate ที่ freeze แล้ว และห้าม refresh candidate เพราะ bootstrap ให้อัปเดตใน final audit (F) หรือ release ถัดไป
 6. **บันทึก:** เขียนไฟล์ log/memory/report ด้วย file tool หรือ script ห้ามใช้ `echo`/here-string ของ shell ที่ทำอักขระเพี้ยน; ระหว่างทางไม่สร้าง audit commit ย่อย ให้รวมใน final audit commit เดียวของ F
@@ -386,7 +388,7 @@ Owner decision 2026-09-29 (4.9.8): release ต้องจบในการส�
 - ข้อที่ต้องแก้หรือกระทบ project อื่น (generated API client `agmws-*`, package `@agrimap/*`, NuGet `AgriMap.*`, endpoint ของ service อื่น หรือ project ที่ต้องตามไปแก้/deploy คู่กัน) ปิดท้ายข้อด้วย `(เกี่ยวข้อง: <project>, <project>)` ใช้ชื่อ repo จริง โดยอธิบายผลที่ผู้ใช้เห็น ไม่อธิบายเทคนิค
 - บันทึกที่ `.agrimap-agent/reports/YYYY-MM/<RUN_ID>-release-description.md` (commit ไปกับ `audit:` commit) และแสดงข้อความเต็มในคำตอบสุดท้ายเสมอ รวมกรณี `--silent`
 - ส่งด้วย `node tools/agrimap/release-notify.mjs send --description <file> --environment Production` ซึ่งตรวจ `…/healthz` ก่อน POST ทุกครั้ง URL มาจาก env `NOTIFY_WEBHOOK_URL` (เช่น `https://appserv2.cdg.co.th/agrimap-notify/release-description`)
-  - exit 2 (ไม่มี env): ถามผู้ใช้ครั้งเดียวขอ URL แล้วรัน `set-url <url>` บันทึก env ถาวรบนเครื่อง จากนั้นส่งต่อใน invocation เดิม
+  - exit 2 (ไม่มี env): ถามครั้งเดียวด้วยเครื่องมือถามคำถามของ host (ไม่ถามเป็นข้อความธรรมดา) ตาม `question` ที่ script ส่งมา ตัวเลือกแรกคือ URL มาตรฐาน แล้วรัน `set-url` บันทึก env ถาวรบนเครื่อง จากนั้นส่งต่อใน invocation เดิม
   - exit 3/4 (health หรือ POST ล้มเหลว): release ยังถือว่าสำเร็จ รายงาน notify เป็น `pending` พร้อม HTTP status และคำสั่งส่งซ้ำ ห้าม retry วนหรือส่งซ้ำเมื่อ `sent: true` แล้ว
 - `--silent` (alias `--skip-noti`) ข้ามเฉพาะการส่ง ยังเขียนและแสดง Release Description; รายงาน notify เป็น `skipped (--silent)`
 - ไฟล์ `tools/agrimap/release-notify.mjs` เป็น managed bootstrap file ถูกแทนที่ทุกครั้งที่อัปเดต bootstrap (มี backup) ห้ามแก้ใน project

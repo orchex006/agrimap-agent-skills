@@ -59,6 +59,10 @@ BOOTSTRAP_BUNDLE_HASH_MISMATCH หมายถึง source bundle ไม่ต�
 
 ตรวจว่า external sql-context-pack/service พร้อมและ conversation นี้มี connected profile หากไม่มีให้ส่ง sanitized schema หรือ local file ที่มี authority แทน ไม่สร้าง connection เอง ไม่เรียก EXEC เพื่อทดสอบ และไม่ sync metadata เพื่อแก้ปัญหา read access
 
+## AGENTS.md คนละ version กับ skill (4.9.9)
+
+ไม่ต้องสั่ง `agm-release bootstrap upgrade` ก่อนอีกแล้ว Agent อัปเดตและ merge ให้ในงานที่สั่งแล้วทำต่อ บรรทัดที่ทีมเพิ่มเองอยู่ในบล็อก `PROJECT CUSTOM` และไฟล์เดิมอยู่ใน `.agrimap-agent/runtime/bootstrap-backups/<hash>/` ถ้า Agent ยังหยุดเพราะเรื่องนี้ แปลว่า plugin ยังเก่ากว่า 4.9.9 ให้อัปเดต plugin
+
 ## คำสั่ง git ถูก deny ด้วย "AGM guard G…" (4.9.0)
 
 Claude Code มี hook `PreToolUse` ที่ตรวจคำสั่ง git ที่ Agent พิมพ์เอง: force push (G1), push เข้า protected branch นอก release (G2), `git add -A/.` หรือ `.agrimap-agent/local` (G3), ลบ protected branch/tag (G5) ถูก deny; `reset --hard`, `clean -f`, `checkout -- .`, `restore .` (G4) และ `stash` (G6) ถามก่อน งาน release (active operation `release`) push develop/jenkins ได้ตาม `AGENTS.release.md` ตั้งแต่ 4.9.6 `git commit -m/-F` ที่ header ไม่ใช่ `feature|fix|comment|bump|audit|ci: …` ถูก deny (G7) พร้อม header ที่แนะนำ เช่น `feat(x): เพิ่มปุ่ม` → `feature: เพิ่มปุ่ม` และตั้งแต่ 4.9.8 คำอธิบายภาษาอังกฤษล้วน (`fix: resolve paths`, `bump: 4.9.8`) ถูก deny ให้เขียนภาษาไทย ใช้เฉพาะ repo AgriMap (มี policy, `.agrimap-agent/` หรือ bootstrap AGENTS) ไม่ใช้กับ merge/revert ที่ Git เขียนเอง และปิดได้ด้วย policy `delivery.commitConvention: "conventional"`

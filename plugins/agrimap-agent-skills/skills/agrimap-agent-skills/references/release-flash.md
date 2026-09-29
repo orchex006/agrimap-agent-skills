@@ -11,8 +11,8 @@ Read this file, release-timing.md, release-notify.md for Production, the target 
 ## Fast path
 
 1. Start the timer, then run `agm-workspace.mjs release preflight` once. It fetches and reports the three branch pairs, both owner pairs, the latest tag, dirty paths, finished work branches (M) and the `autoActions`, `questions` and `blockers`. Do not repeat these checks command by command. Check bootstrap freshness from its receipt now; apply a compatible update now or not at all during this run.
-2. Ask every preflight question in one message, recommended option first; the Production confirmation stays the only later question. Blockers stop only the affected publication, with their paths.
-3. `release sync plan/apply` (merge a clean `origin/develop`, back-merge `jenkins`/`jenkins-release` history that changes no file) and `integrate gather plan --mode ready/apply` when ready branches exist. Conflicting work branches go to `⚠️ ต้องตามต่อ` without a question.
+2. Perform preflight `resolve` steps yourself (merge, resolve conflicts, test, commit) without asking; the Production confirmation is the only question. Blockers stop only the affected publication.
+3. `release sync plan/apply` (merge `origin/develop`, back-merge `jenkins`/`jenkins-release`) and `integrate gather plan/apply` for this release's own branch only; other branches are ignored.
 4. Tools: reuse `.agrimap-agent/runtime/release-tools.json` when it is at most 7 days old and `dotnet tool list -g` still shows the same agm-release version; otherwise follow release-tools.md once and rewrite that ignored file.
 5. Baseline per environment comes from the preflight owner values and the matching verified tag or checkpoint; never pick the largest tag or reuse a Production tag as Inhouse history. Review baseline-to-candidate committed changes plus dirty paths, reading changed content and affected dependencies only.
 6. Prepare once: explicit owner target, otherwise owner PATCH+1. Full prepares both; Production-only leaves Inhouse unchanged; Inhouse writes no Production notes/index/tag. Update the changelog for this delta and Production release.md/notes when selected; keep historical text.

@@ -3,6 +3,8 @@
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { isTemplateContentLine, templateLineKey } from "../skills/agrimap-agent-skills/scripts/project-bootstrap.mjs";
 import {
   loadTaskArtifactSchema,
   renderTaskArtifactSchemaDocs,
@@ -73,6 +75,28 @@ for (const item of bootstrapManifest.files) {
 }
 bootstrapManifest.version = packageVersion;
 await writeFile(bootstrapManifestPath, JSON.stringify(bootstrapManifest, null, 2) + '\n', 'utf8');
+
+// Known template lines (4.9.9): normalized line hashes of every committed version of
+// each copy-mode template, so project-bootstrap can merge a customized project file
+// automatically. The union with the committed file keeps shallow clones stable.
+const templateLinesPath = path.join(bootstrapRoot, 'template-lines.json');
+const templateLines = JSON.parse(await readFile(templateLinesPath, 'utf8').catch(() => '{"schemaVersion":1,"files":{}}'));
+for (const item of bootstrapManifest.files.filter(entry => entry.mode === 'copy')) {
+  const known = new Set(templateLines.files[item.target] || []);
+  const texts = [await readFile(path.join(bootstrapRoot, item.source), 'utf8')];
+  const repoPath = path.relative(root, path.join(bootstrapRoot, item.source)).replaceAll('\\', '/');
+  let history = '';
+  try { history = execFileSync('git', ['log', '--follow', '--name-only', '--format=%H', '--', repoPath], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }); } catch { /* no history: keep the committed set */ }
+  let sha = null;
+  for (const line of history.split(/\r?\n/).map(value => value.trim()).filter(Boolean)) {
+    if (/^[0-9a-f]{40}$/.test(line)) { sha = line; continue; }
+    try { texts.push(execFileSync('git', ['show', `${sha}:${line}`], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })); } catch { /* path absent at that commit */ }
+  }
+  for (const text of texts) for (const line of text.split(/\r?\n/)) if (isTemplateContentLine(line)) known.add(templateLineKey(line));
+  templateLines.files[item.target] = [...known].sort();
+}
+templateLines.schemaVersion = 1;
+await writeFile(templateLinesPath, JSON.stringify(templateLines, null, 1) + '\n', 'utf8');
 const toolLockPath = path.join(canonicalSkill, 'assets/tool-versions.json');
 const toolLock = JSON.parse(await readFile(toolLockPath, 'utf8'));
 if (toolLock.schemaVersion !== 1 || !/^\d+\.\d+\.\d+$/.test(toolLock.sqlfluff?.version || '')) throw new Error('SQLFLUFF_LOCK_INVALID');

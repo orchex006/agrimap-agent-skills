@@ -12,6 +12,59 @@ const kinds = ['fe-main', 'be-main', 'fe-library', 'be-library'];
 const start = '<!-- BEGIN AGRIMAP DEPLOYMENT -->';
 const end = '<!-- END AGRIMAP DEPLOYMENT -->';
 async function readMaybe(file) { try { return await readFile(file); } catch (e) { if (e.code === 'ENOENT') return null; throw e; } }
+
+// Automatic merge of a customized copy file (4.9.9): template-lines.json holds the
+// normalized line hashes of every template version, so a line the project added is
+// one that no template ever had. The new template wins for maintained text and the
+// project lines are kept in PROJECT CUSTOM blocks under the same heading.
+const CUSTOM_START = '<!-- BEGIN PROJECT CUSTOM (kept by bootstrap upgrade) -->';
+const CUSTOM_END = '<!-- END PROJECT CUSTOM -->';
+const MARKER_LINE = /^<!-- (?:AGRIMAP BOOTSTRAP VERSION: [^>]+|BEGIN PROJECT CUSTOM \(kept by bootstrap upgrade\)|END PROJECT CUSTOM) -->$/;
+const normalLine = line => line.trim().replace(/\s+/g, ' ');
+export const templateLineKey = line => createHash('sha256').update(normalLine(line)).digest('hex').slice(0, 12);
+export const isTemplateContentLine = line => Boolean(normalLine(line)) && !MARKER_LINE.test(normalLine(line));
+
+// Blocks under each heading; fenced code stays one unit so a kept block is never split.
+function markdownBlocks(text) {
+  const blocks = [{ heading: '', units: [] }];
+  let fence = null;
+  for (const line of text.replaceAll('\r\n', '\n').split('\n')) {
+    const block = blocks[blocks.length - 1];
+    if (fence) { fence.push(line); if (/^\s*```/.test(line)) fence = null; continue; }
+    if (/^\s*```/.test(line)) { fence = [line]; block.units.push(fence); continue; }
+    if (/^#{1,6} /.test(line)) { blocks.push({ heading: line, units: [] }); continue; }
+    block.units.push([line]);
+  }
+  return blocks;
+}
+
+export function mergeTemplate(installed, template, known) {
+  const templateLines = new Set(template.replaceAll('\r\n', '\n').split('\n').filter(isTemplateContentLine).map(templateLineKey));
+  const isCustom = line => isTemplateContentLine(line) && !known.has(templateLineKey(line)) && !templateLines.has(templateLineKey(line));
+  const kept = new Map();
+  const extra = [];
+  let preserved = 0;
+  for (const block of markdownBlocks(installed)) {
+    const ownHeading = block.heading && isCustom(block.heading);
+    const lines = block.units.filter(unit => ownHeading || unit.some(isCustom)).flat().filter(line => !MARKER_LINE.test(normalLine(line)));
+    while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+    if (!lines.some(line => line.trim()) && !ownHeading) continue;
+    preserved += lines.filter(isTemplateContentLine).length + (ownHeading ? 1 : 0);
+    const key = normalLine(block.heading);
+    if (!ownHeading && template.split('\n').some(line => normalLine(line) === key)) kept.set(key, [...(kept.get(key) || []), ...lines]);
+    else extra.push(...(block.heading ? [block.heading] : []), ...lines, '');
+  }
+  const out = [];
+  const flush = key => { const lines = kept.get(key); if (lines?.length) { while (out.length && !out[out.length - 1].trim()) out.pop(); out.push('', CUSTOM_START, ...lines, CUSTOM_END, ''); kept.delete(key); } };
+  let current = '';
+  for (const unit of markdownBlocks(template)) {
+    if (unit.heading) { flush(current); out.push(unit.heading); current = normalLine(unit.heading); }
+    out.push(...unit.units.flat());
+  }
+  flush(current);
+  if (extra.length) { while (out.length && !out[out.length - 1].trim()) out.pop(); out.push('', CUSTOM_START, ...extra.filter((line, index, list) => line.trim() || index < list.length - 1), CUSTOM_END); }
+  return { content: `${out.join('\n').replace(/\n+$/, '')}\n`, preserved };
+}
 async function safeTarget(root, relative) {
   const dest = path.resolve(root, relative);
   if (!dest.startsWith(root + path.sep)) throw new Error('BOOTSTRAP_PATH_ESCAPE');
@@ -39,6 +92,7 @@ export async function planBootstrap({ target, kind, upgrade = false, reviewedMer
     throw new Error('BOOTSTRAP_MERGE_REVIEW_INVALID');
   }
   if (upgrade && reviewedMerges.length) throw new Error('BOOTSTRAP_MERGE_REPLACEMENT_CONFLICT');
+  const templateLines = JSON.parse(await readFile(path.join(bundle, 'template-lines.json'), 'utf8').catch(() => '{"files":{}}'));
   const entries = [];
   for (const item of manifest.files) {
     const source = await readFile(path.join(bundle, item.source));
@@ -91,16 +145,26 @@ export async function planBootstrap({ target, kind, upgrade = false, reviewedMer
       merge = { sourceSha256: item.sha256, backupHash: evidence.backupHash, reason: evidence.reason };
       content = before; status = 'unchanged';
     }
-    entries.push({ previousVersion, target: item.target, mode: item.mode, status, beforeHash: before ? hash(before) : null, sha256: hash(content || ''), ...(merge ? {merge} : {}), content: (content || Buffer.alloc(0)).toString('base64') });
+    let autoMerge = null;
+    if (!merge && item.mode === 'copy' && status === 'conflict') {
+      const merged = mergeTemplate(before.toString('utf8'), source.toString('utf8'), new Set(templateLines.files?.[item.target] || []));
+      content = Buffer.from(merged.content);
+      status = hash(content) === hash(before) ? 'unchanged' : 'merge';
+      autoMerge = { preserved: merged.preserved };
+    }
+    entries.push({ previousVersion, target: item.target, mode: item.mode, status, beforeHash: before ? hash(before) : null, sha256: hash(content || ''), ...(merge ? {merge} : {}), ...(autoMerge ? {autoMerge} : {}), content: (content || Buffer.alloc(0)).toString('base64') });
   }
   const agents = await readMaybe(await safeTarget(root, 'AGENTS.md'));
   const installedVersion = agents?.toString('utf8').match(/<!-- AGRIMAP BOOTSTRAP VERSION: ([^ ]+) -->/)?.[1] || null;
   const receiptVersion = priorReceipt?.version || null;
   return { version: manifest.version, installedVersion, receiptVersion, freshness: receiptVersion === manifest.version && installedVersion === manifest.version && entries.every(e => e.status === 'unchanged') ? 'current' : 'update-required', root, kind, upgrade: upgrade === true, ok: entries.every(e => e.status !== 'conflict'), entries };
 }
+// Never a stop (4.9.9): everything that can be applied is applied; a file that still
+// conflicts (only a hand-edited README Deployment block can) stays pending and is reported.
 export async function applyBootstrap(options) {
   const plan = await planBootstrap(options);
-  if (!plan.ok) return { ...plan, applied: false };
+  const pending = plan.entries.filter(e => e.status === 'conflict').map(e => e.target);
+  plan.entries = plan.entries.filter(e => e.status !== 'conflict');
   const receipt = await safeTarget(plan.root,'.agrimap-agent/runtime/bootstrap.json');
   // Preflight all target fingerprints before creating any target.
   for (const e of plan.entries) {
@@ -108,7 +172,7 @@ export async function applyBootstrap(options) {
     if ((before ? hash(before) : null) !== e.beforeHash) throw new Error('BOOTSTRAP_TARGET_DRIFT');
   }
   // Save exact prior bytes before any replacement, including project README outside the managed block.
-  for (const e of plan.entries.filter(e => e.status === 'update')) {
+  for (const e of plan.entries.filter(e => e.status === 'update' || e.status === 'merge')) {
     const backup = await safeTarget(plan.root, `.agrimap-agent/runtime/bootstrap-backups/${e.beforeHash}/${e.target}`);
     await mkdir(path.dirname(backup), {recursive:true});
     const old = await readFile(await safeTarget(plan.root, e.target));
@@ -123,7 +187,7 @@ export async function applyBootstrap(options) {
   }
   await mkdir(path.dirname(receipt),{recursive:true});
   await writeFile(receipt,JSON.stringify({version:plan.version,kind:plan.kind,files:plan.entries.map(({content,...e})=>e)},null,2)+'\n');
-  return { ...plan, applied: true };
+  return { ...plan, applied: true, ok: true, pending };
 }
 if (path.resolve(process.argv[1] || '') === fileURLToPath(import.meta.url)) {
   const command = process.argv[2];
@@ -132,6 +196,6 @@ if (path.resolve(process.argv[1] || '') === fileURLToPath(import.meta.url)) {
     if (!['plan','apply','upgrade'].includes(command)) throw new Error('Use plan [--upgrade]|apply|upgrade --target <project> --kind <kind> [--reviewed-merges <json-file>]');
     const reviewedMerges = args['reviewed-merges'] ? JSON.parse(await readFile(args['reviewed-merges'], 'utf8')) : [];
     return (command === 'plan' ? planBootstrap : applyBootstrap)({ target: args.target, kind: args.kind, upgrade: command === 'upgrade' || args.upgrade === true, reviewedMerges });
-  }).then(result => { console.log(JSON.stringify({...result,entries:result.entries.map(({content,...e})=>e)},null,2)); if (!result.ok) process.exitCode=1; })
+  }).then(result => { console.log(JSON.stringify({...result,entries:result.entries.map(({content,...e})=>e)},null,2)); if (!result.ok && !result.applied) process.exitCode=1; })
     .catch(error => {console.error(JSON.stringify({ok:false,message:error.message}));process.exitCode=1;});
 }
