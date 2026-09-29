@@ -64,7 +64,7 @@
 
 <a id="agent-commit-style"></a>
 
-## Agent เขียน commit แบบไหน (4.9.4)
+## Agent เขียน commit แบบไหน (บังคับตั้งแต่ 4.9.6)
 
 ทุก commit ที่ Agent เขียนใน project ใช้รูปแบบเดียวกัน: `<type>: <คำอธิบายภาษาคน>` ไม่มี scope ยาวไม่เกิน 100 ตัวอักษร เขียนให้ App Leader, BA หรือลูกค้าอ่าน header แล้วรู้ว่าเปลี่ยนอะไร รายละเอียดเทคนิค (ชื่อ class, ไฟล์, route) ใส่ใน body ได้ ไม่ใส่ใน header กติกาเต็มอยู่ใน canonical AGENTS §10.6
 
@@ -79,7 +79,9 @@
 
 - ตอน release ที่รวมงานค้าง Agent แยกเป็น content commit ตามชนิดงานจริง (`feature:`/`fix:`/`comment:`) ก่อน แล้วค่อย `bump:` เป็น commit แยก
 - `changelog.md` ยังเป็นภาษาอังกฤษตาม AGENTS §5 ไม่คัดลอก header ไทยไปลง changelog
-- Commit แบบ Conventional Commits ภาษาอังกฤษ (`feat(scope): ...`) ที่ส่งเข้ามาเองยังผ่านการตรวจ แต่ Agent จะไม่สร้างแบบนั้นเอง
+- งานต่างชนิดแยกคนละ commit เช่น ความสามารถใหม่กับแก้ bug ในรอบเดียวกันเป็น `feature:` หนึ่ง commit และ `fix:` อีกหนึ่ง commit
+- บังคับจริงตั้งแต่ 4.9.6: `deliver` แปลง type แบบ Conventional ที่ส่งเข้ามาให้เป็นของทีมและตัด scope (`feat(orders): …` → `feature: …`, `docs:`/`refactor:` → `comment:`, `chore:`/`build:` → `ci:`) และ Claude Code ปฏิเสธ `git commit -m` ที่ Agent พิมพ์เองถ้า header ไม่ตรงรูปแบบ (guard G7) พร้อมบอก header ที่ควรใช้ ข้อความ merge/revert ที่ Git เขียนเองไม่ถูกตรวจ
+- ทีมที่ต้องการ Conventional Commits จริง ๆ ตั้ง `"delivery": { "commitConvention": "conventional" }` ใน `.agrimap-agent/policy/workflow.json`
 
 ## Passive recommendations
 

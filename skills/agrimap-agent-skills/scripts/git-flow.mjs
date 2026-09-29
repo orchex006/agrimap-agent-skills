@@ -12,13 +12,37 @@ import { isProtected, workTypeOf } from "./workflow-policy.mjs";
 
 const AUDIT_DIRECTORIES = new Set(["decisions", "instructions", "knowledge", "logs", "memory", "reports", "policy"]);
 const SECRET_KINDS = new Set(["CREDENTIAL", "TOKEN", "AUTH", "PRIVATE_KEY"]);
-// Team commit style (bootstrap AGENTS.md §10.3): "<type>: <plain description>" that an
+// Team commit style (bootstrap AGENTS.md §10.6): "<type>: <plain description>" that an
 // App Leader, BA or customer can read. Work: feature|fix|comment; agm-release: bump|audit|ci.
 const TYPE_BY_WORK = { feature: "feature", fix: "fix", hotfix: "fix", refactor: "comment", docs: "comment", chore: "ci" };
 export const TEAM_HEADER = /^(feature|fix|comment|ci|bump|audit): \S.*$/u;
 const TEAM_HEADER_MAX = 100;
-// Legacy English Conventional Commits stay valid for explicit input.
+// Conventional or habitual types map onto the team type and lose their scope (4.9.6).
+const TEAM_TYPE_OF = {
+  feat: "feature", feature: "feature", fix: "fix", bugfix: "fix", hotfix: "fix",
+  comment: "comment", refactor: "comment", docs: "comment", doc: "comment", style: "comment", perf: "comment", test: "comment", tests: "comment",
+  chore: "ci", build: "ci", ci: "ci", bump: "bump", release: "bump", version: "bump", audit: "audit",
+};
+const PREFIXED = /^([A-Za-z]+)(?:\([^)]*\))?!?:\s*(.*)$/u;
+// Headers Git writes itself keep Git's wording.
+const GIT_GENERATED = /^(?:Merge (?:branch|remote-tracking branch|pull request|tag|commit) |Revert "|(?:fixup|squash|amend)! )/;
+// English Conventional Commits pass only when the policy selects commitConvention "conventional".
 const HEADER =/^(feat|fix|refactor|docs|chore|test|perf|build|ci)(\([a-z0-9._/-]+\))?: \S.*$/;
+
+export function teamHeader(header) {
+  const match = String(header || "").trim().match(PREFIXED);
+  const type = match && TEAM_TYPE_OF[match[1].toLowerCase()];
+  return type && match[2].trim() ? `${type}: ${match[2].trim()}` : null;
+}
+
+export function checkCommitHeader(header, convention = "agrimap") {
+  const value = String(header || "").trim();
+  if (GIT_GENERATED.test(value)) return { ok: true, generated: true };
+  if (TEAM_HEADER.test(value) && value.length <= TEAM_HEADER_MAX) return { ok: true };
+  if (convention === "conventional" && HEADER.test(value) && value.length <= 72 && !/[^\x20-\x7e]/.test(value)) return { ok: true };
+  const suggestion = teamHeader(value);
+  return { ok: false, suggestion: suggestion && suggestion.length <= TEAM_HEADER_MAX ? suggestion : null };
+}
 const SLUG = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 const toSlash = value => String(value || "").replaceAll("\\", "/");
 // Append-only audit written after a delivery (delivered/completed/integrated,
@@ -340,11 +364,17 @@ function lines(value) {
   return String(value || "").split(/\r?\n/).map(line => line.trim()).filter(Boolean);
 }
 
-function commitMessage({ input, workType, objective, own, executionId, verificationTrailer, bodyFallback = [] }) {
-  const type = input?.type || TYPE_BY_WORK[workType] || "ci";
+function commitMessage({ input, workType, objective, own, executionId, verificationTrailer, bodyFallback = [], convention = "agrimap" }) {
+  let subject = String(input?.subject || objective || "").trim();
+  let type = input?.type ? String(input.type).trim() : null;
+  // A subject that already carries a prefix ("feat(x): ...") supplies the type once.
+  const embedded = subject.match(PREFIXED);
+  if (embedded && TEAM_TYPE_OF[embedded[1].toLowerCase()] && embedded[2].trim()) { type ||= embedded[1]; subject = embedded[2].trim(); }
+  type ||= TYPE_BY_WORK[workType] || "ci";
   let scope = input?.scope;
-  // The team style carries no scope; only legacy Conventional input derives one.
-  if (scope === undefined && !TEAM_HEADER.test(`${type}: x`)) {
+  // The team style carries no scope; only a "conventional" policy derives one.
+  if (convention !== "conventional") { type = TEAM_TYPE_OF[type.toLowerCase()] || type; scope = null; }
+  else if (scope === undefined && !TEAM_HEADER.test(`${type}: x`)) {
     const counts = {};
     for (const entry of own) {
       const top = entry.path.includes("/") ? entry.path.split("/")[0] : null;
@@ -352,7 +382,6 @@ function commitMessage({ input, workType, objective, own, executionId, verificat
     }
     scope = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]?.toLowerCase().replace(/[^a-z0-9._/-]+/g, "-") || null;
   }
-  const subject = String(input?.subject || objective || "").trim();
   const header = `${type}${scope ? `(${scope})` : ""}: ${subject}`;
   const body = (Array.isArray(input?.body) && input.body.length ? input.body : bodyFallback).slice(0, 5).map(item => `- ${String(item).replace(/^-\s*/, "")}`);
   const trailers = [`AGM-Execution: ${executionId}`, ...(verificationTrailer ? [`AGM-Verification: ${verificationTrailer}`] : [])];
@@ -463,11 +492,10 @@ export async function planDelivery({
   const verification = active.verificationStatus;
   const verified = ["passed", "not-applicable"].includes(verification);
   if (!verified) warnings.push(warning("DELIVERED_UNVERIFIED", active.executionId, "run the tests, fix them, deliver again; merge is not offered until verification passes"));
-  const message = commitMessage({ input, workType: active.workType || workTypeOf(policy, branch), objective: active.objective, own: groups.own, executionId: active.executionId, verificationTrailer: verified ? null : verification === "failed" ? "failed" : "not-run", bodyFallback });
-  if (!pushOnly && groups.own.length) {
-    const team = TEAM_HEADER.test(message.header) && message.header.length <= TEAM_HEADER_MAX;
-    const legacy = HEADER.test(message.header) && message.header.length <= 72 && !/[^\x20-\x7e]/.test(message.header);
-    if (!team && !legacy) return stop("MESSAGE_INVALID", `Header must be "<feature|fix|comment|ci|bump|audit>: <plain description>" (at most ${TEAM_HEADER_MAX} characters): ${message.header}`, { next: { action: "run", command: "deliver plan --input message.json" } });
+  const convention = policy?.delivery?.commitConvention || "agrimap";
+  const message = commitMessage({ input, workType: active.workType || workTypeOf(policy, branch), objective: active.objective, own: groups.own, executionId: active.executionId, verificationTrailer: verified ? null : verification === "failed" ? "failed" : "not-run", bodyFallback, convention });
+  if (!pushOnly && groups.own.length && !checkCommitHeader(message.header, convention).ok) {
+    return stop("MESSAGE_INVALID", `Header must be "<feature|fix|comment|ci|bump|audit>: <plain description>" (at most ${TEAM_HEADER_MAX} characters): ${message.header}`, { next: { action: "run", command: "deliver plan --input message.json" } });
   }
   const head = facts.head;
   const headMessage = head ? out(git(run, root, ["log", "-1", "--format=%B", head])) : "";

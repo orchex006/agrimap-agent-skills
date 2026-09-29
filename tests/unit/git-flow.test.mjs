@@ -545,3 +545,19 @@ test('a generated execution ID that collides within the same second moves to the
   assert.equal(started.ok,true,JSON.stringify(started));
   assert.ok(!taken.includes(started.activeTask.executionId),started.activeTask.executionId);
 });
+
+test('team commit style is enforced: Conventional types map to feature|fix|comment|ci and lose their scope (4.9.6)',async t=>{
+  const {checkCommitHeader,teamHeader}=await import('../../skills/agrimap-agent-skills/scripts/git-flow.mjs');
+  assert.deepEqual(checkCommitHeader('feat(orders): add export'),{ok:false,suggestion:'feature: add export'});
+  assert.equal(checkCommitHeader('feat(orders): add export','conventional').ok,true,'opt-out policy');
+  for(const [from,to] of [['docs: x','comment: x'],['refactor(api): x','comment: x'],['chore: x','ci: x'],['fix(ui)!: x','fix: x']])assert.equal(teamHeader(from),to,from);
+  for(const header of ["Merge branch 'feature/x' into develop",'Revert "feature: x"','fixup! feature: x'])assert.equal(checkCommitHeader(header).ok,true,header);
+  assert.deepEqual(checkCommitHeader('wip'),{ok:false,suggestion:null});
+  const h=await fixture(t);const p=await project(h,{method:'local-merge'});
+  const {executionId}=await startWork(p,{slug:'legacy-input'});
+  await writeFile(path.join(p.repo,'e.js'),'x\n');verify(p,'s1',executionId);
+  const plan=p.cli(['deliver','plan','--session','s1','--input',await messageFile(h)]);
+  assert.equal(plan.message.header,'feature: follow-up change');
+  await writeFile(path.join(h.temp,'embedded.json'),JSON.stringify({subject:'docs(readme): อธิบายการติดตั้ง'}));
+  assert.equal(p.cli(['deliver','plan','--session','s1','--input',path.join(h.temp,'embedded.json')]).message.header,'comment: อธิบายการติดตั้ง');
+});
