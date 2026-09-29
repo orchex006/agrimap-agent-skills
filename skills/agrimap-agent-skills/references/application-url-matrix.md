@@ -1,6 +1,6 @@
 # AgriMap Application URL Matrix
 
-This is the authoritative FE/BE decision reference for domain concatenation, redirects, and callbacks. Select an exact `application`, `mode`, `environment`, and `url_kind`. `—` means unsupported or unused; stop explicitly instead of falling back. Never synthesize a URL by generic string concatenation when this matrix contains an exact value.
+This is the authoritative FE/BE decision reference for domain concatenation, redirects, and callbacks. Service and job URLs (gateway, Pod-to-Pod, health) are in [service-url-matrix.md](service-url-matrix.md). Select an exact `application`, `mode`, `environment`, and `url_kind`. `—` means unsupported or unused; stop explicitly instead of falling back. Never synthesize a URL by generic string concatenation when this matrix contains an exact value.
 
 ## Application URL
 

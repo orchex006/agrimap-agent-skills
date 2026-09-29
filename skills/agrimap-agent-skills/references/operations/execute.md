@@ -43,6 +43,7 @@
 - When a generated API endpoint is added, changed, or consumed: [patterns/gencode-api.md](../patterns/gencode-api.md) — single shared source for the generator, config schema, and no-hand-written-client rules
 - When the authorized work touches a stored procedure, table, or persisted data: [db-schema-context.md](../db-schema-context.md) — schema evidence required before data changes
 - When the authorized work touches FE/BE URL, domain, redirect, or callback logic: [application-url-matrix.md](../application-url-matrix.md) — authoritative environment-specific execution values
+- When a service/job URL, gateway route, Pod-to-Pod call, base path or health endpoint is in scope: [service-url-matrix.md](../service-url-matrix.md) — service gateway keys, Kubernetes Services and health; no DB or IP data
 - When Subagent assignments are dispatched: [subagents-and-branches.md](../subagents-and-branches.md) — delegation packet, workspace mode, visibility, and integration boundaries
 - When material intent remains unresolved: [elicitation.md](../elicitation.md) — resolve only consequential ambiguity
 - When database context is needed: [sql-context-readonly.md](../sql-context-readonly.md) — managed read-only metadata and SELECT; never database writes

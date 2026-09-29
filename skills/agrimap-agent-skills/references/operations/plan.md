@@ -34,6 +34,7 @@
 - When the backend plan touches cookie, header, query, form, JSON body, or device-ID resolution: [patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md](../patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md) — request-value API and precedence plan
 - When the plan touches a stored procedure, table, or persisted data: [db-schema-context.md](../db-schema-context.md) — schema evidence required before data steps
 - When the plan includes FE/BE URL, domain, redirect, or callback logic: [application-url-matrix.md](../application-url-matrix.md) — authoritative environment-specific plan inputs
+- When a service/job URL, gateway route, Pod-to-Pod call, base path or health endpoint is in scope: [service-url-matrix.md](../service-url-matrix.md) — service gateway keys, Kubernetes Services and health; no DB or IP data
 - When material intent remains unresolved: [elicitation.md](../elicitation.md) — resolve only consequential ambiguity
 - When you are about to ask the requester a question: [autonomy.md](../autonomy.md) — ask only requester-owned material choices, with a decision card
 - When the project profile is spec-first or hybrid and the question concerns specified behavior: [spec-driven.md](../spec-driven.md) — spec items are the source of truth for specified behavior

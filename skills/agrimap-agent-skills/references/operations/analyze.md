@@ -34,6 +34,7 @@
 - When the backend target reads cookie, header, query, form, JSON body, or device ID: [patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md](../patterns/golden/backend-libraries/013-1-extensions-request-value-normalize.md) — exact normalize API and compatibility behavior
 - When the target reads or writes data through a stored procedure, view, table, or inline SQL: [db-schema-context.md](../db-schema-context.md) — owner DDL evidence and SP → table tracing
 - When FE/BE URL, domain, redirect, or callback logic is in scope: [application-url-matrix.md](../application-url-matrix.md) — authoritative environment-specific URL selection
+- When a service/job URL, gateway route, Pod-to-Pod call, base path or health endpoint is in scope: [service-url-matrix.md](../service-url-matrix.md) — service gateway keys, Kubernetes Services and health; no DB or IP data
 - When material intent remains unresolved: [elicitation.md](../elicitation.md) — resolve only consequential ambiguity
 - When database context is needed: [sql-context-readonly.md](../sql-context-readonly.md) — managed read-only metadata and SELECT; never database writes
 - When you are about to ask the requester a question: [autonomy.md](../autonomy.md) — ask only requester-owned material choices, with a decision card

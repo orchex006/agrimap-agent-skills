@@ -173,6 +173,11 @@
           "why": "authoritative environment-specific URL selection"
         },
         {
+          "when": "a service/job URL, gateway route, Pod-to-Pod call, base path or health endpoint is in scope",
+          "path": "service-url-matrix.md",
+          "why": "service gateway keys, Kubernetes Services and health; no DB or IP data"
+        },
+        {
           "when": "material intent remains unresolved",
           "path": "elicitation.md",
           "why": "resolve only consequential ambiguity"
@@ -271,6 +276,11 @@
           "why": "authoritative environment-specific URL behavior"
         },
         {
+          "when": "a service/job URL, gateway route, Pod-to-Pod call, base path or health endpoint is in scope",
+          "path": "service-url-matrix.md",
+          "why": "service gateway keys, Kubernetes Services and health; no DB or IP data"
+        },
+        {
           "when": "material intent remains unresolved",
           "path": "elicitation.md",
           "why": "resolve only consequential ambiguity"
@@ -363,6 +373,11 @@
           "why": "authoritative environment-specific plan inputs"
         },
         {
+          "when": "a service/job URL, gateway route, Pod-to-Pod call, base path or health endpoint is in scope",
+          "path": "service-url-matrix.md",
+          "why": "service gateway keys, Kubernetes Services and health; no DB or IP data"
+        },
+        {
           "when": "material intent remains unresolved",
           "path": "elicitation.md",
           "why": "resolve only consequential ambiguity"
@@ -453,6 +468,11 @@
           "when": "the architecture includes FE/BE URL, domain, redirect, or callback ownership",
           "path": "application-url-matrix.md",
           "why": "authoritative environment-specific boundary values"
+        },
+        {
+          "when": "a service/job URL, gateway route, Pod-to-Pod call, base path or health endpoint is in scope",
+          "path": "service-url-matrix.md",
+          "why": "service gateway keys, Kubernetes Services and health; no DB or IP data"
         },
         {
           "when": "material intent remains unresolved",
@@ -799,6 +819,11 @@
           "when": "URL, domain, redirect, or callback logic is in scope",
           "path": "application-url-matrix.md",
           "why": "authoritative environment-specific URL values"
+        },
+        {
+          "when": "a service/job URL, gateway route, Pod-to-Pod call, base path or health endpoint is in scope",
+          "path": "service-url-matrix.md",
+          "why": "service gateway keys, Kubernetes Services and health; no DB or IP data"
         },
         {
           "when": "material intent remains unresolved",
@@ -1184,6 +1209,11 @@
           "why": "authoritative environment-specific Prompt Result inputs"
         },
         {
+          "when": "a service/job URL, gateway route, Pod-to-Pod call, base path or health endpoint is in scope",
+          "path": "service-url-matrix.md",
+          "why": "service gateway keys, Kubernetes Services and health; no DB or IP data"
+        },
+        {
           "when": "material intent remains unresolved",
           "path": "elicitation.md",
           "why": "resolve only consequential ambiguity"
@@ -1321,6 +1351,11 @@
           "when": "the authorized work touches FE/BE URL, domain, redirect, or callback logic",
           "path": "application-url-matrix.md",
           "why": "authoritative environment-specific execution values"
+        },
+        {
+          "when": "a service/job URL, gateway route, Pod-to-Pod call, base path or health endpoint is in scope",
+          "path": "service-url-matrix.md",
+          "why": "service gateway keys, Kubernetes Services and health; no DB or IP data"
         },
         {
           "when": "Subagent assignments are dispatched",

@@ -49,7 +49,8 @@ When a signal primitive choice is unclear, open `009-4-signal-decision-guide.md`
 
 Any task that adds, changes, or consumes a generated endpoint reads
 [gencode-api.md](../gencode-api.md) first. Hand-written clients are forbidden and generated output
-is never edited by hand. `018-11-generated-api-contract.md` is a pointer to that file.
+is never edited by hand. `018-11-generated-api-contract.md` is a pointer to that file. API URLs in
+`environment.*.ts` follow [service-url-matrix.md](../../service-url-matrix.md).
 
 ## SHOULD
 

@@ -129,6 +129,22 @@
       ]
     },
     {
+      "id": "be-service-matrix-light",
+      "description": "Backend Pod-to-Pod or gateway work loads the service matrix (4.9.7) without the FE application matrix",
+      "operation": "be",
+      "depth": "light",
+      "activate": [
+        "service-url-matrix.md"
+      ],
+      "mustLoad": [
+        "goal-rules.md",
+        "passive-capabilities.md",
+        "backend-engineer.md",
+        "patterns/backend.md",
+        "service-url-matrix.md"
+      ]
+    },
+    {
       "id": "passive-simulate-fe-main-light",
       "description": "Passive Frontend state simulation with FE state and observable fundamentals",
       "operation": "analyze",
