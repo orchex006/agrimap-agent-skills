@@ -208,7 +208,7 @@
 
 ### 10.6 รูปแบบ commit ของทีม (บังคับ)
 
-- ทุก commit ที่ Agent สร้าง (deliver/release/commit เอง): `<type>: <คำอธิบายภาษาไทย>` ≤ 100 ตัวอักษร ไม่มี scope ให้ BA/ทีมอ่านรู้เรื่อง ศัพท์เทคนิคเป็นอังกฤษได้ เช่น `fix: แก้ dynamic form เพิ่มวันที่` รายละเอียดใส่ body; ห้าม `feat(x):`/`docs:`/`chore:` (guard G7) ยกเว้น merge ของ Git
+- ทุก commit ที่ Agent สร้าง (deliver/release/commit เอง): `<type>: <คำอธิบายภาษาไทย>` ≤ 100 ตัวอักษร ไม่มี scope ให้ BA/ทีมอ่านรู้เรื่อง ศัพท์เทคนิคที่ทีมใช้เขียนทับศัพท์ตรงตัว ไม่แปลเป็นคำไทยกว้าง ๆ เช่น `feature: ปรับเพิ่มการส่งรหัส x-correlation-id ใน header เพื่อให้ทีมตรวจสอบปัญหาได้ตรงจุด` รายละเอียดใส่ body; ห้าม `feat(x):`/`docs:`/`chore:` (guard G7) ยกเว้น merge ของ Git
 - งาน: `feature:` ใหม่, `fix:` แก้ที่ผิด, `comment:` ปรับตาม comment/หน้าตา/ข้อความ/โครงสร้าง/เอกสาร; agm-release: `bump:` version, `audit:` บันทึก `.agrimap-agent`, `ci:` pipeline/governance/bootstrap; ต่างชนิดแยก commit
 
 ## Bootstrap contract freshness

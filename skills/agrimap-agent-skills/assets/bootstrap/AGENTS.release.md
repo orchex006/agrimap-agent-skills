@@ -181,7 +181,7 @@ agm-release -- notes --mode production
 - English ใช้ได้ตามปกติโดยไม่ต้องแปลและไม่ต้องใส่วงเล็บอธิบาย สำหรับ:
   - identifier ทุกชนิด เช่น function, method, variable, class, property, file path, route, branch, tag, version, environment name ตัวอย่าง `OAuthUseCase`, `GET /api/oauth/authorize`, `Jenkinsfile_Production`, `v1.0.16`
   - code block, shell command, config key, SQL object, package name, error code และ HTTP status ตัวอย่าง `401`, `invalid_grant`, `AgriMap.Platform 0.0.208`
-  - คำทับศัพท์ทางเทคนิคที่ทีมใช้จริง เช่น deploy, pipeline, commit, merge, promote, tag, release, endpoint, token, session, cache, rollback
+  - คำทับศัพท์ทางเทคนิคที่ทีมใช้จริง เช่น deploy, pipeline, commit, merge, promote, tag, release, endpoint, token, session, cache, rollback, header และชื่อที่ทีมรู้จัก เช่น `x-correlation-id` ให้เขียนตรงตัว ไม่แปลเป็นคำไทยกว้าง ๆ เช่น "ปรับเพิ่มการส่งรหัส x-correlation-id ใน header เพื่อให้ทีมงานตรวจสอบและประสานงานแก้ปัญหาได้ตรงจุด" เข้าใจง่ายกว่า "เพิ่มรหัสติดตามคำขอที่ส่งผ่าน Gateway"
 - ห้ามแปล identifier เป็นไทย และห้ามบังคับสร้างคำไทยแทนคำทับศัพท์ที่ทีมใช้จนคุ้น เพราะจะ grep เทียบกับ code ไม่เจอและสื่อสารกันไม่ตรง
 - ประโยคต้องอ่านเป็นภาษาไทยที่มี term อังกฤษแทรกอยู่ ไม่ใช่ประโยคอังกฤษที่แทรกคำไทย ถ้าย่อหน้าไหนเป็นอังกฤษล้วนให้เขียนใหม่เป็นไทย
 - หัวข้อและ field ตาม schema ใน `release-notes/README.md` คงเป็นอังกฤษเสมอ ห้ามแปล ได้แก่ `## Deployment targets`, `## Added`, `## Changed`, `## Fixed`, `## Verification` และ field `Version`, `Date`, `Source baseline`, `Source candidate`, `Tag` เพราะเป็นโครงสร้างที่เครื่องมืออ่าน
