@@ -1,12 +1,12 @@
 {
-  "version": "4.9.10",
+  "version": "4.10.1",
   "source": "Owner-supplied canonical contract submitted 2026-09-08; owner-authorized missing-memory indexing revision 2026-09-09; owner-authorized explicit Version/Patch precedence and compatible direct preparation revision 2026-09-09",
   "files": [
     {
       "source": "AGENTS.md",
       "target": "AGENTS.md",
       "mode": "copy",
-      "sha256": "80aee7dd504205b21a2b9d80fe83bb2b866962c51242a750986375c269f55951",
+      "sha256": "17046f8aaa7a63d41176aded81445e73844cac7853346d3381e6f006a3da1585",
       "previous": [
         {
           "version": "3.2.2",
@@ -119,6 +119,10 @@
         {
           "version": "4.9.9",
           "sha256": "608a2602586db8af4e01116885bba9591fc6467d876a7636db7daad9c4b446ce"
+        },
+        {
+          "version": "4.9.10",
+          "sha256": "80aee7dd504205b21a2b9d80fe83bb2b866962c51242a750986375c269f55951"
         }
       ]
     },
@@ -126,7 +130,7 @@
       "source": "AGENTS.release.md",
       "target": "AGENTS.release.md",
       "mode": "copy",
-      "sha256": "2e623e1224d30ff2d4eb506746016990f21bae2bb9940c3e1fff7ee44a4184d8",
+      "sha256": "45915695545bc9b85434239204bbcff4a4def12ec7d27ba65ead1c82eab9cc8e",
       "previous": [
         {
           "version": "4.8.0",
@@ -163,6 +167,10 @@
         {
           "version": "4.9.9",
           "sha256": "0defbab02f55d39acb7f96c4e63886da617310f8f99c5817af1e073ed0fcbf4c"
+        },
+        {
+          "version": "4.9.10",
+          "sha256": "2e623e1224d30ff2d4eb506746016990f21bae2bb9940c3e1fff7ee44a4184d8"
         }
       ]
     },
@@ -270,7 +278,7 @@
       "source": "release-notify.mjs",
       "target": "tools/agrimap/release-notify.mjs",
       "mode": "managed",
-      "sha256": "d7a3949487f645bb07f977b9b302543b9fcf549ec357a6ce2e2bbee4109f9e1d",
+      "sha256": "5de443192e45830b878c365f6845f74d7b60a30d59811a1354cb83d8fb1846c1",
       "previous": [
         {
           "version": "4.9.3",
@@ -279,6 +287,10 @@
         {
           "version": "4.9.8",
           "sha256": "007bd386a10367ffe9b94e890e6b96eaa52a972eab89803ed93bd201c868b62e"
+        },
+        {
+          "version": "4.9.10",
+          "sha256": "d7a3949487f645bb07f977b9b302543b9fcf549ec357a6ce2e2bbee4109f9e1d"
         }
       ]
     }

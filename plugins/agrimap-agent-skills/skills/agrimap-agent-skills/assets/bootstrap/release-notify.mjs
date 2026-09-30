@@ -7,10 +7,14 @@
 //
 //   node tools/agrimap/release-notify.mjs check
 //   node tools/agrimap/release-notify.mjs set-url <https://.../agrimap-notify/release-description>
+//   node tools/agrimap/release-notify.mjs generate --version <x.y.z> [--from <ref>] [--to <ref>] [--project-name <name>] [--out <file.md>]
 //   node tools/agrimap/release-notify.mjs send --description <file.md> [--environment Production] [--preview]
 //
 // Description file: "# <project name> / <version>", then one "- " bullet per change. A bullet
 // ending with "(เกี่ยวข้อง: a, b)" lists the other projects that change affects.
+// generate writes that file deterministically from the team commit headers "feature:|fix: <ไทย> (x.y.z)"
+// between the previous v* tag and --to, so every project gets the same format. Related projects come
+// from "เกี่ยวข้อง:"/"Related:" body lines and from AgriMap.* NuGet / @agrimap/* package changes.
 // URL: --url, else env NOTIFY_WEBHOOK_URL (process, then Windows user env or shell profile).
 // Health: env NOTIFY_HEALTH_URL, else the same base with /healthz as the last path segment.
 // Exit: 0 ok, 1 usage, 2 NOTIFY_WEBHOOK_URL_MISSING, 3 health failed, 4 post failed.
@@ -25,6 +29,10 @@ const PROFILE_FILES = ['.profile', '.bashrc', '.zshrc'];
 const ENVIRONMENTS = ['Inhouse', 'Production'];
 const LIMITS = { name: 200, text: 500, items: 50, related: 20 };
 const RELATED = /\s*\((?:เกี่ยวข้อง|ส่วนนี้มาจาก|related)\s*:?\s*([^)]+)\)\s*$/iu;
+
+const ITEM_TYPES = /^(?:feature|feat|fix)\s*(?:\([^)]*\))?\s*!?:\s*(.+?)\s*$/iu;
+const VERSION_SUFFIX = /\s*\(v?\d+\.\d+\.\d+(?:[-+][^)]*)?\)\s*$/u;
+const TRAILER = /^\s*(?:เกี่ยวข้อง|project ที่เกี่ยวข้อง|related)\s*:\s*(.+?)\s*$/iu;
 
 const print = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
 const fail = (code, exit, extra = {}) => { print({ ok: false, code, ...extra }); process.exit(exit); };
@@ -126,13 +134,91 @@ function setUrl(value) {
   print({ ok: true, saved: '~/.profile', url: url.toString() });
 }
 
+const git = (...argv) => execFileSync('git', argv, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 });
+const splitNames = value => value.split(/[,、]/).map(name => clip(name, LIMITS.name)).filter(Boolean);
+
+// A dependency the commit changed: AgriMap.Platform.Logging -> AgriMap.Platform, @agrimap/auth-client stays.
+function dependencyProjects(sha) {
+  let diff = '';
+  try { diff = git('show', '--format=', '-U0', sha, '--', '*.csproj', '*.props', '*.targets', 'package.json', '*/package.json'); }
+  catch { return []; }
+  const names = new Set();
+  for (const line of diff.split(/\r?\n/)) {
+    if (!line.startsWith('+') || line.startsWith('+++')) continue;
+    const nuget = line.match(/Include="(AgriMap\.[A-Za-z0-9_]+)(?:\.[A-Za-z0-9_.]+)?"/);
+    if (nuget) names.add(nuget[1]);
+    const npm = line.match(/"(@agrimap\/[a-z0-9._-]+)"\s*:/i);
+    if (npm) names.add(npm[1]);
+  }
+  return [...names];
+}
+
+function repoName() {
+  try {
+    const remote = git('remote', 'get-url', 'origin').trim();
+    const name = remote.replace(/\.git$/, '').split(/[/:\\]/).pop();
+    if (name) return name;
+  } catch { /* no remote */ }
+  try { return path.basename(git('rev-parse', '--show-toplevel').trim()); } catch { return path.basename(process.cwd()); }
+}
+
+function previousTag(to) {
+  try { return git('describe', '--tags', '--abbrev=0', '--match', 'v[0-9]*', `${to}^`).trim(); } catch { return ''; }
+}
+
+export function generateDescription(options) {
+  const version = String(options.version || '').replace(/^v/, '').trim();
+  if (!version || version === 'true') fail('RELEASE_VERSION_MISSING', 1, { next: 'Pass --version <Production version>' });
+  const to = options.to && options.to !== true ? options.to : 'HEAD';
+  const from = options.from && options.from !== true ? options.from : previousTag(to);
+  const range = from ? `${from}..${to}` : to;
+  let log;
+  try { log = git('log', '--no-merges', '--reverse', '--format=%H%x1f%s%x1f%b%x1e', range); }
+  catch { fail('GIT_RANGE_INVALID', 1, { range }); }
+  const items = new Map();
+  for (const record of log.split('\x1e')) {
+    const [sha, subject, body = ''] = record.replace(/^\s+/, '').split('\x1f');
+    const header = subject?.match(ITEM_TYPES);
+    if (!sha || !header) continue;
+    const text = clip(header[1].replace(VERSION_SUFFIX, '').replace(RELATED, ''), LIMITS.text);
+    if (!text) continue;
+    const related = new Set(items.get(text) || []);
+    const inline = header[1].replace(VERSION_SUFFIX, '').match(RELATED);
+    if (inline) splitNames(inline[1]).forEach(name => related.add(name));
+    for (const line of body.split(/\r?\n/)) { const match = line.match(TRAILER); if (match) splitNames(match[1]).forEach(name => related.add(name)); }
+    dependencyProjects(sha).forEach(name => related.add(name));
+    items.set(text, [...related]);
+  }
+  const projectName = clip(options['project-name'] && options['project-name'] !== true ? options['project-name'] : repoName(), LIMITS.name);
+  const lines = [`# ${projectName} / ${version}`];
+  for (const [text, related] of [...items].slice(0, LIMITS.items)) {
+    const own = related.filter(name => name !== projectName).slice(0, LIMITS.related);
+    lines.push(`- ${text}${own.length ? ` (เกี่ยวข้อง: ${own.join(', ')})` : ''}`);
+  }
+  return { projectName, version, range, items: lines.length - 1, markdown: lines.join('\n') + '\n' };
+}
+
+function generate(options) {
+  const result = generateDescription(options);
+  if (!result.items) fail('RELEASE_DESCRIPTION_EMPTY', 1, { range: result.range, next: 'No feature:/fix: commit in range; check --from/--to or the commit headers' });
+  if (options.out && options.out !== true) writeFileSync(options.out, result.markdown, 'utf8');
+  print({ ok: true, file: options.out && options.out !== true ? options.out : null, ...result });
+}
+
 // "# Project / Version" (or plain) first line, then "- " / "* " / "1. " bullets.
 function parseDescription(file) {
   const lines = readFileSync(file, 'utf8').replace(/^﻿/, '').split(/\r?\n/);
   const heading = lines.find(line => line.trim());
   const title = String(heading || '').replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
   const [projectName, version] = title.includes(' / ') ? title.split(' / ').map(part => part.trim()) : [title, ''];
-  const items = lines.map(line => line.match(/^\s*(?:[-*]|\d+\.)\s+(.+?)\s*$/)?.[1]).filter(Boolean).map(text => {
+  const bullets = [];
+  for (const line of lines) {
+    const bullet = line.match(/^\s*(?:[-*]|\d+\.)\s+(.+?)\s*$/)?.[1];
+    const trailer = !bullet && bullets.length ? line.match(TRAILER) : null;
+    if (bullet) bullets.push(bullet);
+    else if (trailer) bullets[bullets.length - 1] += ` (เกี่ยวข้อง: ${trailer[1]})`;
+  }
+  const items = bullets.map(text => {
     const related = text.match(RELATED);
     const relatedProjects = related ? related[1].split(/[,、]/).map(name => clip(name, LIMITS.name)).filter(Boolean).slice(0, LIMITS.related) : [];
     return { text: clip(related ? text.slice(0, related.index) : text, LIMITS.text), relatedProjects };
@@ -178,8 +264,9 @@ if (command === 'check') {
   print({ ok: health.ok, url, source, health });
   process.exit(health.ok ? 0 : 3);
 } else if (command === 'set-url') setUrl(options._[1]);
+else if (command === 'generate') generate(options);
 else if (command === 'send') await send(options);
 else {
-  print({ ok: command === 'help', usage: ['check', 'set-url <url>', 'send --description <file.md> [--environment Inhouse|Production] [--project-name <name>] [--version <x.y.z>] [--preview]'] });
+  print({ ok: command === 'help', usage: ['check', 'set-url <url>', 'generate --version <x.y.z> [--from <ref>] [--to <ref>] [--project-name <name>] [--out <file.md>]', 'send --description <file.md> [--environment Inhouse|Production] [--project-name <name>] [--version <x.y.z>] [--preview]'] });
   process.exit(command === 'help' ? 0 : 1);
 }
