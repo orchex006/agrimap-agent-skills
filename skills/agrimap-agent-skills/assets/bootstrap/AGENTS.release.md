@@ -1,6 +1,6 @@
 # กติกา Release, Version, Changelog และ Deployment
 
-<!-- AGRIMAP BOOTSTRAP VERSION: 4.9.10 -->
+<!-- AGRIMAP BOOTSTRAP VERSION: 4.10.1 -->
 
 ไฟล์นี้ใช้ร่วมกับ `AGENTS.md` (core) ของ repository เดียวกัน: เก็บ §2 Intent routing ฉบับเต็มและ §4–§8 โดยคงเลข § เดิม เพื่อให้การอ้างอิงข้ามไฟล์ไม่เปลี่ยน §1, §3, §9 และ §10 อยู่ใน `AGENTS.md` และยังบังคับใช้กับงาน release ทุกงาน
 
@@ -372,7 +372,7 @@ Owner decision 2026-09-29 (4.9.8): release ต้องจบในการส�
 
 ใช้กับ `release production`, `release full` (รวม `--flash`) และ `promote` ทุกครั้งที่ Production tag checkpoint ผ่าน รวม release ที่หยุดรอยืนยันแล้วจบด้วย `promote` หรือ resume; ส่งครั้งเดียวต่อ version; `release inhouse`, `pipeline`, `prepare` และกลุ่ม A/B ไม่ส่ง
 
-แจ้งเตือนมี 2 แบบแยกกัน: **Jenkins build card** (`POST …/release`) ส่งจาก `post { always }` ของ `Jenkinsfile`/`Jenkinsfile_Production` พร้อม metadata ของ build ส่วน Agent ไม่แก้ไข; **Release Description** (`POST …/release-description`) คือสรุปจาก AI ตามหัวข้อนี้ ส่งเฉพาะชื่อ project, version และรายการที่แก้พร้อม project ที่เกี่ยวข้อง
+แจ้งเตือนมี 2 แบบแยกกัน: **Jenkins build card** (`POST …/release`) ส่งจาก `post { always }` ของ `Jenkinsfile`/`Jenkinsfile_Production` พร้อม metadata ของ build ส่วน Agent ไม่แก้ไข; **Release Description** (`POST …/release-description`) คือสรุปที่ script สร้างตามหัวข้อนี้ ส่งเฉพาะชื่อ project, version และรายการที่แก้พร้อม project ที่เกี่ยวข้อง
 
 - **Release Description** เป็นภาษาคนที่ BA copy ส่งลูกค้าได้ทันที เขียนไทย สั้น ตรง ไม่ใช้ชื่อ class/ไฟล์/route/SHA เป็นเนื้อหา:
 
@@ -385,8 +385,8 @@ Owner decision 2026-09-29 (4.9.8): release ต้องจบในการส�
 
 - รูปแบบตายตัว: บรรทัดแรก `# <project> / <version>` แล้วตามด้วย `- ` bullet ทันที ไม่มีบรรทัดว่าง หัวข้อย่อย ตาราง ตัวหนา หรือข้อความนำ/ปิดท้าย
 
-- ครอบคลุมทุกจุดที่เปลี่ยนใน version นั้นจาก release notes/diff ที่ตรวจแล้ว หนึ่งข้อต่อหนึ่งเรื่องที่ผู้ใช้สังเกตได้ รวมเรื่องเล็กที่เกี่ยวกันเป็นข้อเดียว ไม่ใส่ bump/audit/ci
-- ข้อที่ต้องแก้หรือกระทบ project อื่น (generated API client `agmws-*`, package `@agrimap/*`, NuGet `AgriMap.*`, endpoint ของ service อื่น หรือ project ที่ต้องตามไปแก้/deploy คู่กัน) ปิดท้ายข้อด้วย `(เกี่ยวข้อง: <project>, <project>)` ใช้ชื่อ repo จริง โดยอธิบายผลที่ผู้ใช้เห็น ไม่อธิบายเทคนิค
+- **สร้างด้วย script เท่านั้น ห้ามเขียนหรือเรียบเรียงเอง** เพื่อให้ทุก project ได้รูปแบบและถ้อยคำเดียวกัน: `node tools/agrimap/release-notify.mjs generate --version <Production version> --out .agrimap-agent/reports/YYYY-MM/<RUN_ID>-release-description.md` รายการมาจาก header ของ commit `feature:`/`fix:` (ตัด `(x.y.z)`, รวมข้อซ้ำ) ตั้งแต่ tag `v*` ก่อนหน้า ไม่รวม `comment:`/`bump:`/`audit:`/`ci:`
+- `(เกี่ยวข้อง: …)` เติมอัตโนมัติจากบรรทัด `เกี่ยวข้อง:` ใน body ของ commit และจาก package `AgriMap.*` (NuGet ใช้สองส่วนแรก เช่น `AgriMap.Platform`) หรือ `@agrimap/*` ที่เปลี่ยน; ข้อความไม่ดีให้แก้ที่ commit header ไม่แก้ไฟล์ที่ generate; exit 1 `RELEASE_DESCRIPTION_EMPTY` ให้รายงาน ห้ามแต่งรายการเอง
 - บันทึกที่ `.agrimap-agent/reports/YYYY-MM/<RUN_ID>-release-description.md` (commit ไปกับ `audit:` commit) และคำตอบสุดท้ายต้องมีหัวข้อ `description-released` ตามด้วยข้อความเต็มใน code block `markdown` ตามรูปแบบข้างต้นเสมอ ไม่ว่า notify จะ `sent`, `pending` หรือ `skipped (--silent)`; ขาดหัวข้อนี้ถือว่ายังไม่ `completed`
 - ส่งด้วย `node tools/agrimap/release-notify.mjs send --description <file> --environment Production` ซึ่งตรวจ `…/healthz` ก่อน POST ทุกครั้ง URL มาจาก env `NOTIFY_WEBHOOK_URL` (เช่น `https://appserv2.cdg.co.th/agrimap-notify/release-description`)
   - exit 2 (ไม่มี env): ถามครั้งเดียวด้วยเครื่องมือถามคำถามของ host (ไม่ถามเป็นข้อความธรรมดา) ตาม `question` ที่ script ส่งมา ตัวเลือกแรกคือ URL มาตรฐาน แล้วรัน `set-url` บันทึก env ถาวรบนเครื่อง จากนั้นส่งต่อใน invocation เดิม

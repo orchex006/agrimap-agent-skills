@@ -106,7 +106,7 @@ test('instruction diet: core AGENTS.md at most 24,000 chars; core + release keep
   const entry=manifest.files.find(f=>f.source==='AGENTS.release.md');
   assert.equal(entry.target,'AGENTS.release.md');assert.equal(entry.sha256,createHash('sha256').update(release).digest('hex'));
   const frozen=release.replace(/<!-- AGRIMAP BOOTSTRAP VERSION: [^>]+ -->/,'<!-- AGRIMAP BOOTSTRAP VERSION: 3.6.1 -->');
-  assert.equal(createHash('sha256').update(frozen).digest('hex'),'f3dd7b9fa55cfbab71367ea310638f7ed041412f1a8092c04943c0d195797cd7');
+  assert.equal(createHash('sha256').update(frozen).digest('hex'),'ed0219574c35f6ee1f771207d0829116792c1243ad82dfe475dd4d0f41ef1c23');
   const headings=['## 0.','## 1.','## 2.','### 2.1','### 2.2','### 2.3','## 3.','## 4.','## 5.','### 5.1','### 5.2','## 6.','### 6.1','### 6.2','### 6.3','## 7.','## 8.','### 8.1','## 9.','### 9.1','### 9.5','## 10.','### 10.5','## Bootstrap contract freshness'];
   const all=(core+'\n'+release).split('\n');
   for(const h of headings)assert.ok(all.some(line=>line.startsWith(h)),h);
@@ -190,6 +190,29 @@ test('release-notify: short Release Description payload with related projects; u
   const sent=await run(['send','--description','desc.md','--url',url]);
   assert.equal(sent.status,0,sent.stdout);assert.equal(JSON.parse(sent.stdout).sent,true);
   assert.equal(posts.length,1);assert.equal(posts[0].url,'/agrimap-notify/release-description');assert.equal(posts[0].body.items.length,3);
+});
+
+test('release-notify generate: same shape from feature/fix commit headers with related projects detected (4.10.1)',async t=>{
+  const {createHarness}=await import('../helpers/harness.mjs');
+  const {execFileSync}=await import('node:child_process');
+  const {writeFile}=await import('node:fs/promises');
+  const h=await createHarness('agm-generate-');t.after(()=>h.cleanup());
+  const script=path.join(projectRoot,'skills/agrimap-agent-skills/assets/bootstrap/release-notify.mjs');
+  const env={...process.env,AGM_GUARD_DISABLE:'1'};
+  const git=(...a)=>execFileSync('git',a,{cwd:h.temp,encoding:'utf8',env});
+  const commit=async(file,content,...messages)=>{await writeFile(path.join(h.temp,file),content);git('add','--',file);git('-c','core.hooksPath=/dev/null','commit','-q',...messages.flatMap(m=>['-m',m]));};
+  git('init','-q');git('config','user.email','t@t');git('config','user.name','t');git('remote','add','origin','https://git.example/agmws-demo-netcore.git');
+  await commit('a.txt','a','feature: เริ่มต้นระบบ');git('tag','v1.0.0');
+  await commit('a.csproj','<PackageReference Include="AgriMap.Platform.Logging" Version="2.0.0" />','fix: ปรับ log เป็น JSON พร้อมรหัสติดตามคำขอ (1.0.1)');
+  await commit('b.txt','b','ci: ปรับขั้นตอน build');
+  await commit('c.txt','c','feature: เพิ่มรายงานสรุป','เกี่ยวข้อง: agmwa-platform-ng');
+  const out=JSON.parse(execFileSync(process.execPath,[script,'generate','--version','1.0.1','--out','d.md'],{cwd:h.temp,encoding:'utf8'}));
+  assert.equal(out.range,'v1.0.0..HEAD');
+  assert.equal(await readFile(path.join(h.temp,'d.md'),'utf8'),['# agmws-demo-netcore / 1.0.1','- ปรับ log เป็น JSON พร้อมรหัสติดตามคำขอ (เกี่ยวข้อง: AgriMap.Platform)','- เพิ่มรายงานสรุป (เกี่ยวข้อง: agmwa-platform-ng)',''].join(String.fromCharCode(10)));
+  await writeFile(path.join(h.temp,'e.md'),['# p / 1','- ข้อหนึ่ง','  เกี่ยวข้อง: AgriMap.Platform'].join(String.fromCharCode(10)));
+  const preview=JSON.parse(execFileSync(process.execPath,[script,'send','--description','e.md','--preview'],{cwd:h.temp,encoding:'utf8'}));
+  assert.deepEqual(preview.payload.items,[{text:'ข้อหนึ่ง',relatedProjects:['AgriMap.Platform']}]);
+  assert.match(await readFile(path.join(projectRoot,'skills/agrimap-agent-skills/references/release-notify.md'),'utf8'),/release-notify.mjs generate --version/);
 });
 
 test('release production/full and promote always push the Production tag and send the Release Description (4.9.8)',async()=>{
