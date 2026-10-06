@@ -259,3 +259,41 @@ test('a customized AGENTS.md merges automatically: template updated, project rul
   const backups=await readFile(path.join(h.temp,'.agrimap-agent/runtime/bootstrap-backups',entry.beforeHash,'AGENTS.md'),'utf8');
   assert.equal(backups,custom,'backup kept');
 });
+
+test('release-notify commandPath uses only explicit install locations, never PATH or cwd decoys (4.10.2)',async t=>{
+  const {mkdtemp,mkdir,writeFile,rm}=await import('node:fs/promises');
+  const os=await import('node:os');
+  const {pathToFileURL}=await import('node:url');
+  const {commandPath}=await import(pathToFileURL(path.join(projectRoot,'skills/agrimap-agent-skills/assets/bootstrap/release-notify.mjs')).href);
+  assert.throws(()=>commandPath('node'),/Unsupported command/);
+  assert.throws(()=>commandPath('git.exe'),/Unsupported command/);
+  const temp=await mkdtemp(path.join(os.tmpdir(),'agm-cmdpath-'));
+  const keys=['PATH','Path','ProgramW6432','ProgramFiles','ProgramFiles(x86)','LOCALAPPDATA','SystemRoot'];
+  const saved=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
+  const cwd=process.cwd();
+  t.after(async()=>{for(const k of keys){if(saved[k]===undefined)delete process.env[k];else process.env[k]=saved[k];}process.chdir(cwd);await rm(temp,{recursive:true,force:true});});
+  const decoy=path.join(temp,'decoy');await mkdir(decoy);
+  for(const name of ['git','git.exe','reg.exe','setx.exe'])await writeFile(path.join(decoy,name),'');
+  process.env.PATH=decoy;process.env.Path=decoy;process.chdir(decoy);
+  if(process.platform!=='win32'){
+    const git=(()=>{try{return commandPath('git');}catch{return null;}})();
+    if(git)assert.ok(['/usr/bin/git','/usr/local/bin/git','/opt/homebrew/bin/git'].includes(git),git);
+    assert.throws(()=>commandPath('reg'),/Trusted executable not found: reg/);
+    return;
+  }
+  const programs=path.join(temp,'programs');const system=path.join(temp,'windows');
+  for(const k of ['ProgramW6432','ProgramFiles','ProgramFiles(x86)','LOCALAPPDATA'])process.env[k]=programs;
+  process.env.SystemRoot=system;
+  // C:\Program Files is a fixed fallback, so a machine Git may still be found there; it must never be a decoy.
+  let machineGit=null;
+  try{machineGit=commandPath('git');}catch(error){assert.match(error.message,/Trusted executable not found: git/);}
+  if(machineGit)assert.equal(machineGit,path.join('C:\\Program Files','Git','cmd','git.exe'));
+  assert.throws(()=>commandPath('reg'),/Trusted executable not found: reg/);
+  assert.throws(()=>commandPath('setx'),/Trusted executable not found: setx/);
+  const git=path.join(programs,'Git','cmd','git.exe');await mkdir(path.dirname(git),{recursive:true});await writeFile(git,'');
+  await mkdir(path.join(system,'System32'),{recursive:true});
+  for(const name of ['reg','setx'])await writeFile(path.join(system,'System32',`${name}.exe`),'');
+  assert.equal(commandPath('git'),git);
+  assert.equal(commandPath('reg'),path.join(system,'System32','reg.exe'));
+  assert.equal(commandPath('setx'),path.join(system,'System32','setx.exe'));
+});
