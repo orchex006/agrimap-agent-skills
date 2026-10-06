@@ -276,8 +276,10 @@ test('release-notify commandPath uses only explicit install locations, never PAT
   for(const name of ['git','git.exe','reg.exe','setx.exe'])await writeFile(path.join(decoy,name),'');
   process.env.PATH=decoy;process.env.Path=decoy;process.chdir(decoy);
   if(process.platform!=='win32'){
-    const git=(()=>{try{return commandPath('git');}catch{return null;}})();
-    if(git)assert.ok(['/usr/bin/git','/usr/local/bin/git','/opt/homebrew/bin/git'].includes(git),git);
+    const {existsSync}=await import('node:fs');
+    const approved=['/usr/bin/git','/usr/local/bin/git','/opt/homebrew/bin/git'].find(file=>existsSync(file));
+    if(approved)assert.equal(commandPath('git'),approved);
+    else assert.throws(()=>commandPath('git'),/Trusted executable not found: git/);
     assert.throws(()=>commandPath('reg'),/Trusted executable not found: reg/);
     return;
   }
@@ -285,9 +287,10 @@ test('release-notify commandPath uses only explicit install locations, never PAT
   for(const k of ['ProgramW6432','ProgramFiles','ProgramFiles(x86)','LOCALAPPDATA'])process.env[k]=programs;
   process.env.SystemRoot=system;
   // C:\Program Files is a fixed fallback, so a machine Git may still be found there; it must never be a decoy.
-  let machineGit=null;
-  try{machineGit=commandPath('git');}catch(error){assert.match(error.message,/Trusted executable not found: git/);}
-  if(machineGit)assert.equal(machineGit,path.join('C:\\Program Files','Git','cmd','git.exe'));
+  const {existsSync}=await import('node:fs');
+  const fixedGit=path.join('C:\\Program Files','Git','cmd','git.exe');
+  if(existsSync(fixedGit))assert.equal(commandPath('git'),fixedGit);
+  else assert.throws(()=>commandPath('git'),/Trusted executable not found: git/);
   assert.throws(()=>commandPath('reg'),/Trusted executable not found: reg/);
   assert.throws(()=>commandPath('setx'),/Trusted executable not found: setx/);
   const git=path.join(programs,'Git','cmd','git.exe');await mkdir(path.dirname(git),{recursive:true});await writeFile(git,'');
