@@ -37,7 +37,9 @@ export function commandPath(command) {
   let candidates = [];
   if (process.platform === 'win32') {
     candidates = command === 'git'
-      ? [path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Git', 'cmd', 'git.exe')]
+      ? [process.env.ProgramW6432, process.env.ProgramFiles, process.env['ProgramFiles(x86)'], 'C:\\Program Files',
+        process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Programs')]
+        .filter(Boolean).map(root => path.join(root, 'Git', 'cmd', 'git.exe'))
       : [path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', `${command}.exe`)];
   } else if (command === 'git') {
     candidates = ['/usr/bin/git', '/usr/local/bin/git', '/opt/homebrew/bin/git'];
