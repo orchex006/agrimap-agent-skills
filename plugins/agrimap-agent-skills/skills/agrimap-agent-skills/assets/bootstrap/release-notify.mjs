@@ -23,30 +23,115 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const ENV = 'NOTIFY_WEBHOOK_URL';
 const PROFILE_FILES = ['.profile', '.bashrc', '.zshrc'];
 const ENVIRONMENTS = ['Inhouse', 'Production'];
 const LIMITS = { name: 200, text: 500, items: 50, related: 20 };
-const RELATED = /\s*\((?:เกี่ยวข้อง|ส่วนนี้มาจาก|related)\s*:?\s*([^)]+)\)\s*$/iu;
+const RELATED_LABELS = ['เกี่ยวข้อง', 'ส่วนนี้มาจาก', 'related'];
 
-const ITEM_TYPES = /^(?:feature|feat|fix)\s*(?:\([^)]*\))?\s*!?:\s*(.+?)\s*$/iu;
-const VERSION_SUFFIX = /\s*\(v?\d+\.\d+\.\d+(?:[-+][^)]*)?\)\s*$/u;
-const TRAILER = /^\s*(?:เกี่ยวข้อง|project ที่เกี่ยวข้อง|related)\s*:\s*(.+?)\s*$/iu;
+// Only explicit installation locations are eligible; never search inherited PATH or cwd.
+export function commandPath(command) {
+  if (!['git', 'reg', 'setx'].includes(command)) throw new Error('Unsupported command');
+  let candidates = [];
+  if (process.platform === 'win32') {
+    candidates = command === 'git'
+      ? [path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Git', 'cmd', 'git.exe')]
+      : [path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', `${command}.exe`)];
+  } else if (command === 'git') {
+    candidates = ['/usr/bin/git', '/usr/local/bin/git', '/opt/homebrew/bin/git'];
+  }
+  const executable = candidates.find(file => path.isAbsolute(file) && existsSync(file));
+  if (!executable) throw new Error(`Trusted executable not found: ${command}`);
+  return executable;
+}
+
+export function itemText(subject) {
+  const prefix = /^(?:feature|feat|fix)/iu.exec(subject);
+  if (!prefix) return null;
+  let rest = subject.slice(prefix[0].length).trimStart();
+  if (rest.startsWith('(')) {
+    const close = rest.indexOf(')');
+    if (close < 0) return null;
+    rest = rest.slice(close + 1).trimStart();
+  }
+  if (rest.startsWith('!')) rest = rest.slice(1);
+  if (!rest.startsWith(':')) return null;
+  return rest.slice(1).trim() || null;
+}
+
+// Scan candidate opening parentheses once; the suffix cannot contain a closing parenthesis.
+function suffixStart(text, matches) {
+  if (!text.endsWith(')')) return -1;
+  const end = text.length - 1;
+  const start = text.lastIndexOf(')', end - 1) + 1;
+  for (let i = start; i < end; i++) {
+    if (text[i] === '(' && matches(text, i + 1, end)) return i;
+  }
+  return -1;
+}
+
+export function stripVersion(value) {
+  const text = value.trimEnd();
+  const index = suffixStart(text, (source, start, end) => {
+    let i = start;
+    if (source[i] === 'v') i++;
+    for (let part = 0; part < 3; part++) {
+      const first = i;
+      while (i < end && source[i] >= '0' && source[i] <= '9') i++;
+      if (i === first) return false;
+      if (part < 2 && source[i++] !== '.') return false;
+    }
+    return i === end || source[i] === '-' || source[i] === '+';
+  });
+  return index < 0 ? value : text.slice(0, index).trimEnd();
+}
+
+export function splitRelated(value) {
+  const text = value.trimEnd();
+  let contentStart = -1;
+  const index = suffixStart(text, (source, start, end) => {
+    const label = RELATED_LABELS.find(name => source.slice(start, start + name.length).toLowerCase() === name);
+    if (!label) return false;
+    let i = start + label.length;
+    while (i < end && /\s/u.test(source[i])) i++;
+    if (source[i] === ':') i++;
+    while (i < end && /\s/u.test(source[i])) i++;
+    contentStart = i;
+    return i < end;
+  });
+  return index < 0 ? { text: value, related: null }
+    : { text: text.slice(0, index).trimEnd(), related: text.slice(contentStart, -1) };
+}
+
+function trailerText(line) {
+  const text = line.trim();
+  const prefix = /^(?:เกี่ยวข้อง|project ที่เกี่ยวข้อง|related)\s*:/iu.exec(text);
+  return prefix ? text.slice(prefix[0].length).trim() || null : null;
+}
+
+export function bulletText(line) {
+  const text = line.trim();
+  const prefix = /^(?:[-*]|\d+\.)\s/u.exec(text);
+  return prefix ? text.slice(prefix[0].length).trim() || null : null;
+}
 
 const print = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
 const fail = (code, exit, extra = {}) => { print({ ok: false, code, ...extra }); process.exit(exit); };
 const clip = (value, max) => String(value).trim().slice(0, max);
 
-function args(argv) {
+export function args(argv) {
   const out = { _: [] };
-  for (let i = 0; i < argv.length; i++) {
-    const token = argv[i];
+  const tokens = argv[Symbol.iterator]();
+  let current = tokens.next();
+  while (!current.done) {
+    const token = current.value;
+    current = tokens.next();
     if (!token.startsWith('--')) { out._.push(token); continue; }
     const key = token.slice(2);
-    const next = argv[i + 1];
-    if (next === undefined || next.startsWith('--')) out[key] = true;
-    else { out[key] = next; i++; }
+    if (current.done || current.value.startsWith('--')) out[key] = true;
+    else { out[key] = current.value; current = tokens.next(); }
   }
   return out;
 }
@@ -59,7 +144,7 @@ function validUrl(value) {
 function persistedUrl() {
   if (process.platform === 'win32') {
     try {
-      const text = execFileSync('reg', ['query', 'HKCU\\Environment', '/v', ENV], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+      const text = execFileSync(commandPath('reg'), ['query', 'HKCU\\Environment', '/v', ENV], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
       const match = text.match(new RegExp(`${ENV}\\s+REG_\\w+\\s+(\\S.*)`));
       if (match) return { url: match[1].trim(), source: 'windows-user-env' };
     } catch { /* not set */ }
@@ -122,7 +207,7 @@ function setUrl(value) {
   const url = validUrl(value);
   if (!url) fail('NOTIFY_WEBHOOK_URL_INVALID', 1, { next: 'Pass an http(s) URL such as https://<host>/agrimap-notify/release-description' });
   if (process.platform === 'win32') {
-    execFileSync('setx', [ENV, url.toString()], { stdio: 'ignore' });
+    execFileSync(commandPath('setx'), [ENV, url.toString()], { stdio: 'ignore' });
     print({ ok: true, saved: 'windows-user-env', url: url.toString(), note: 'New terminals see it; this script also reads it directly.' });
     return;
   }
@@ -134,7 +219,7 @@ function setUrl(value) {
   print({ ok: true, saved: '~/.profile', url: url.toString() });
 }
 
-const git = (...argv) => execFileSync('git', argv, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 });
+const git = (...argv) => execFileSync(commandPath('git'), argv, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 });
 const splitNames = value => value.split(/[,、]/).map(name => clip(name, LIMITS.name)).filter(Boolean);
 
 // A dependency the commit changed: AgriMap.Platform.Logging -> AgriMap.Platform, @agrimap/auth-client stays.
@@ -166,35 +251,54 @@ function previousTag(to) {
   try { return git('describe', '--tags', '--abbrev=0', '--match', 'v[0-9]*', `${to}^`).trim(); } catch { return ''; }
 }
 
+function readReleaseLog(range) {
+  try { return git('log', '--no-merges', '--reverse', '--format=%H%x1f%s%x1f%b%x1e', range); }
+  catch { fail('GIT_RANGE_INVALID', 1, { range }); }
+}
+
+function addDescriptionRecord(items, record) {
+  const [sha, subject, body = ''] = record.replace(/^\s+/, '').split('\x1f');
+  const header = subject ? itemText(subject) : null;
+  if (!sha || !header) return;
+  const parsed = splitRelated(stripVersion(header));
+  const text = clip(parsed.text, LIMITS.text);
+  if (!text) return;
+  const related = new Set(items.get(text) || []);
+  if (parsed.related) splitNames(parsed.related).forEach(name => related.add(name));
+  for (const line of body.split(/\r?\n/)) {
+    const trailer = trailerText(line);
+    if (trailer) splitNames(trailer).forEach(name => related.add(name));
+  }
+  dependencyProjects(sha).forEach(name => related.add(name));
+  items.set(text, [...related]);
+}
+
+function collectDescriptionItems(log) {
+  const items = new Map();
+  for (const record of log.split('\x1e')) addDescriptionRecord(items, record);
+  return items;
+}
+
+function descriptionBullet([text, related], projectName) {
+  const own = related.filter(name => name !== projectName).slice(0, LIMITS.related);
+  const suffix = own.length ? ` (เกี่ยวข้อง: ${own.join(', ')})` : '';
+  return `- ${text}${suffix}`;
+}
+
+function optionValue(value) {
+  return value && value !== true ? value : null;
+}
+
 export function generateDescription(options) {
   const version = String(options.version || '').replace(/^v/, '').trim();
   if (!version || version === 'true') fail('RELEASE_VERSION_MISSING', 1, { next: 'Pass --version <Production version>' });
-  const to = options.to && options.to !== true ? options.to : 'HEAD';
-  const from = options.from && options.from !== true ? options.from : previousTag(to);
+  const to = optionValue(options.to) || 'HEAD';
+  const from = optionValue(options.from) || previousTag(to);
   const range = from ? `${from}..${to}` : to;
-  let log;
-  try { log = git('log', '--no-merges', '--reverse', '--format=%H%x1f%s%x1f%b%x1e', range); }
-  catch { fail('GIT_RANGE_INVALID', 1, { range }); }
-  const items = new Map();
-  for (const record of log.split('\x1e')) {
-    const [sha, subject, body = ''] = record.replace(/^\s+/, '').split('\x1f');
-    const header = subject?.match(ITEM_TYPES);
-    if (!sha || !header) continue;
-    const text = clip(header[1].replace(VERSION_SUFFIX, '').replace(RELATED, ''), LIMITS.text);
-    if (!text) continue;
-    const related = new Set(items.get(text) || []);
-    const inline = header[1].replace(VERSION_SUFFIX, '').match(RELATED);
-    if (inline) splitNames(inline[1]).forEach(name => related.add(name));
-    for (const line of body.split(/\r?\n/)) { const match = line.match(TRAILER); if (match) splitNames(match[1]).forEach(name => related.add(name)); }
-    dependencyProjects(sha).forEach(name => related.add(name));
-    items.set(text, [...related]);
-  }
-  const projectName = clip(options['project-name'] && options['project-name'] !== true ? options['project-name'] : repoName(), LIMITS.name);
-  const lines = [`# ${projectName} / ${version}`];
-  for (const [text, related] of [...items].slice(0, LIMITS.items)) {
-    const own = related.filter(name => name !== projectName).slice(0, LIMITS.related);
-    lines.push(`- ${text}${own.length ? ` (เกี่ยวข้อง: ${own.join(', ')})` : ''}`);
-  }
+  const items = collectDescriptionItems(readReleaseLog(range));
+  const projectName = clip(optionValue(options['project-name']) || repoName(), LIMITS.name);
+  const bullets = [...items].slice(0, LIMITS.items).map(item => descriptionBullet(item, projectName));
+  const lines = [`# ${projectName} / ${version}`, ...bullets];
   return { projectName, version, range, items: lines.length - 1, markdown: lines.join('\n') + '\n' };
 }
 
@@ -213,15 +317,15 @@ function parseDescription(file) {
   const [projectName, version] = title.includes(' / ') ? title.split(' / ').map(part => part.trim()) : [title, ''];
   const bullets = [];
   for (const line of lines) {
-    const bullet = line.match(/^\s*(?:[-*]|\d+\.)\s+(.+?)\s*$/)?.[1];
-    const trailer = !bullet && bullets.length ? line.match(TRAILER) : null;
+    const bullet = bulletText(line);
+    const trailer = !bullet && bullets.length ? trailerText(line) : null;
     if (bullet) bullets.push(bullet);
-    else if (trailer) bullets[bullets.length - 1] += ` (เกี่ยวข้อง: ${trailer[1]})`;
+    else if (trailer) bullets[bullets.length - 1] += ` (เกี่ยวข้อง: ${trailer})`;
   }
   const items = bullets.map(text => {
-    const related = text.match(RELATED);
-    const relatedProjects = related ? related[1].split(/[,、]/).map(name => clip(name, LIMITS.name)).filter(Boolean).slice(0, LIMITS.related) : [];
-    return { text: clip(related ? text.slice(0, related.index) : text, LIMITS.text), relatedProjects };
+    const parsed = splitRelated(text);
+    const relatedProjects = parsed.related ? splitNames(parsed.related).slice(0, LIMITS.related) : [];
+    return { text: clip(parsed.text, LIMITS.text), relatedProjects };
   }).filter(item => item.text);
   return { projectName, version, items };
 }
@@ -256,6 +360,7 @@ async function send(options) {
   }
 }
 
+async function main() {
 const options = args(process.argv.slice(2));
 const command = options._[0] || 'help';
 if (command === 'check') {
@@ -270,3 +375,6 @@ else {
   print({ ok: command === 'help', usage: ['check', 'set-url <url>', 'generate --version <x.y.z> [--from <ref>] [--to <ref>] [--project-name <name>] [--out <file.md>]', 'send --description <file.md> [--environment Inhouse|Production] [--project-name <name>] [--version <x.y.z>] [--preview]'] });
   process.exit(command === 'help' ? 0 : 1);
 }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) await main();
