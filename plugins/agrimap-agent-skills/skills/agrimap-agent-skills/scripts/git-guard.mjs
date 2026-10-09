@@ -83,6 +83,20 @@ export function gitInvocation(segment) {
   return { sub: tokens[index], args: tokens.slice(index + 1), cwd: cwdIndex >= 0 ? globals[cwdIndex + 1] : null };
 }
 
+// G8 (4.11.0): `sqlctx query --reveal` prints real sensitive values to the terminal.
+// sql-context-pack 3.0.0 refuses it without an interactive terminal; this denies the
+// agent typing it at all, so protected values never enter an agent transcript.
+export function sqlctxRevealInvocation(segment) {
+  const tokens = tokenize(segment);
+  let index = 0;
+  while (index < tokens.length && (/^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[index]) || tokens[index] === "&" || /^(?:sudo|command|exec|env)$/.test(tokens[index]))) index += 1;
+  const program = String(tokens[index] || "").replaceAll("\\", "/").split("/").pop().toLowerCase();
+  const rest = tokens.slice(index + 1);
+  const viaModule = /^(?:python3?|py)(?:.exe)?$/.test(program) && rest[0] === "-m" && rest[1] === "sqlctx";
+  if (program !== "sqlctx" && program !== "sqlctx.exe" && !viaModule) return false;
+  return rest.includes("query") && rest.some(item => item === "--reveal" || item.startsWith("--reveal="));
+}
+
 // Heredoc ($(cat <<'EOF' ... EOF)) and PowerShell here-string (@'...'@) bodies.
 function unwrapMessage(value) {
   const text = String(value);
@@ -212,6 +226,7 @@ export async function guardCommand(command, { cwd, session = null } = {}) {
   };
   let result = null;
   for (const segment of splitCommands(command)) {
+    if (sqlctxRevealInvocation(segment)) return { decision: DENY, rule: "G8", reason: "sqlctx query --reveal shows real sensitive values; give the user reveal_handoff to run it themselves" };
     const invocation = gitInvocation(segment);
     if (!invocation) continue;
     const verdict = evaluate(invocation, context);

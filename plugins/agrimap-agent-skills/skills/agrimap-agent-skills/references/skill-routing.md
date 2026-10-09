@@ -50,9 +50,9 @@ Precedence when several intents match: doctor > release > prompt > plan > archit
 
 ## 5. Supporting package: sql-context-pack
 
-Use for live schema, columns, parameters or bounded masked rows that local `sql/**` files and `.agrimap-agent/knowledge/references/db-schema/**` cannot answer.
+Use for live schema, columns, parameters or bounded protected rows (sensitive values are faked, aliased, generalized or redacted by sql-context-pack 3.0.0+) that local `sql/**` files and `.agrimap-agent/knowledge/references/db-schema/**` cannot answer.
 
-- Supporting: Inside any agm-* operation sql-context-pack is supporting evidence only: its read-only tools and recipes (metadata and masked SELECT). No DDL/DML, EXEC/CALL, export, metadata sync, classification or routine deployment.
+- Supporting: Inside any agm-* operation sql-context-pack (3.0.0 or later) is supporting evidence only: its read-only tools and recipes (metadata and protected SELECT). No DDL/DML, EXEC/CALL, export, metadata sync, classification, routine deployment or reveal of protected values.
 - Owner turn: A direct owner request to sql-context-pack (its invocation, or naming it with an owner operation) is that package's turn: follow its own SKILL and approval gates. AgriMap adds no authority, lifecycle or prohibition to that turn and never runs those operations inside an agm-* operation.
 - Owner operations: export/catalog capture, DB_METADATA_CONTEXT sync, folder classification, context generation, routine deployment, profile connect/change, SQLFluff install/update.
 - Read-only tools: `sqlctx_get_capabilities`, `sqlctx_get_active_profile`, `sqlctx_list_context_index`, `sqlctx_list_managed_folders`, `sqlctx_query_data`. Recipes: [sql-context-readonly.md](sql-context-readonly.md).
