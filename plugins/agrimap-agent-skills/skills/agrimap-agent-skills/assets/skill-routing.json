@@ -501,7 +501,7 @@
         "$sql-content-pack"
       ],
       "mention": "\\bsql-cont(?:ext|ent)-pack\\b|\\bsqlctx\\b",
-      "use": "live schema, columns, parameters or bounded masked rows that local `sql/**` files and `.agrimap-agent/knowledge/references/db-schema/**` cannot answer",
+      "use": "live schema, columns, parameters or bounded protected rows (sensitive values are faked, aliased, generalized or redacted by sql-context-pack 3.0.0+) that local `sql/**` files and `.agrimap-agent/knowledge/references/db-schema/**` cannot answer",
       "keywords": [
         "ข้อมูลจริง",
         "ข้อมูลใน\\s*(?:db|database|ฐานข้อมูล)",
@@ -542,7 +542,11 @@
         },
         {
           "need": "representative data shape",
-          "steps": "`sqlctx_query_data` with an explicit column list, a narrow WHERE and `TOP` at most 500; output stays masked"
+          "steps": "`sqlctx_query_data` with an explicit column list, a narrow WHERE on public columns only and `TOP` at most 500; columns marked `⟨FAKE|ALIAS|GENERALIZED|REDACTED|SCANNED…⟩` hold no real values, so say a quoted value is fake"
+        },
+        {
+          "need": "real sensitive values (names, national IDs, phones, accounts, addresses)",
+          "steps": "never obtain them; relay the result or error `reveal_handoff` (`sql`, `user_steps`) verbatim so the user runs it outside the session; never run `sqlctx query --reveal` or rewrite a query around `QUERY_SENSITIVE_USAGE_RESTRICTED`"
         },
         {
           "need": "full DDL or routine body",
@@ -572,7 +576,7 @@
         "จัดหมวด",
         "ติดตั้ง"
       ],
-      "supportingRule": "Inside any agm-* operation sql-context-pack is supporting evidence only: its read-only tools and recipes (metadata and masked SELECT). No DDL/DML, EXEC/CALL, export, metadata sync, classification or routine deployment.",
+      "supportingRule": "Inside any agm-* operation sql-context-pack (3.0.0 or later) is supporting evidence only: its read-only tools and recipes (metadata and protected SELECT). No DDL/DML, EXEC/CALL, export, metadata sync, classification, routine deployment or reveal of protected values.",
       "ownerRule": "A direct owner request to sql-context-pack (its invocation, or naming it with an owner operation) is that package's turn: follow its own SKILL and approval gates. AgriMap adds no authority, lifecycle or prohibition to that turn and never runs those operations inside an agm-* operation."
     }
   ]

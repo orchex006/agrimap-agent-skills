@@ -5,7 +5,7 @@ import {spawnSync} from 'node:child_process';
 import path from 'node:path';
 import {createHarness,projectRoot} from '../helpers/harness.mjs';
 import {createGitFixture} from '../helpers/git-fixture.mjs';
-import {splitCommands,gitInvocation,evaluate,guardCommand} from '../../skills/agrimap-agent-skills/scripts/git-guard.mjs';
+import {splitCommands,gitInvocation,evaluate,guardCommand,sqlctxRevealInvocation} from '../../skills/agrimap-agent-skills/scripts/git-guard.mjs';
 
 const GUARD=path.join(projectRoot,'skills/agrimap-agent-skills/scripts/git-guard.mjs');
 const ctx={protectedList:['main','develop','jenkins','jenkins-release','release/*'],currentBranch:'feature/x',release:false};
@@ -86,4 +86,12 @@ test('G7 denies commit headers outside the team style in AgriMap repositories (4
   assert.equal((await guardCommand('git commit -F msg.txt',{cwd:repo}))?.rule,'G7');
   await writeFile(path.join(repo,'msg.txt'),'comment: ปรับข้อความ\n');
   assert.equal(await guardCommand('git commit -F msg.txt',{cwd:repo}),null);
+});
+
+test('G8 the agent never runs sqlctx query --reveal (4.11.0)',async()=>{
+  for(const command of ['sqlctx query --reveal --profile demo "SELECT 1"','sqlctx query --sql-file q.sql --reveal','C:/Users/x/Scripts/sqlctx.exe query --reveal q','python -m sqlctx query --reveal q','cd repo && sqlctx query --reveal q']) assert.equal(sqlctxRevealInvocation(splitCommands(command).at(-1)),true,command);
+  for(const command of ['sqlctx query "SELECT 1"','sqlctx doctor check --host claude','echo sqlctx query --reveal','grep -- --reveal README.md']) assert.equal(sqlctxRevealInvocation(command),false,command);
+  const denied=await guardCommand('sqlctx query --reveal --profile demo q',{cwd:projectRoot});
+  assert.equal(denied?.rule,'G8');
+  assert.equal(denied?.decision,'deny');
 });

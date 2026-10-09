@@ -2,6 +2,14 @@
 
 Release history, not current operating instructions. Start with [Getting Started](docs/GETTING-STARTED.md) and [Migration](docs/MIGRATION-3.0.md) for current behavior.
 
+## 4.11.0 — 2026-10-09
+
+Supports sql-context-pack 3.0.0, which keeps sensitive data from reaching AI models: values come back as marked fakes, aliases, generalized or redacted values, and real values go only to the user through a reveal handoff.
+
+- `sql-context-readonly.md` recipes (from `assets/skill-routing.json`): "representative data shape" filters on public columns only and says a quoted value marked `⟨FAKE|ALIAS|GENERALIZED|REDACTED|SCANNED…⟩` is not real; a new "real sensitive values" recipe relays `reveal_handoff` verbatim and never works around `QUERY_SENSITIVE_USAGE_RESTRICTED`. The supporting rule names sql-context-pack 3.0.0 or later and adds reveal of protected values to the prohibited operations.
+- Guard G8: `git-guard.mjs` denies `sqlctx query --reveal` (also `python -m sqlctx` and `sqlctx.exe`) typed by the agent, so real sensitive values never enter an agent transcript. sql-context-pack itself already refuses `--reveal` without an interactive terminal; G8 is defence in depth and fails open like the other guards.
+- Wording: "masked SELECT" becomes "protected SELECT" in AGENTS.md, `db-schema-context.md`, `sql-context-readonly.md` and the session context line in `hook-context.mjs`.
+
 ## 4.10.2 — 2026-10-05
 
 `release-notify.mjs` passes the SonarQube scan; the copy maintained in `agmws-identity-netcore` becomes the bootstrap source.
